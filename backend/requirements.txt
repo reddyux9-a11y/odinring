@@ -1,0 +1,53 @@
+# 🚀 ABSOLUTE MINIMUM REQUIREMENTS FOR VERCEL SERVERLESS
+# Only packages actually imported and used in server.py
+
+# Core FastAPI framework (includes uvicorn, starlette)
+fastapi==0.110.1
+
+# Firebase Admin SDK (replaces MongoDB)
+firebase-admin==7.1.0
+
+# Authentication (essential)
+bcrypt==4.3.0
+PyJWT==2.10.1
+
+# Data validation (essential)
+pydantic==2.11.7
+pydantic-settings==2.1.0
+email-validator==2.3.0
+
+# Environment variables (essential for serverless)
+python-dotenv==1.1.1
+
+# File uploads (essential for logo uploads)
+python-multipart==0.0.12
+
+# QR Code generation (essential for QR features)
+qrcode==8.0
+Pillow==10.4.0
+
+# HTTP requests (essential for external API calls)
+requests==2.32.3
+
+# Date utilities (essential)
+python-dateutil==2.9.0.post0
+
+# Rate limiting (security)
+slowapi==0.1.9
+
+# Logging and monitoring (production)
+sentry-sdk[fastapi]==1.40.0
+structlog==24.1.0
+
+# Testing (development)
+pytest==7.4.3
+pytest-asyncio==0.21.1
+pytest-cov==4.1.0
+# httpx is provided by firebase-admin
+faker==20.1.0
+
+# Caching (optional - falls back to in-memory if not available)
+redis==5.0.1
+
+# TOTAL SIZE: ~35MB (well under 250MB limit)
+# REMOVED: pymongo (included with motor), uvicorn (included with fastapi)

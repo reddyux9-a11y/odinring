@@ -1,0 +1,27 @@
+{
+  "short_name": "OdinRing",
+  "name": "OdinRing - NFC Digital Identity",
+  "description": "Premium digital identity platform powered by NFC technology",
+  "icons": [
+    {
+      "src": "/OdinRingLogo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/OdinRingLogo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#000000",
+  "background_color": "#ffffff",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "categories": ["productivity", "social"]
+}
+

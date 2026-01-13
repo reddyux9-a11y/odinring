@@ -1,0 +1,92 @@
+# =============================================================================
+# OdinRing Backend .dockerignore
+# =============================================================================
+# Files and directories to exclude from Docker build context
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.hypothesis/
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
+.pytest_cache/
+tests/
+test_*.py
+*_test.py
+
+# Documentation
+*.md
+docs/
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Service account (should be injected via secrets)
+*service-account*.json
+firebase-*.json
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Config files
+render.yaml
+vercel.json
+.cursorignore
+
+# Scripts not needed in container
+scripts/
+setup_*.py
+seed_*.py
+backup_*.py
+restore_*.py
+
+# Test files
+conftest.py
+pytest.ini
+
+# Firestore rules
+firestore-rules-*.txt
+

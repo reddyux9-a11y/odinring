@@ -1,0 +1,490 @@
+"""
+Firestore Database Operations
+Provides async-style wrappers for Firestore operations with caching support
+"""
+
+from firebase_config import get_firestore_client, Collections, firestore_to_dict, dict_to_firestore, retry_on_failure
+from cache_service import get_cache, CACHE_TTL
+from google.cloud.firestore_v1 import FieldFilter
+from datetime import datetime
+import logging
+import hashlib
+import json
+
+logger = logging.getLogger(__name__)
+
+class FirestoreDB:
+    """
+    Firestore database operations wrapper
+    Provides MongoDB-like interface for Firestore with caching support
+    """
+    
+    def __init__(self, collection_name=None, enable_cache=True):
+        self.db = get_firestore_client()
+        self.collection_name = collection_name
+        self.enable_cache = enable_cache
+        self.cache = get_cache() if enable_cache else None
+    
+    def collection(self, name):
+        """Get collection reference"""
+        return self.db.collection(name)
+    
+    def _get_cache_key(self, collection: str, filter_dict: dict) -> str:
+        """Generate cache key from collection and filter"""
+        # Create deterministic key from filter
+        filter_str = json.dumps(filter_dict, sort_keys=True) if filter_dict else "{}"
+        key_hash = hashlib.md5(filter_str.encode()).hexdigest()[:16]
+        return f"{collection}:{key_hash}"
+    
+    @retry_on_failure(max_retries=2, delay=0.5)
+    async def find_one(self, collection_name=None, filter_dict=None, use_cache=True):
+        """
+        Find one document matching filter with retry logic and caching
+        MongoDB equivalent: collection.find_one(filter)
+        
+        Args:
+            collection_name: Collection name (optional if set in __init__)
+            filter_dict: Filter dictionary
+            use_cache: Whether to use cache (default: True)
+        """
+        import json
+        
+        # Support both old style (collection_name, filter_dict) and new style (filter_dict only)
+        if collection_name is not None and not isinstance(collection_name, dict):
+            # Old style: collection_name is a string
+            coll_name = collection_name
+            filt = filter_dict or {}
+        else:
+            # New style: collection_name is actually the filter_dict
+            coll_name = self.collection_name
+            filt = collection_name or {}
+        
+        # Try cache first (only for simple id lookups for now)
+        if self.enable_cache and self.cache and use_cache:
+            # Cache lookup for direct ID queries
+            if 'id' in filt and len(filt) == 1:
+                cache_key = filt['id']
+                cached = self.cache.get(coll_name, cache_key)
+                if cached is not None:
+                    logger.debug(f"Cache hit: {coll_name}:{cache_key}")
+                    return cached
+        
+        try:
+            # Handle $or queries - Firestore doesn't support $or directly
+            if '$or' in filt:
+                or_conditions = filt['$or']
+                # Try each condition in the $or array
+                for condition in or_conditions:
+                    result = await self.find_one(coll_name, condition)
+                    if result:
+                        return result
+                return None
+            
+            # Special case: if querying by 'id', use document() lookup instead of where()
+            # In Firestore, 'id' is the document ID, not a queryable field
+            if 'id' in filt and len(filt) == 1:
+                doc_id = filt['id']
+                doc_ref = self.db.collection(coll_name).document(doc_id).get()
+                if doc_ref.exists:
+                    result = firestore_to_dict(doc_ref)
+                    # Cache the result
+                    if self.enable_cache and self.cache and use_cache:
+                        ttl = CACHE_TTL.get(coll_name, CACHE_TTL['default'])
+                        self.cache.set(coll_name, doc_id, result, ttl)
+                    return result
+                return None
+            
+            # For other fields, use where() queries
+            query = self.db.collection(coll_name)
+            
+            for key, value in filt.items():
+                # Skip $or as it's handled above
+                if key == '$or':
+                    continue
+                # Handle regex queries (case-insensitive search)
+                if isinstance(value, dict) and '$regex' in value:
+                    regex_pattern = value['$regex']
+                    # Firestore doesn't support regex directly
+                    # For case-insensitive prefix matching, use range queries
+                    # Note: This is a simplified implementation - full regex is not supported
+                    pattern_lower = regex_pattern.lower()
+                    query = query.where(filter=FieldFilter(key, '>=', pattern_lower))
+                    query = query.where(filter=FieldFilter(key, '<=', pattern_lower + '\uf8ff'))
+                else:
+                    query = query.where(filter=FieldFilter(key, '==', value))
+            
+            docs = query.limit(1).stream()
+            
+            for doc in docs:
+                result = firestore_to_dict(doc)
+                # Cache the result if it has an ID
+                if self.enable_cache and self.cache and use_cache and 'id' in result:
+                    ttl = CACHE_TTL.get(coll_name, CACHE_TTL['default'])
+                    self.cache.set(coll_name, result['id'], result, ttl)
+                return result
+            
+            return None
+            
+        except Exception as e:
+            logger.error(f"Error in find_one: {e}")
+            raise
+    
+    @retry_on_failure(max_retries=2, delay=0.5)
+    async def find(self, collection_name=None, filter_dict=None, limit=None, sort=None, skip=None):
+        """
+        Find multiple documents with retry logic
+        MongoDB equivalent: collection.find(filter)
+        """
+        # Support both old style and new style
+        if collection_name is not None and not isinstance(collection_name, dict):
+            coll_name = collection_name
+            filt = filter_dict
+        else:
+            coll_name = self.collection_name
+            filt = collection_name
+        
+        try:
+            # Handle $or queries - Firestore doesn't support $or directly
+            if filt and '$or' in filt:
+                or_conditions = filt['$or']
+                all_results = []
+                seen_ids = set()
+                
+                # Try each condition in the $or array and combine results
+                for condition in or_conditions:
+                    # Recursively call find for each condition
+                    results = await self.find(coll_name, condition, limit=None, sort=sort, skip=None)
+                    for result in results:
+                        if result['id'] not in seen_ids:
+                            all_results.append(result)
+                            seen_ids.add(result['id'])
+                
+                # Apply sorting if specified
+                if sort:
+                    for field, direction in sort:
+                        reverse = (direction == -1)
+                        all_results.sort(key=lambda x: x.get(field, ''), reverse=reverse)
+                
+                # Apply skip and limit
+                if skip:
+                    all_results = all_results[skip:]
+                if limit:
+                    all_results = all_results[:limit]
+                
+                return all_results
+            
+            query = self.db.collection(coll_name)
+            
+            if filt:
+                for key, value in filt.items():
+                    # Skip $or as it's handled above
+                    if key == '$or':
+                        continue
+                    # Handle regex queries (case-insensitive search)
+                    if isinstance(value, dict) and '$regex' in value:
+                        regex_pattern = value['$regex']
+                        # Firestore doesn't support regex directly
+                        # For case-insensitive prefix matching, use range queries
+                        # Note: This is a simplified implementation - full regex is not supported
+                        pattern_lower = regex_pattern.lower()
+                        query = query.where(filter=FieldFilter(key, '>=', pattern_lower))
+                        query = query.where(filter=FieldFilter(key, '<=', pattern_lower + '\uf8ff'))
+                    else:
+                        query = query.where(filter=FieldFilter(key, '==', value))
+            
+            if sort:
+                for field, direction in sort:
+                    query = query.order_by(field, direction='DESCENDING' if direction == -1 else 'ASCENDING')
+            
+            if skip:
+                query = query.offset(skip)
+            
+            if limit:
+                query = query.limit(limit)
+            
+            docs = query.stream()
+            return [firestore_to_dict(doc) for doc in docs]
+            
+        except Exception as e:
+            logger.error(f"Error in find: {e}")
+            return []
+    
+    @retry_on_failure(max_retries=2, delay=0.5)
+    async def insert_one(self, collection_name=None, document=None):
+        """
+        Insert a single document with retry logic and cache invalidation
+        MongoDB equivalent: collection.insert_one(doc)
+        """
+        # Support both old style and new style
+        if collection_name is not None and not isinstance(collection_name, dict):
+            coll_name = collection_name
+            doc = document
+        else:
+            coll_name = self.collection_name
+            doc = collection_name
+        
+        try:
+            data = dict_to_firestore(doc)
+            
+            # If document has an 'id' field, use it as document ID
+            doc_id = doc.get('id')
+            
+            if doc_id:
+                self.db.collection(coll_name).document(doc_id).set(data)
+                # Cache the new document
+                if self.enable_cache and self.cache:
+                    ttl = CACHE_TTL.get(coll_name, CACHE_TTL['default'])
+                    self.cache.set(coll_name, doc_id, doc, ttl)
+                return {'inserted_id': doc_id}
+            else:
+                doc_ref = self.db.collection(coll_name).add(data)
+                inserted_id = doc_ref[1].id
+                # Cache the new document
+                if self.enable_cache and self.cache:
+                    doc['id'] = inserted_id
+                    ttl = CACHE_TTL.get(coll_name, CACHE_TTL['default'])
+                    self.cache.set(coll_name, inserted_id, doc, ttl)
+                return {'inserted_id': inserted_id}
+                
+        except Exception as e:
+            logger.error(f"Error in insert_one: {e}")
+            raise
+    
+    @retry_on_failure(max_retries=2, delay=0.5)
+    async def update_one(self, collection_name=None, filter_dict=None, update_dict=None, upsert=False):
+        """
+        Update a single document with retry logic
+        MongoDB equivalent: collection.update_one(filter, {'$set': update})
+        """
+        # Support both old style and new style
+        if collection_name is not None and not isinstance(collection_name, dict):
+            coll_name = collection_name
+            filt = filter_dict
+            upd = update_dict
+        else:
+            coll_name = self.collection_name
+            filt = collection_name
+            upd = filter_dict
+            if update_dict is not None and isinstance(update_dict, bool):
+                upsert = update_dict
+        
+        try:
+            # Find the document first
+            doc = await self.find_one(coll_name, filt)
+            
+            if doc:
+                doc_id = doc['id']
+                
+                # Handle MongoDB $set operator
+                if '$set' in upd:
+                    update_data = dict_to_firestore(upd['$set'])
+                else:
+                    update_data = dict_to_firestore(upd)
+                
+                self.db.collection(coll_name).document(doc_id).update(update_data)
+                # Invalidate cache
+                if self.enable_cache and self.cache:
+                    self.cache.delete(coll_name, doc_id)
+                return {'modified_count': 1}
+            elif upsert:
+                # Insert if document doesn't exist
+                result = await self.insert_one(coll_name, {**filt, **upd.get('$set', upd)})
+                return {'modified_count': 0, 'upserted_id': True}
+            
+            return {'modified_count': 0}
+            
+        except Exception as e:
+            logger.error(f"Error in update_one: {e}")
+            raise
+    
+    @retry_on_failure(max_retries=2, delay=0.5)
+    async def delete_one(self, collection_name=None, filter_dict=None):
+        """
+        Delete a single document with retry logic
+        MongoDB equivalent: collection.delete_one(filter)
+        """
+        # Support both old style and new style
+        if collection_name is not None and not isinstance(collection_name, dict):
+            coll_name = collection_name
+            filt = filter_dict
+        else:
+            coll_name = self.collection_name
+            filt = collection_name
+        
+        try:
+            doc = await self.find_one(coll_name, filt)
+            
+            if doc:
+                doc_id = doc['id']
+                self.db.collection(coll_name).document(doc_id).delete()
+                # Invalidate cache
+                if self.enable_cache and self.cache:
+                    self.cache.delete(coll_name, doc_id)
+                return {'deleted_count': 1}
+            
+            return {'deleted_count': 0}
+            
+        except Exception as e:
+            logger.error(f"Error in delete_one: {e}")
+            raise
+    
+    async def count_documents(self, collection_name=None, filter_dict=None):
+        """
+        Count documents in collection
+        MongoDB equivalent: collection.count_documents(filter)
+        """
+        # Support both old style and new style
+        if collection_name is not None and not isinstance(collection_name, dict):
+            coll_name = collection_name
+            filt = filter_dict
+        else:
+            coll_name = self.collection_name
+            filt = collection_name
+        
+        try:
+            docs = await self.find(coll_name, filt)
+            return len(docs)
+            
+        except Exception as e:
+            logger.error(f"Error in count_documents: {e}")
+            return 0
+    
+    async def aggregate(self, collection_name=None, pipeline=None):
+        """
+        Aggregate query (simplified)
+        Note: Firestore doesn't have aggregation like MongoDB
+        This is a simplified version for basic needs
+        """
+        logger.warning("Aggregate queries are limited in Firestore")
+        # For now, return empty list
+        # You'll need to implement specific aggregations as needed
+        return []
+    
+    def sort(self, field, direction=-1):
+        """MongoDB-like sort method (returns self for chaining)"""
+        # This is a placeholder for MongoDB compatibility
+        # Actual sorting should be done in find() method
+        return self
+    
+    def limit(self, count):
+        """MongoDB-like limit method (returns self for chaining)"""
+        # This is a placeholder for MongoDB compatibility
+        # Actual limiting should be done in find() method
+        return self
+    
+    def skip(self, count):
+        """MongoDB-like skip method (returns self for chaining)"""
+        # This is a placeholder for MongoDB compatibility
+        # Actual skipping should be done in find() method
+        return self
+    
+    @retry_on_failure(max_retries=2, delay=0.5)
+    async def batch_write(self, operations: list):
+        """
+        Execute multiple write operations in a single batch transaction
+        Significantly improves write performance for multiple operations
+        
+        Args:
+            operations: List of operation dicts with format:
+                {
+                    'type': 'insert' | 'update' | 'delete',
+                    'collection': 'collection_name',
+                    'document': {...},  # for insert/update
+                    'filter': {...},    # for update/delete
+                    'update': {...}      # for update only
+                }
+        
+        Returns:
+            Dict with results: {'inserted': [...], 'updated': [...], 'deleted': [...]}
+        """
+        try:
+            batch = self.db.batch()
+            results = {
+                'inserted': [],
+                'updated': [],
+                'deleted': []
+            }
+            
+            for op in operations:
+                op_type = op.get('type')
+                coll_name = op.get('collection', self.collection_name)
+                
+                if op_type == 'insert':
+                    doc = op.get('document', {})
+                    data = dict_to_firestore(doc)
+                    doc_id = doc.get('id')
+                    
+                    if doc_id:
+                        doc_ref = self.db.collection(coll_name).document(doc_id)
+                        batch.set(doc_ref, data)
+                        results['inserted'].append(doc_id)
+                    else:
+                        # Generate ID for batch insert
+                        doc_ref = self.db.collection(coll_name).document()
+                        batch.set(doc_ref, data)
+                        results['inserted'].append(doc_ref.id)
+                
+                elif op_type == 'update':
+                    filt = op.get('filter', {})
+                    upd = op.get('update', {})
+                    
+                    # Find document first
+                    doc = await self.find_one(coll_name, filt, use_cache=False)
+                    if doc:
+                        doc_id = doc['id']
+                        update_data = dict_to_firestore(upd.get('$set', upd))
+                        doc_ref = self.db.collection(coll_name).document(doc_id)
+                        batch.update(doc_ref, update_data)
+                        results['updated'].append(doc_id)
+                
+                elif op_type == 'delete':
+                    filt = op.get('filter', {})
+                    doc = await self.find_one(coll_name, filt, use_cache=False)
+                    if doc:
+                        doc_id = doc['id']
+                        doc_ref = self.db.collection(coll_name).document(doc_id)
+                        batch.delete(doc_ref)
+                        results['deleted'].append(doc_id)
+            
+            # Commit batch
+            await batch.commit()
+            
+            # Invalidate cache for affected documents
+            if self.enable_cache and self.cache:
+                for doc_id in results['inserted'] + results['updated'] + results['deleted']:
+                    coll = operations[0].get('collection', self.collection_name) if operations else self.collection_name
+                    if coll:
+                        self.cache.delete(coll, doc_id)
+            
+            return results
+            
+        except Exception as e:
+            logger.error(f"Error in batch_write: {e}")
+            raise
+
+# Global database instance
+_db_instance = None
+
+def get_db():
+    """Get database instance"""
+    global _db_instance
+    if _db_instance is None:
+        _db_instance = FirestoreDB()
+    return _db_instance
+
+# Collection accessors
+async def get_users_collection():
+    return get_db().collection(Collections.USERS)
+
+async def get_rings_collection():
+    return get_db().collection(Collections.RINGS)
+
+async def get_admins_collection():
+    return get_db().collection(Collections.ADMINS)
+
+async def get_analytics_collection():
+    return get_db().collection(Collections.RING_ANALYTICS)
+
+async def get_status_checks_collection():
+    return get_db().collection(Collections.STATUS_CHECKS)
+

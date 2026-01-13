@@ -1,0 +1,500 @@
+
+> frontend@1.4.0 start
+> craco start
+
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+(node:12047) [DEP0176] DeprecationWarning: fs.F_OK is deprecated, use fs.constants.F_OK instead
+(Use `node --trace-deprecation ...` to show where the warning was created)
+(node:12047) [DEP_WEBPACK_DEV_SERVER_ON_AFTER_SETUP_MIDDLEWARE] DeprecationWarning: 'onAfterSetupMiddleware' option is deprecated. Please use the 'setupMiddlewares' option.
+(node:12047) [DEP_WEBPACK_DEV_SERVER_ON_BEFORE_SETUP_MIDDLEWARE] DeprecationWarning: 'onBeforeSetupMiddleware' option is deprecated. Please use the 'setupMiddlewares' option.
+Starting the development server...
+
+Compiled successfully!
+
+You can now view frontend in the browser.
+
+  Local:            http://localhost:3000
+  On Your Network:  http://192.168.1.117:3000
+
+Note that the development build is not optimized.
+To create a production build, use yarn build.
+
+webpack compiled successfully
+Compiling...
+Failed to compile.
+
+Module not found: Error: Can't resolve '../components/DirectLinkMode' in '/Users/sankarreddy/Desktop/odinring-main-2/frontend/src/pages'
+ERROR in ./src/pages/Dashboard.jsx 20:0-58
+Module not found: Error: Can't resolve '../components/DirectLinkMode' in '/Users/sankarreddy/Desktop/odinring-main-2/frontend/src/pages'
+
+webpack compiled with 1 error
+Compiling...
+Failed to compile.
+
+Module not found: Error: Can't resolve '../components/DirectLinkMode' in '/Users/sankarreddy/Desktop/odinring-main-2/frontend/src/pages'
+ERROR in ./src/pages/Dashboard.jsx 20:0-58
+Module not found: Error: Can't resolve '../components/DirectLinkMode' in '/Users/sankarreddy/Desktop/odinring-main-2/frontend/src/pages'
+
+webpack compiled with 1 error
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Failed to compile.
+
+[eslint] 
+src/components/MobileHomePage.jsx
+Syntax error: 'return' outside of function. (258:2) (258:2)
+ERROR in ./src/components/MobileHomePage.jsx
+Module build failed (from ./node_modules/babel-loader/lib/index.js):
+SyntaxError: /Users/sankarreddy/Desktop/odinring-main-2/frontend/src/components/MobileHomePage.jsx: 'return' outside of function. (258:2)
+
+  256 |   );
+  257 |
+> 258 |   return (
+      |   ^
+  259 |     <div className="min-h-screen bg-background">
+  260 |       {/* Profile Header */}
+  261 |       <div className="px-6 pt-8 pb-6">
+    at constructor (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/parser/lib/index.js:367:19)
+    at FlowParserMixin.raise (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/parser/lib/index.js:6630:19)
+    at FlowParserMixin.parseReturnStatement (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/parser/lib/index.js:13145:12)
+    at FlowParserMixin.parseStatementContent (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/parser/lib/index.js:12807:21)
+    at FlowParserMixin.parseStatementLike (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/parser/lib/index.js:12776:17)
+    at FlowParserMixin.parseStatementLike (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/parser/lib/index.js:2949:24)
+    at FlowParserMixin.parseModuleItem (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/parser/lib/index.js:12753:17)
+    at FlowParserMixin.parseBlockOrModuleBlockBody (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/parser/lib/index.js:13325:36)
+    at FlowParserMixin.parseBlockBody (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/parser/lib/index.js:13318:10)
+    at FlowParserMixin.parseProgram (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/parser/lib/index.js:12634:10)
+    at FlowParserMixin.parseTopLevel (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/parser/lib/index.js:12624:25)
+    at FlowParserMixin.parseTopLevel (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/parser/lib/index.js:3718:28)
+    at FlowParserMixin.parse (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/parser/lib/index.js:14501:10)
+    at parse (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/parser/lib/index.js:14535:38)
+    at parser (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/core/lib/parser/index.js:41:34)
+    at parser.next (<anonymous>)
+    at normalizeFile (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/core/lib/transformation/normalize-file.js:64:37)
+    at normalizeFile.next (<anonymous>)
+    at run (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/core/lib/transformation/index.js:22:50)
+    at run.next (<anonymous>)
+    at transform (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/core/lib/transform.js:22:33)
+    at transform.next (<anonymous>)
+    at step (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/gensync/index.js:261:32)
+    at /Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/gensync/index.js:273:13
+    at async.call.result.err.err (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/gensync/index.js:223:11)
+
+ERROR in [eslint] 
+src/components/MobileHomePage.jsx
+  Line 258:2:  Parsing error: 'return' outside of function. (258:2)
+
+webpack compiled with 2 errors
+Compiling...
+Failed to compile.
+
+[eslint] 
+src/components/MobileHomePage.jsx
+Syntax error: 'return' outside of function. (254:2) (254:2)
+ERROR in ./src/components/MobileHomePage.jsx
+Module build failed (from ./node_modules/babel-loader/lib/index.js):
+SyntaxError: /Users/sankarreddy/Desktop/odinring-main-2/frontend/src/components/MobileHomePage.jsx: 'return' outside of function. (254:2)
+
+  252 |   );
+  253 |
+> 254 |   return (
+      |   ^
+  255 |     <div className="min-h-screen bg-background">
+  256 |       {/* Profile Header */}
+  257 |       <div className="px-6 pt-8 pb-6">
+    at constructor (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/parser/lib/index.js:367:19)
+    at FlowParserMixin.raise (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/parser/lib/index.js:6630:19)
+    at FlowParserMixin.parseReturnStatement (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/parser/lib/index.js:13145:12)
+    at FlowParserMixin.parseStatementContent (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/parser/lib/index.js:12807:21)
+    at FlowParserMixin.parseStatementLike (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/parser/lib/index.js:12776:17)
+    at FlowParserMixin.parseStatementLike (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/parser/lib/index.js:2949:24)
+    at FlowParserMixin.parseModuleItem (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/parser/lib/index.js:12753:17)
+    at FlowParserMixin.parseBlockOrModuleBlockBody (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/parser/lib/index.js:13325:36)
+    at FlowParserMixin.parseBlockBody (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/parser/lib/index.js:13318:10)
+    at FlowParserMixin.parseProgram (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/parser/lib/index.js:12634:10)
+    at FlowParserMixin.parseTopLevel (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/parser/lib/index.js:12624:25)
+    at FlowParserMixin.parseTopLevel (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/parser/lib/index.js:3718:28)
+    at FlowParserMixin.parse (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/parser/lib/index.js:14501:10)
+    at parse (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/parser/lib/index.js:14535:38)
+    at parser (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/core/lib/parser/index.js:41:34)
+    at parser.next (<anonymous>)
+    at normalizeFile (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/core/lib/transformation/normalize-file.js:64:37)
+    at normalizeFile.next (<anonymous>)
+    at run (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/core/lib/transformation/index.js:22:50)
+    at run.next (<anonymous>)
+    at transform (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/core/lib/transform.js:22:33)
+    at transform.next (<anonymous>)
+    at step (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/gensync/index.js:261:32)
+    at /Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/gensync/index.js:273:13
+    at async.call.result.err.err (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/gensync/index.js:223:11)
+
+ERROR in [eslint] 
+src/components/MobileHomePage.jsx
+  Line 254:2:  Parsing error: 'return' outside of function. (254:2)
+
+webpack compiled with 2 errors
+Compiling...
+Failed to compile.
+
+[eslint] 
+src/components/MobileHomePage.jsx
+Syntax error: 'return' outside of function. (246:2) (246:2)
+ERROR in ./src/components/MobileHomePage.jsx
+Module build failed (from ./node_modules/babel-loader/lib/index.js):
+SyntaxError: /Users/sankarreddy/Desktop/odinring-main-2/frontend/src/components/MobileHomePage.jsx: 'return' outside of function. (246:2)
+
+  244 |   );
+  245 |
+> 246 |   return (
+      |   ^
+  247 |     <div className="min-h-screen bg-background">
+  248 |       {/* Profile Header */}
+  249 |       <div className="px-6 pt-8 pb-6">
+    at constructor (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/parser/lib/index.js:367:19)
+    at FlowParserMixin.raise (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/parser/lib/index.js:6630:19)
+    at FlowParserMixin.parseReturnStatement (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/parser/lib/index.js:13145:12)
+    at FlowParserMixin.parseStatementContent (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/parser/lib/index.js:12807:21)
+    at FlowParserMixin.parseStatementLike (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/parser/lib/index.js:12776:17)
+    at FlowParserMixin.parseStatementLike (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/parser/lib/index.js:2949:24)
+    at FlowParserMixin.parseModuleItem (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/parser/lib/index.js:12753:17)
+    at FlowParserMixin.parseBlockOrModuleBlockBody (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/parser/lib/index.js:13325:36)
+    at FlowParserMixin.parseBlockBody (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/parser/lib/index.js:13318:10)
+    at FlowParserMixin.parseProgram (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/parser/lib/index.js:12634:10)
+    at FlowParserMixin.parseTopLevel (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/parser/lib/index.js:12624:25)
+    at FlowParserMixin.parseTopLevel (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/parser/lib/index.js:3718:28)
+    at FlowParserMixin.parse (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/parser/lib/index.js:14501:10)
+    at parse (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/parser/lib/index.js:14535:38)
+    at parser (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/core/lib/parser/index.js:41:34)
+    at parser.next (<anonymous>)
+    at normalizeFile (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/core/lib/transformation/normalize-file.js:64:37)
+    at normalizeFile.next (<anonymous>)
+    at run (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/core/lib/transformation/index.js:22:50)
+    at run.next (<anonymous>)
+    at transform (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/core/lib/transform.js:22:33)
+    at transform.next (<anonymous>)
+    at step (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/gensync/index.js:261:32)
+    at /Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/gensync/index.js:273:13
+    at async.call.result.err.err (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/gensync/index.js:223:11)
+
+ERROR in [eslint] 
+src/components/MobileHomePage.jsx
+  Line 246:2:  Parsing error: 'return' outside of function. (246:2)
+
+webpack compiled with 2 errors
+Compiling...
+Failed to compile.
+
+[eslint] 
+src/components/MobileHomePage.jsx
+Syntax error: 'return' outside of function. (246:2) (246:2)
+ERROR in ./src/components/MobileHomePage.jsx
+Module build failed (from ./node_modules/babel-loader/lib/index.js):
+SyntaxError: /Users/sankarreddy/Desktop/odinring-main-2/frontend/src/components/MobileHomePage.jsx: 'return' outside of function. (246:2)
+
+  244 |   );
+  245 |
+> 246 |   return (
+      |   ^
+  247 |     <div className="min-h-screen bg-background">
+  248 |       {/* Profile Header */}
+  249 |       <div className="px-6 pt-8 pb-6">
+    at constructor (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/parser/lib/index.js:367:19)
+    at FlowParserMixin.raise (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/parser/lib/index.js:6630:19)
+    at FlowParserMixin.parseReturnStatement (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/parser/lib/index.js:13145:12)
+    at FlowParserMixin.parseStatementContent (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/parser/lib/index.js:12807:21)
+    at FlowParserMixin.parseStatementLike (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/parser/lib/index.js:12776:17)
+    at FlowParserMixin.parseStatementLike (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/parser/lib/index.js:2949:24)
+    at FlowParserMixin.parseModuleItem (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/parser/lib/index.js:12753:17)
+    at FlowParserMixin.parseBlockOrModuleBlockBody (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/parser/lib/index.js:13325:36)
+    at FlowParserMixin.parseBlockBody (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/parser/lib/index.js:13318:10)
+    at FlowParserMixin.parseProgram (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/parser/lib/index.js:12634:10)
+    at FlowParserMixin.parseTopLevel (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/parser/lib/index.js:12624:25)
+    at FlowParserMixin.parseTopLevel (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/parser/lib/index.js:3718:28)
+    at FlowParserMixin.parse (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/parser/lib/index.js:14501:10)
+    at parse (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/parser/lib/index.js:14535:38)
+    at parser (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/core/lib/parser/index.js:41:34)
+    at parser.next (<anonymous>)
+    at normalizeFile (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/core/lib/transformation/normalize-file.js:64:37)
+    at normalizeFile.next (<anonymous>)
+    at run (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/core/lib/transformation/index.js:22:50)
+    at run.next (<anonymous>)
+    at transform (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/@babel/core/lib/transform.js:22:33)
+    at transform.next (<anonymous>)
+    at step (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/gensync/index.js:261:32)
+    at /Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/gensync/index.js:273:13
+    at async.call.result.err.err (/Users/sankarreddy/Desktop/odinring-main-2/frontend/node_modules/gensync/index.js:223:11)
+
+ERROR in [eslint] 
+src/components/MobileHomePage.jsx
+  Line 246:2:  Parsing error: 'return' outside of function. (246:2)
+
+webpack compiled with 2 errors
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully
+Compiling...
+Compiled successfully!
+webpack compiled successfully

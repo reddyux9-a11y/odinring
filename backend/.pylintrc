@@ -1,0 +1,307 @@
+[MASTER]
+# Python code to execute, usually for sys.path manipulation such as pygtk.require().
+init-hook='import sys; sys.path.append(".")'
+
+# Profiling output file.
+profile=no
+
+# Set the cache size for astng.
+cache-size=500
+
+# Pickle collected data for later comparisons.
+persistent=yes
+
+# List of plugins (as comma separated values of python modules names) to load,
+# usually to register additional checkers.
+load-plugins=
+
+# Use multiple processes to speed up Pylint.
+jobs=4
+
+# Allow loading of arbitrary C extensions. Extensions are imported into the
+# active Python interpreter and may run arbitrary code.
+unsafe-load-any-extension=no
+
+[MESSAGES CONTROL]
+# Disable all checks except critical security ones
+disable=
+    missing-docstring,
+    too-few-public-methods,
+    too-many-arguments,
+    too-many-locals,
+    too-many-branches,
+    too-many-statements,
+    too-many-instance-attributes,
+    too-many-public-methods,
+    too-many-return-statements,
+    too-many-boolean-expressions,
+    import-error,
+    no-member,
+    abstract-method,
+    import-outside-toplevel,
+    fixme
+
+# Security-critical checks to enable
+enable=
+    security,
+    dangerous-default-value,
+    eval-used,
+    exec-used,
+    bad-continuation,
+    deprecated-module,
+    apply-builtin,
+    basestring-builtin,
+    buffer-builtin,
+    cmp-builtin,
+    coerce-builtin,
+    execfile-builtin,
+    file-builtin,
+    long-builtin,
+    raw_input-builtin,
+    reduce-builtin,
+    standarderror-builtin,
+    unicode-builtin,
+    xrange-builtin,
+    oct-builtin,
+    hex-builtin,
+    nonzero-builtin,
+    round-builtin,
+    input-builtin,
+    using-cmp-argument,
+    eq-without-hash,
+    div-method,
+    idiv-method,
+    rdiv-method,
+    exception-message-attribute,
+    invalid-str-codec,
+    sys-max-int,
+    bad-python3-import,
+    deprecated-string-function,
+    deprecated-str-translate-call,
+    import-error,
+    no-name-in-module,
+    missing-module-docstring,
+    missing-class-docstring,
+    missing-function-docstring,
+    invalid-name,
+    attribute-defined-outside-init,
+    access-member-before-definition,
+    arguments-differ,
+    method-hidden,
+    abstract-class-instantiated,
+    bad-super-call,
+    abstract-method,
+    bad-exception-context,
+    missing-super-argument,
+    super-init-not-called,
+    no-init,
+    non-parent-init-called,
+    super-with-arguments,
+    bad-context-manager,
+    invalid-unary-operand-type,
+    invalid-binary-operand-type,
+    unsupported-binary-operation,
+    unsupported-membership-test,
+    unsupported-delete-operation,
+    function-redefined,
+    duplicate-argument-name,
+    no-value-for-parameter,
+    unexpected-keyword-arg,
+    no-value-for-parameter,
+    unexpected-keyword-arg,
+    not-callable,
+    not-context-manager,
+    assigning-non-slot,
+    assign-to-new-keyword,
+    return-in-init,
+    function-returns-value,
+    lost-exception,
+    no-self-use,
+    protected-access,
+    attribute-defined-outside-init,
+    abstract-class-instantiated,
+    unused-variable,
+    unused-argument,
+    unused-import,
+    unused-wildcard-import,
+    redefined-outer-name,
+    redefined-builtin,
+    redefined-in-handler,
+    unhashable-member,
+    deprecated-module,
+    deprecated-class,
+    deprecated-decorator,
+    deprecated-method,
+    deprecated-function,
+    deprecated-argument,
+    deprecated-class-method,
+    deprecated-static-method,
+    no-member,
+    no-name-in-module,
+    import-error,
+    no-name-in-module,
+    import-self,
+    cyclic-import,
+    relative-beyond-top-level,
+    wrong-import-order,
+    wrong-import-position,
+    ungrouped-imports,
+    wrong-import-order
+
+[REPORTS]
+# Set the output format. Available formats are text, parseable, colorized, json
+# and msvs (visual studio). You can also give a reporter class, e.g.
+# mypackage.mymodule.MyReporterClass.
+output-format=text
+
+# Put messages in a separate file for each module / package specified on the
+# command line instead of printing them on stdout. Reports (if any) will be
+# written in a file name "pylint_global.[txt|html]".
+files-output=no
+
+# Tells whether to display a full report or only the messages
+reports=yes
+
+# Python expression which should return a note less than 10 (10 is the highest
+# note). You have access to the variables errors warning, statement which
+# respectively contain the number of errors / warnings messages and the total
+# number of statements analyzed. This is used by the global evaluation report
+# (RP0004).
+evaluation=10.0 - ((float(5 * error + warning + refactor + convention) / statement) * 10)
+
+# Template used to display messages. This is a python new-style format string
+# used to format the message information. See doc for all details
+#msg-template=
+
+# Activate the evaluation score.
+score=yes
+
+[FORMAT]
+# Maximum number of characters on a single line.
+max-line-length=120
+
+# Regexp for a line that is allowed to be longer than the limit.
+ignore-long-lines=^\s*(# )?<?https?://\S+>?$
+
+# Number of spaces of indent required inside a hanging  or continued line.
+indent-after-paren=4
+
+# String used as indentation unit. This is usually "    " (4 spaces) or "\t" (1
+# tab).
+indent-string='    '
+
+# Expected format of line ending, e.g. empty (any line ending), LF or CRLF.
+expected-line-ending-format=
+
+[BASIC]
+# Good variable names which should always be accepted, separated by a comma
+good-names=i,j,k,ex,Run,_,id,pk,db,app,env,ctx,req,res,resp,json,str,bool,int,float,list,dict,set,tuple,api,url,uri,path,file,dir,fn,func,cls,self,cls_,kwargs,args
+
+# Bad variable names which should always be refused, separated by a comma
+bad-names=foo,bar,baz,toto,tutu,tata
+
+# Include a hint for the correct naming format with invalid-name
+include-naming-hint=yes
+
+# Regular expression matching correct function names
+function-rgx=[a-z_][a-z0-9_]{2,30}$
+
+# Naming hint for function names
+function-name-hint=[a-z_][a-z0-9_]{2,30}$
+
+# Regular expression matching correct variable names
+variable-rgx=[a-z_][a-z0-9_]{2,30}$
+
+# Naming hint for variable names
+variable-name-hint=[a-z_][a-z0-9_]{2,30}$
+
+# Regular expression matching correct constant names
+const-rgx=(([A-Z_][A-Z0-9_]*)|(__.*__))$
+
+# Naming hint for constant names
+const-name-hint=(([A-Z_][A-Z0-9_]*)|(__.*__))$
+
+# Regular expression matching correct attribute names
+attr-rgx=[a-z_][a-z0-9_]{2,30}$
+
+# Naming hint for attribute names
+attr-name-hint=[a-z_][a-z0-9_]{2,30}$
+
+# Regular expression matching correct argument names
+argument-rgx=[a-z_][a-z0-9_]{2,30}$
+
+# Naming hint for argument names
+argument-name-hint=[a-z_][a-z0-9_]{2,30}$
+
+# Regular expression matching correct class attribute names
+class-attribute-rgx=([A-Za-z_][A-Za-z0-9_]{2,30}|(__.*__))$
+
+# Naming hint for class attribute names
+class-attribute-name-hint=([A-Za-z_][A-Za-z0-9_]{2,30}|(__.*__))$
+
+# Regular expression matching correct class names
+class-rgx=[A-Z_][a-zA-Z0-9]+$
+
+# Naming hint for class names
+class-name-hint=[A-Z_][a-zA-Z0-9]+$
+
+# Regular expression matching correct module names
+module-rgx=(([a-z_][a-z0-9_]*)|([A-Z][a-zA-Z0-9]+))$
+
+# Naming hint for module names
+module-name-hint=(([a-z_][a-z0-9_]*)|([A-Z][a-zA-Z0-9]+))$
+
+# Regular expression matching correct method names
+method-rgx=[a-z_][a-z0-9_]{2,30}$
+
+# Naming hint for method names
+method-name-hint=[a-z_][a-z0-9_]{2,30}$
+
+# Regular expression which should only match function or class names that do
+# not require a docstring.
+no-docstring-rgx=^_
+
+# Minimum line length for functions/classes that require docstrings, shorter
+# ones are exempt.
+docstring-min-length=-1
+
+[DESIGN]
+# Maximum number of arguments for function / method
+max-args=10
+
+# Maximum number of attributes for a class (see R0902).
+max-attributes=15
+
+# Maximum number of boolean expressions in a if statement
+max-bool-expr=5
+
+# Maximum number of branch for function / method body
+max-branches=15
+
+# Maximum number of locals for function / method body
+max-locals=20
+
+# Maximum number of parents for a class (see R0901).
+max-parents=7
+
+# Maximum number of public methods for a class (see R0904).
+max-public-methods=30
+
+# Maximum number of return / yield for function / method body
+max-returns=8
+
+# Maximum number of statements in function / method body
+max-statements=60
+
+# Minimum number of public methods for a class (see R0903).
+min-public-methods=0
+
+# Maximum number of arguments for function / method
+max-args=10
+
+[EXCEPTIONS]
+# Exceptions that will emit a warning when being caught. Defaults to
+# "BaseException, Exception".
+overgeneral-exceptions=BaseException,Exception
+
+

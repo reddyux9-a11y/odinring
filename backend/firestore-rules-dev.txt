@@ -1,0 +1,35 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Users collection
+    match /users/{userId} {
+      allow read: if true;  // Anyone can read user profiles
+      allow write: if request.auth != null;  // Only authenticated users can write
+    }
+    
+    // Rings collection
+    match /rings/{ringId} {
+      allow read: if true;  // Anyone can read rings (for public profiles)
+      allow write: if request.auth != null;  // Only authenticated users
+    }
+    
+    // Admins collection
+    match /admins/{adminId} {
+      allow read: if request.auth != null;  // Only authenticated
+      allow write: if false;  // No direct writes (use backend)
+    }
+    
+    // Analytics collection
+    match /ring_analytics/{analyticsId} {
+      allow read: if request.auth != null;  // Only authenticated
+      allow write: if request.auth != null;
+    }
+    
+    // Status checks collection
+    match /status_checks/{checkId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+  }
+}

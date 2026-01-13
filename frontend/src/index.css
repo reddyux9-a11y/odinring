@@ -1,0 +1,432 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Mobile-First Base Styles */
+:root {
+  --vh: 1vh;
+  --sat: 0px;
+  --sar: 0px; 
+  --sab: 0px;
+  --sal: 0px;
+  
+  /* Keep existing shadcn/ui variables */
+  --background: 0 0% 100%;
+  --foreground: 0 0% 3.9%;
+  --card: 0 0% 100%;
+  --card-foreground: 0 0% 3.9%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 0 0% 3.9%;
+  --primary: 0 0% 9%;
+  --primary-foreground: 0 0% 98%;
+  --secondary: 0 0% 96.1%;
+  --secondary-foreground: 0 0% 9%;
+  --muted: 0 0% 96.1%;
+  --muted-foreground: 0 0% 45.1%;
+  --accent: 0 0% 96.1%;
+  --accent-foreground: 0 0% 9%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 0 0% 89.8%;
+  --input: 0 0% 89.8%;
+  --ring: 0 0% 3.9%;
+  --chart-1: 12 76% 61%;
+  --chart-2: 173 58% 39%;
+  --chart-3: 197 37% 24%;
+  --chart-4: 43 74% 66%;
+  --chart-5: 27 87% 67%;
+  --radius: 0.5rem;
+  
+  /* Brand Colors - Mocha Medley Palette */
+  --brand-coffee-dark: 30 25% 18%;    /* #332820 */
+  --brand-coffee: 30 18% 30%;          /* #5A4D40 */
+  --brand-taupe: 30 12% 52%;          /* #98867B */
+  --brand-sand: 30 18% 75%;           /* #D0C6BD */
+  --brand-off-white: 30 10% 93%;      /* #EFEDEA */
+}
+
+html.dark {
+  --background: 0 0% 3.9%;
+  --foreground: 0 0% 98%;
+  --card: 0 0% 3.9%;
+  --card-foreground: 0 0% 98%;
+  --popover: 0 0% 3.9%;
+  --popover-foreground: 0 0% 98%;
+  --primary: 0 0% 98%;
+  --primary-foreground: 0 0% 9%;
+  --secondary: 0 0% 14.9%;
+  --secondary-foreground: 0 0% 98%;
+  --muted: 0 0% 14.9%;
+  --muted-foreground: 0 0% 63.9%;
+  --accent: 0 0% 14.9%;
+  --accent-foreground: 0 0% 98%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 0 0% 14.9%;
+  --input: 0 0% 14.9%;
+  --ring: 0 0% 83.1%;
+  --chart-1: 220 70% 50%;
+  --chart-2: 160 60% 45%;
+  --chart-3: 30 80% 55%;
+  --chart-4: 280 65% 60%;
+  --chart-5: 340 75% 55%;
+  
+  /* Brand Colors - Mocha Medley (Dark Mode Adaptations) */
+  --brand-coffee-dark: 30 25% 85%;    /* Lightened for dark bg */
+  --brand-coffee: 30 18% 70%;         /* Lightened */
+  --brand-taupe: 30 12% 60%;          /* Lightened */
+  --brand-sand: 30 18% 25%;           /* Darkened for dark bg */
+  --brand-off-white: 30 10% 10%;      /* Dark background */
+}
+
+/* Smooth scrolling for mobile */
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+  -ms-text-size-adjust: 100%;
+}
+
+/* Mobile-first body styles */
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--background-light, #fafafa);
+  color: var(--foreground-light, #000);
+  line-height: 1.6;
+  font-size: 16px;
+  
+  /* Mobile optimizations */
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  
+  /* Prevent zoom on inputs */
+  touch-action: manipulation;
+}
+
+/* Re-enable text selection for specific elements */
+p, span, div, h1, h2, h3, h4, h5, h6, input, textarea {
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
+}
+
+/* Ensure input and textarea support all keyboard shortcuts */
+input, textarea {
+  /* Enable standard text editing shortcuts */
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
+  
+  /* Ensure keyboard shortcuts work properly */
+  -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+  -webkit-touch-callout: default;
+  
+  /* Enable spellcheck and autocomplete for better editing */
+  -webkit-text-size-adjust: 100%;
+  -ms-text-size-adjust: 100%;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+/* Mobile keyboard handling */
+.keyboard-visible {
+  height: calc(var(--vh, 1vh) * 100);
+}
+
+/* Safe area utilities */
+.safe-area-inset {
+  padding-top: env(safe-area-inset-top);
+  padding-right: env(safe-area-inset-right);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+}
+
+.safe-area-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Custom scrollbar for webkit browsers */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html {
+    color-scheme: light dark;
+  }
+  body {
+    @apply bg-background text-foreground transition-colors;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
+}
+
+/* Mobile-First Utility Classes */
+@layer utilities {
+  /* Touch targets */
+  .mobile-tap-target {
+    min-height: 44px;
+    min-width: 44px;
+    @apply flex items-center justify-center;
+  }
+  
+  .mobile-tap-target-large {
+    min-height: 48px;
+    min-width: 48px;
+    @apply flex items-center justify-center;
+  }
+  
+  /* Mobile-optimized animations */
+  .mobile-touch-feedback {
+    @apply transition-transform duration-100 ease-out;
+  }
+  
+  .mobile-touch-feedback:active {
+    @apply scale-95;
+  }
+  
+  /* Mobile text sizes */
+  .text-mobile-xs { font-size: 12px; line-height: 16px; }
+  .text-mobile-sm { font-size: 14px; line-height: 20px; }
+  .text-mobile-base { font-size: 16px; line-height: 24px; }
+  .text-mobile-lg { font-size: 18px; line-height: 28px; }
+  .text-mobile-xl { font-size: 20px; line-height: 28px; }
+  
+  /* Mobile spacing */
+  .p-mobile { @apply p-4; }
+  .px-mobile { @apply px-4; }
+  .py-mobile { @apply py-4; }
+  .m-mobile { @apply m-4; }
+  .mx-mobile { @apply mx-4; }
+  .my-mobile { @apply my-4; }
+  
+  /* Mobile layout utilities */
+  .mobile-container {
+    @apply max-w-sm mx-auto px-4;
+  }
+  
+  .mobile-grid {
+    @apply grid grid-cols-1 gap-4;
+  }
+  
+  /* Mobile-friendly form elements */
+  .mobile-input {
+    @apply h-12 text-base px-4 rounded-xl border-2 border-gray-200 focus:border-gray-500 focus:ring-2 focus:ring-gray-500/20;
+  }
+  
+  .mobile-button {
+    @apply h-12 px-6 text-base font-medium rounded-xl transition-all duration-200;
+  }
+  
+  .mobile-button-sm {
+    @apply h-10 px-4 text-sm font-medium rounded-lg;
+  }
+  
+  /* Mobile cards */
+  .mobile-card {
+    @apply bg-white rounded-2xl shadow-sm border border-gray-100 p-4;
+  }
+  
+  /* Mobile overlays */
+  .mobile-overlay {
+    @apply fixed inset-0 bg-black/50 backdrop-blur-sm z-50;
+  }
+  
+  .mobile-sheet {
+    @apply fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl z-50;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  /* Chart skeleton shimmer animation */
+  @keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+  
+  .shimmer-animation {
+    animation: shimmer 2s ease-in-out infinite;
+  }
+
+  /* Mobile navigation */
+  .mobile-nav {
+    @apply fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  /* Mobile-optimized text truncation */
+  .mobile-truncate {
+    @apply truncate max-w-[200px];
+  }
+  
+  /* Swipe indicators */
+  .swipe-hint {
+    @apply text-xs text-gray-400 animate-pulse;
+  }
+  
+  /* Loading states optimized for mobile */
+  .mobile-skeleton {
+    @apply animate-pulse bg-gray-200 rounded-lg;
+  }
+  
+  /* Mobile-first responsive breakpoints helper */
+  .mobile-only {
+    display: block;
+  }
+  
+  @screen sm {
+    .mobile-only {
+      display: none;
+    }
+  }
+  
+  .desktop-only {
+    display: none;
+  }
+  
+  @screen sm {
+    .desktop-only {
+      display: block;
+    }
+  }
+}
+
+/* Mobile-friendly drag and drop styles */
+.drag-container {
+  touch-action: none;
+}
+
+.drag-item {
+  touch-action: none;
+  user-select: none;
+}
+
+.drag-item.dragging {
+  z-index: 1000;
+  position: relative;
+  transform: rotate(2deg) scale(1.05);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+/* Line clamp utilities */
+.line-clamp-1 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+}
+
+.line-clamp-2 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+/* Mobile scrollbars */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+/* Hide scrollbar utility */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari, Opera */
+}
+
+/* Mobile device specific styles */
+@media screen and (max-width: 767px) {
+  /* Ensure inputs don't zoom on iOS */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+  
+  /* Better touch targets on mobile */
+  button, a, [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Optimize font sizes for mobile reading */
+  body {
+    font-size: 16px;
+  }
+  
+  h1 { font-size: 28px; }
+  h2 { font-size: 24px; }
+  h3 { font-size: 20px; }
+  h4 { font-size: 18px; }
+  h5 { font-size: 16px; }
+  h6 { font-size: 14px; }
+}
+
+/* Dark mode considerations for mobile */
+@media (prefers-color-scheme: dark) {
+  .dark-mode-support {
+    background-color: #000;
+    color: #fff;
+  }
+}
+
+/* Reduced motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .high-contrast {
+    border-color: #000 !important;
+    color: #000 !important;
+    background-color: #fff !important;
+  }
+}

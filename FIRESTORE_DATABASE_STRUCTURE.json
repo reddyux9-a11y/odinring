@@ -1,0 +1,411 @@
+{
+  "project_id": "studio-7743041576-fc16f",
+  "database_type": "Firestore (NoSQL)",
+  "last_updated": "2025-12-26",
+  
+  "collections": {
+    "users": {
+      "description": "User accounts and profiles",
+      "document_count": 3,
+      "storage_location": "Firestore collection",
+      "fields": {
+        "id": "string (UUID)",
+        "name": "string",
+        "username": "string (unique)",
+        "email": "string (unique, indexed)",
+        "password": "string (hashed)",
+        "bio": "string",
+        "avatar": "string (URL)",
+        "ring_id": "string (indexed)",
+        "theme": "string (light/dark)",
+        "accent_color": "string (hex color)",
+        "background_color": "string (hex color)",
+        "custom_logo": "string (URL)",
+        "show_footer": "boolean",
+        "show_ring_badge": "boolean",
+        "items": "array<object> (NEW: items stored in user document)",
+        "is_active": "boolean",
+        "created_at": "timestamp",
+        "updated_at": "timestamp"
+      },
+      "indexes": [
+        "email (ASCENDING)",
+        "username (ASCENDING)",
+        "ring_id (ASCENDING)",
+        "google_id (ASCENDING)"
+      ],
+      "notes": "Items are now stored as an array within user documents (not separate collection)"
+    },
+    
+    "links": {
+      "description": "User profile links",
+      "document_count": 6,
+      "storage_location": "Firestore collection",
+      "fields": {
+        "id": "string (UUID)",
+        "user_id": "string (foreign key to users)",
+        "title": "string",
+        "url": "string",
+        "description": "string",
+        "icon": "string",
+        "category": "string",
+        "style": "string (default/minimal/gradient/glass/filled/outlined)",
+        "color": "string (hex)",
+        "background_color": "string (hex)",
+        "border_radius": "string",
+        "animation": "string",
+        "active": "boolean",
+        "scheduled": "boolean",
+        "order": "integer",
+        "clicks": "integer",
+        "phone_number": "string",
+        "created_at": "timestamp",
+        "updated_at": "timestamp"
+      },
+      "indexes": [
+        "user_id + order (ASCENDING)",
+        "user_id + is_active + order (ASCENDING)",
+        "user_id + created_at (DESCENDING)"
+      ]
+    },
+    
+    "items": {
+      "description": "Merchant items (DEPRECATED - now stored in users.items array)",
+      "document_count": 10,
+      "storage_location": "Firestore collection (legacy)",
+      "status": "DEPRECATED - Items now stored in user documents",
+      "fields": {
+        "id": "string (UUID)",
+        "user_id": "string (foreign key to users)",
+        "name": "string",
+        "description": "string",
+        "price": "float",
+        "currency": "string (USD/EUR/GBP/etc)",
+        "image_url": "string (URL)",
+        "category": "string (product/service/digital)",
+        "stock_quantity": "integer",
+        "sku": "string",
+        "tags": "array<string>",
+        "active": "boolean",
+        "views": "integer",
+        "orders": "integer",
+        "order": "integer (display order)",
+        "created_at": "timestamp",
+        "updated_at": "timestamp"
+      },
+      "notes": "This collection is deprecated. Items are now stored in users.items array for better data locality and atomic operations."
+    },
+    
+    "rings": {
+      "description": "NFC ring assignments",
+      "document_count": 1,
+      "storage_location": "Firestore collection",
+      "fields": {
+        "id": "string (UUID)",
+        "ring_id": "string (unique)",
+        "user_id": "string (foreign key to users)",
+        "direct_mode": "boolean",
+        "created_at": "timestamp"
+      }
+    },
+    
+    "sessions": {
+      "description": "Active user sessions (JWT)",
+      "document_count": 71,
+      "storage_location": "Firestore collection",
+      "fields": {
+        "id": "string (UUID, session_id)",
+        "user_id": "string (foreign key to users)",
+        "token": "string (JWT)",
+        "is_active": "boolean",
+        "ip_address": "string",
+        "user_agent": "string",
+        "created_at": "timestamp",
+        "last_activity": "timestamp",
+        "expires_at": "timestamp"
+      },
+      "indexes": [
+        "user_id + is_active + created_at (DESC)",
+        "expires_at + is_active (ASC)",
+        "user_id + last_activity (DESC)"
+      ],
+      "ttl": "7 days (configurable)"
+    },
+    
+    "refresh_tokens": {
+      "description": "Refresh tokens for JWT rotation",
+      "document_count": 90,
+      "storage_location": "Firestore collection",
+      "fields": {
+        "id": "string (UUID)",
+        "user_id": "string (foreign key to users)",
+        "session_id": "string (foreign key to sessions)",
+        "token_hash": "string (hashed)",
+        "is_active": "boolean",
+        "is_rotated": "boolean",
+        "rotated_at": "timestamp",
+        "ip_address": "string",
+        "user_agent": "string",
+        "created_at": "timestamp",
+        "last_used": "timestamp",
+        "expires_at": "timestamp"
+      },
+      "indexes": [
+        "user_id + is_revoked + created_at (DESC)",
+        "expires_at + is_revoked (ASC)",
+        "family_id + created_at (DESC)",
+        "session_id + is_revoked (ASC)"
+      ],
+      "ttl": "7 days (configurable)"
+    },
+    
+    "audit_logs": {
+      "description": "Security and compliance audit trail",
+      "document_count": "varies",
+      "storage_location": "Firestore collection",
+      "fields": {
+        "id": "string (UUID)",
+        "actor_id": "string (user_id)",
+        "action": "string (login/logout/profile_update/link_create/etc)",
+        "entity_type": "string (user/link/ring/etc)",
+        "entity_id": "string",
+        "ip_address": "string",
+        "timestamp": "timestamp"
+      },
+      "indexes": [
+        "actor_id + timestamp (DESC)",
+        "action + timestamp (DESC)",
+        "entity_type + entity_id + timestamp (DESC)",
+        "ip_address + timestamp (DESC)"
+      ]
+    },
+    
+    "analytics": {
+      "description": "General analytics events",
+      "document_count": "varies",
+      "storage_location": "Firestore collection",
+      "fields": {
+        "id": "string (UUID)",
+        "user_id": "string",
+        "event_type": "string",
+        "timestamp": "timestamp"
+      },
+      "indexes": [
+        "user_id + timestamp (DESC)"
+      ]
+    },
+    
+    "ring_analytics": {
+      "description": "NFC ring tap and scan analytics",
+      "document_count": "varies",
+      "storage_location": "Firestore collection",
+      "fields": {
+        "id": "string (UUID)",
+        "ring_id": "string",
+        "user_id": "string",
+        "event_type": "string (tap/view/scan)",
+        "timestamp": "timestamp"
+      },
+      "indexes": [
+        "ring_id + timestamp (DESC)",
+        "user_id + timestamp (DESC)",
+        "event_type + timestamp (DESC)"
+      ]
+    },
+    
+    "qr_scans": {
+      "description": "QR code scan tracking",
+      "document_count": "varies",
+      "storage_location": "Firestore collection",
+      "fields": {
+        "id": "string (UUID)",
+        "user_id": "string",
+        "scan_type": "string (profile/link)",
+        "timestamp": "timestamp"
+      },
+      "indexes": [
+        "user_id + timestamp (DESC)"
+      ]
+    },
+    
+    "availability": {
+      "description": "User availability schedules",
+      "document_count": "varies",
+      "storage_location": "Firestore collection",
+      "fields": {
+        "id": "string (UUID)",
+        "user_id": "string",
+        "day_of_week": "integer (0-6)",
+        "start_time": "string",
+        "end_time": "string",
+        "is_available": "boolean"
+      }
+    },
+    
+    "appointments": {
+      "description": "Scheduled appointments",
+      "document_count": "varies",
+      "storage_location": "Firestore collection",
+      "fields": {
+        "id": "string (UUID)",
+        "user_id": "string (host)",
+        "attendee_name": "string",
+        "attendee_email": "string",
+        "appointment_date": "timestamp",
+        "duration_minutes": "integer",
+        "status": "string (scheduled/confirmed/cancelled/completed)",
+        "google_event_id": "string",
+        "created_at": "timestamp",
+        "updated_at": "timestamp"
+      },
+      "indexes": [
+        "user_id + status + appointment_date (ASC)"
+      ]
+    },
+    
+    "businesses": {
+      "description": "Solo business accounts (Phase 2)",
+      "document_count": 0,
+      "storage_location": "Firestore collection",
+      "fields": {
+        "id": "string (UUID)",
+        "owner_id": "string (foreign key to users)",
+        "name": "string",
+        "description": "string",
+        "created_at": "timestamp",
+        "updated_at": "timestamp"
+      },
+      "indexes": [
+        "owner_id + created_at (DESC)"
+      ]
+    },
+    
+    "organizations": {
+      "description": "Multi-user organization accounts (Phase 2)",
+      "document_count": 0,
+      "storage_location": "Firestore collection",
+      "fields": {
+        "id": "string (UUID)",
+        "owner_id": "string (foreign key to users)",
+        "name": "string",
+        "description": "string",
+        "created_at": "timestamp",
+        "updated_at": "timestamp"
+      },
+      "indexes": [
+        "owner_id + created_at (DESC)"
+      ]
+    },
+    
+    "departments": {
+      "description": "Organization departments (Phase 2)",
+      "document_count": 0,
+      "storage_location": "Firestore collection",
+      "fields": {
+        "id": "string (UUID)",
+        "organization_id": "string (foreign key to organizations)",
+        "name": "string",
+        "description": "string"
+      },
+      "indexes": [
+        "organization_id + name (ASC)"
+      ]
+    },
+    
+    "memberships": {
+      "description": "Organization member roles (Phase 2)",
+      "document_count": 0,
+      "storage_location": "Firestore collection",
+      "fields": {
+        "id": "string (UUID)",
+        "user_id": "string (foreign key to users)",
+        "organization_id": "string (foreign key to organizations)",
+        "department_id": "string (optional)",
+        "role": "string (owner/admin/member)",
+        "created_at": "timestamp"
+      },
+      "indexes": [
+        "user_id + created_at (DESC)",
+        "organization_id + role + created_at (ASC)",
+        "organization_id + department_id + created_at (ASC)"
+      ]
+    },
+    
+    "subscriptions": {
+      "description": "Subscription and billing (Phase 2)",
+      "document_count": 0,
+      "storage_location": "Firestore collection",
+      "fields": {
+        "id": "string (UUID)",
+        "owner_id": "string",
+        "owner_type": "string (user/business/organization)",
+        "plan": "string (personal/solo/org)",
+        "status": "string (active/trial/expired/none)",
+        "start_date": "timestamp",
+        "end_date": "timestamp",
+        "created_at": "timestamp",
+        "updated_at": "timestamp"
+      },
+      "indexes": [
+        "owner_id + owner_type + created_at (DESC)",
+        "status + plan + created_at (DESC)",
+        "status + end_date (ASC)"
+      ]
+    }
+  },
+  
+  "configuration": {
+    "firebase_project": "studio-7743041576-fc16f",
+    "service_account": "firebase-service-account.json",
+    "region": "us-central1",
+    "database_mode": "Native mode",
+    "total_indexes": 26,
+    "total_collections": 16,
+    "active_collections": 10,
+    "deprecated_collections": 1
+  },
+  
+  "key_changes": {
+    "items_storage": {
+      "old": "Separate 'items' collection",
+      "new": "Stored in users.items array",
+      "reason": "Better data locality, atomic operations, no user_id mismatches",
+      "migration": "Completed - old collection deprecated but not deleted"
+    }
+  },
+  
+  "security_features": {
+    "authentication": "JWT with refresh tokens",
+    "session_management": "Active session tracking with expiry",
+    "audit_logging": "Comprehensive audit trail for compliance",
+    "token_rotation": "Refresh token rotation for security",
+    "password_hashing": "Bcrypt",
+    "rate_limiting": "Implemented via slowapi"
+  },
+  
+  "data_relationships": {
+    "users_to_links": "one-to-many (user_id foreign key)",
+    "users_to_items": "one-to-many (embedded array in user document)",
+    "users_to_rings": "one-to-one (ring_id)",
+    "users_to_sessions": "one-to-many (user_id foreign key)",
+    "sessions_to_refresh_tokens": "one-to-many (session_id foreign key)",
+    "users_to_businesses": "one-to-one (owner_id)",
+    "users_to_organizations": "many-to-many (via memberships)",
+    "organizations_to_departments": "one-to-many (organization_id)"
+  },
+  
+  "performance_optimizations": {
+    "composite_indexes": "26 composite indexes for common queries",
+    "embedded_items": "Items embedded in user documents for faster reads",
+    "session_cleanup": "Automatic expiry via TTL",
+    "connection_pooling": "Firestore client reuse"
+  }
+}
+
+
+
+
+
+
+
+

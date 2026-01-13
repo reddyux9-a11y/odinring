@@ -1,0 +1,160 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+    
+    function isAdmin() {
+      return isSignedIn() && 
+             exists(/databases/$(database)/documents/admins/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == 'super_admin';
+    }
+    
+    // Users collection
+    match /users/{userId} {
+      // Anyone can read public user profiles
+      allow read: if true;
+      
+      // Users can create their own profile
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      
+      // Users can update their own profile, admins can update any
+      allow update: if isOwner(userId) || isAdmin();
+      
+      // Users can delete their own profile, admins can delete any
+      allow delete: if isOwner(userId) || isAdmin();
+    }
+    
+    // Links collection
+    match /links/{linkId} {
+      // Anyone can read active links
+      allow read: if resource.data.active == true || isOwner(resource.data.user_id) || isAdmin();
+      
+      // Users can create their own links
+      allow create: if isSignedIn() && request.resource.data.user_id == request.auth.uid;
+      
+      // Users can update their own links
+      allow update: if isOwner(resource.data.user_id) || isAdmin();
+      
+      // Users can delete their own links
+      allow delete: if isOwner(resource.data.user_id) || isAdmin();
+    }
+    
+    // Rings collection
+    match /rings/{ringId} {
+      // Anyone can read rings (for tap functionality)
+      allow read: if true;
+      
+      // Only authenticated users can create rings
+      allow create: if isSignedIn();
+      
+      // Users can update their own rings
+      allow update: if isOwner(resource.data.user_id) || isAdmin();
+      
+      // Users can delete their own rings
+      allow delete: if isOwner(resource.data.user_id) || isAdmin();
+    }
+    
+    // Analytics collection
+    match /analytics/{analyticsId} {
+      // SECURITY: Require valid structure for analytics creation (rate limiting handled at API level)
+      allow create: if request.resource.data.keys().hasAll(['user_id', 'timestamp']) &&
+                     request.resource.data.user_id is string &&
+                     request.resource.data.timestamp is timestamp;
+      
+      // Users can read their own analytics
+      allow read: if isOwner(resource.data.user_id) || isAdmin();
+      
+      // No updates or deletes (analytics are immutable)
+      allow update, delete: if isAdmin();
+    }
+    
+    // Ring Analytics collection
+    match /ring_analytics/{analyticsId} {
+      // SECURITY: Require valid structure for ring analytics creation
+      allow create: if request.resource.data.keys().hasAll(['ring_id', 'timestamp']) &&
+                     request.resource.data.ring_id is string &&
+                     request.resource.data.timestamp is timestamp;
+      
+      // Users can read their own ring analytics
+      allow read: if isOwner(resource.data.user_id) || isAdmin();
+      
+      // No updates or deletes (analytics are immutable)
+      allow update, delete: if isAdmin();
+    }
+    
+    // QR Scans collection
+    match /qr_scans/{scanId} {
+      // SECURITY: Require valid structure for QR scan creation
+      allow create: if request.resource.data.keys().hasAll(['user_id', 'timestamp']) &&
+                     request.resource.data.user_id is string &&
+                     request.resource.data.timestamp is timestamp;
+      
+      // Users can read their own scans
+      allow read: if isOwner(resource.data.user_id) || isAdmin();
+      
+      // No updates or deletes
+      allow update, delete: if isAdmin();
+    }
+    
+    // Appointments collection
+    match /appointments/{appointmentId} {
+      // Users can read their own appointments
+      allow read: if isOwner(resource.data.user_id) || isAdmin();
+      
+      // SECURITY: Require valid structure for appointment creation (booking)
+      allow create: if request.resource.data.keys().hasAll(['user_id', 'appointment_date', 'client_email']) &&
+                     request.resource.data.user_id is string &&
+                     request.resource.data.appointment_date is timestamp &&
+                     request.resource.data.client_email is string;
+      
+      // Users can update their own appointments
+      allow update: if isOwner(resource.data.user_id) || isAdmin();
+      
+      // Users can delete their own appointments
+      allow delete: if isOwner(resource.data.user_id) || isAdmin();
+    }
+    
+    // Availability collection
+    match /availability/{availabilityId} {
+      // Anyone can read availability (for booking)
+      allow read: if true;
+      
+      // Users can create their own availability
+      allow create: if isSignedIn() && request.resource.data.user_id == request.auth.uid;
+      
+      // Users can update their own availability
+      allow update: if isOwner(resource.data.user_id) || isAdmin();
+      
+      // Users can delete their own availability
+      allow delete: if isOwner(resource.data.user_id) || isAdmin();
+    }
+    
+    // Admins collection
+    match /admins/{adminId} {
+      // Only admins can read admin profiles
+      allow read: if isAdmin();
+      
+      // Only super admins can create new admins
+      allow create: if isAdmin();
+      
+      // Only super admins can update admins
+      allow update: if isAdmin();
+      
+      // Only super admins can delete admins
+      allow delete: if isAdmin();
+    }
+    
+    // SECURITY: Test collection removed - test collections should not exist in production
+    // If needed for testing, use a separate test database or require authentication
+  }
+}
+

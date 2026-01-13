@@ -1,0 +1,39 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Users collection - users can only read/write their own data
+    match /users/{userId} {
+      allow read: if true;  // Public profiles
+      allow create: if request.auth != null;
+      allow update, delete: if request.auth.uid == userId;
+    }
+    
+    // Rings collection - owners can manage their rings
+    match /rings/{ringId} {
+      allow read: if true;  // Public access for NFC scanning
+      allow create: if request.auth != null;
+      allow update, delete: if request.auth != null && 
+                              request.auth.uid == resource.data.user_id;
+    }
+    
+    // Admins collection - no direct access (backend only)
+    match /admins/{adminId} {
+      allow read, write: if false;
+    }
+    
+    // Analytics - only authenticated users
+    match /ring_analytics/{analyticsId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update, delete: if false;  // Immutable analytics
+    }
+    
+    // Status checks
+    match /status_checks/{checkId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update, delete: if false;
+    }
+  }
+}

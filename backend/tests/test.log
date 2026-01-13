@@ -1,0 +1,651 @@
+2026-01-11 21:00:23 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:23 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:23 [   DEBUG] faker.factory: Looking for locale `en_US` in provider `faker.providers.address`.
+2026-01-11 21:00:23 [   DEBUG] faker.factory: Provider `faker.providers.address` has been localized to `en_US`.
+2026-01-11 21:00:23 [   DEBUG] faker.factory: Looking for locale `en_US` in provider `faker.providers.automotive`.
+2026-01-11 21:00:23 [   DEBUG] faker.factory: Provider `faker.providers.automotive` has been localized to `en_US`.
+2026-01-11 21:00:23 [   DEBUG] faker.factory: Looking for locale `en_US` in provider `faker.providers.bank`.
+2026-01-11 21:00:23 [   DEBUG] faker.factory: Specified locale `en_US` is not available for provider `faker.providers.bank`. Locale reset to `en_GB` for this provider.
+2026-01-11 21:00:23 [   DEBUG] faker.factory: Looking for locale `en_US` in provider `faker.providers.barcode`.
+2026-01-11 21:00:23 [   DEBUG] faker.factory: Provider `faker.providers.barcode` has been localized to `en_US`.
+2026-01-11 21:00:23 [   DEBUG] faker.factory: Looking for locale `en_US` in provider `faker.providers.color`.
+2026-01-11 21:00:23 [   DEBUG] faker.factory: Provider `faker.providers.color` has been localized to `en_US`.
+2026-01-11 21:00:23 [   DEBUG] faker.factory: Looking for locale `en_US` in provider `faker.providers.company`.
+2026-01-11 21:00:23 [   DEBUG] faker.factory: Provider `faker.providers.company` has been localized to `en_US`.
+2026-01-11 21:00:23 [   DEBUG] faker.factory: Looking for locale `en_US` in provider `faker.providers.credit_card`.
+2026-01-11 21:00:23 [   DEBUG] faker.factory: Provider `faker.providers.credit_card` has been localized to `en_US`.
+2026-01-11 21:00:23 [   DEBUG] faker.factory: Looking for locale `en_US` in provider `faker.providers.currency`.
+2026-01-11 21:00:23 [   DEBUG] faker.factory: Provider `faker.providers.currency` has been localized to `en_US`.
+2026-01-11 21:00:23 [   DEBUG] faker.factory: Looking for locale `en_US` in provider `faker.providers.date_time`.
+2026-01-11 21:00:23 [   DEBUG] faker.factory: Provider `faker.providers.date_time` has been localized to `en_US`.
+2026-01-11 21:00:23 [   DEBUG] faker.factory: Provider `faker.providers.emoji` does not feature localization. Specified locale `en_US` is not utilized for this provider.
+2026-01-11 21:00:23 [   DEBUG] faker.factory: Provider `faker.providers.file` does not feature localization. Specified locale `en_US` is not utilized for this provider.
+2026-01-11 21:00:23 [   DEBUG] faker.factory: Looking for locale `en_US` in provider `faker.providers.geo`.
+2026-01-11 21:00:23 [   DEBUG] faker.factory: Provider `faker.providers.geo` has been localized to `en_US`.
+2026-01-11 21:00:23 [   DEBUG] faker.factory: Looking for locale `en_US` in provider `faker.providers.internet`.
+2026-01-11 21:00:23 [   DEBUG] faker.factory: Provider `faker.providers.internet` has been localized to `en_US`.
+2026-01-11 21:00:23 [   DEBUG] faker.factory: Provider `faker.providers.isbn` does not feature localization. Specified locale `en_US` is not utilized for this provider.
+2026-01-11 21:00:23 [   DEBUG] faker.factory: Looking for locale `en_US` in provider `faker.providers.job`.
+2026-01-11 21:00:24 [   DEBUG] faker.factory: Provider `faker.providers.job` has been localized to `en_US`.
+2026-01-11 21:00:24 [   DEBUG] faker.factory: Looking for locale `en_US` in provider `faker.providers.lorem`.
+2026-01-11 21:00:24 [   DEBUG] faker.factory: Provider `faker.providers.lorem` has been localized to `en_US`.
+2026-01-11 21:00:24 [   DEBUG] faker.factory: Looking for locale `en_US` in provider `faker.providers.misc`.
+2026-01-11 21:00:24 [   DEBUG] faker.factory: Provider `faker.providers.misc` has been localized to `en_US`.
+2026-01-11 21:00:24 [   DEBUG] faker.factory: Looking for locale `en_US` in provider `faker.providers.passport`.
+2026-01-11 21:00:24 [   DEBUG] faker.factory: Provider `faker.providers.passport` has been localized to `en_US`.
+2026-01-11 21:00:24 [   DEBUG] faker.factory: Looking for locale `en_US` in provider `faker.providers.person`.
+2026-01-11 21:00:24 [   DEBUG] faker.factory: Provider `faker.providers.person` has been localized to `en_US`.
+2026-01-11 21:00:24 [   DEBUG] faker.factory: Looking for locale `en_US` in provider `faker.providers.phone_number`.
+2026-01-11 21:00:24 [   DEBUG] faker.factory: Provider `faker.providers.phone_number` has been localized to `en_US`.
+2026-01-11 21:00:24 [   DEBUG] faker.factory: Provider `faker.providers.profile` does not feature localization. Specified locale `en_US` is not utilized for this provider.
+2026-01-11 21:00:24 [   DEBUG] faker.factory: Provider `faker.providers.python` does not feature localization. Specified locale `en_US` is not utilized for this provider.
+2026-01-11 21:00:24 [   DEBUG] faker.factory: Provider `faker.providers.sbn` does not feature localization. Specified locale `en_US` is not utilized for this provider.
+2026-01-11 21:00:24 [   DEBUG] faker.factory: Looking for locale `en_US` in provider `faker.providers.ssn`.
+2026-01-11 21:00:24 [   DEBUG] faker.factory: Provider `faker.providers.ssn` has been localized to `en_US`.
+2026-01-11 21:00:24 [   DEBUG] faker.factory: Provider `faker.providers.user_agent` does not feature localization. Specified locale `en_US` is not utilized for this provider.
+2026-01-11 21:00:25 [   DEBUG] sentry_sdk.errors: [Tracing] Create new propagation context: {'trace_id': '2c07ec3793d04813a98495af416cd92b', 'span_id': 'a345838afc3dc07e', 'parent_span_id': None, 'dynamic_sampling_context': None}
+2026-01-11 21:00:25 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:25 [    INFO] server: request_received method=POST path=/api/auth/register client_ip=testclient
+2026-01-11 21:00:25 [    INFO] server: request_completed method=POST path=/api/auth/register status_code=400
+2026-01-11 21:00:25 [    INFO] httpx: HTTP Request: POST http://testserver/api/auth/register "HTTP/1.1 400 Bad Request"
+2026-01-11 21:00:25 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:25 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:25 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:25 [    INFO] server: request_received method=POST path=/api/links client_ip=testclient
+2026-01-11 21:00:25 [    INFO] server: request_completed method=POST path=/api/links status_code=401
+2026-01-11 21:00:25 [    INFO] httpx: HTTP Request: POST http://testserver/api/links "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:25 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:25 [    INFO] server: request_received method=POST path=/api/links client_ip=testclient
+2026-01-11 21:00:25 [    INFO] server: request_completed method=POST path=/api/links status_code=401
+2026-01-11 21:00:25 [    INFO] httpx: HTTP Request: POST http://testserver/api/links "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:25 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:25 [    INFO] server: request_received method=POST path=/api/links client_ip=testclient
+2026-01-11 21:00:25 [    INFO] server: request_completed method=POST path=/api/links status_code=401
+2026-01-11 21:00:25 [    INFO] httpx: HTTP Request: POST http://testserver/api/links "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:25 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:25 [    INFO] server: request_received method=PUT path=/api/links/reorder client_ip=testclient
+2026-01-11 21:00:25 [    INFO] server: request_completed method=PUT path=/api/links/reorder status_code=401
+2026-01-11 21:00:25 [    INFO] httpx: HTTP Request: PUT http://testserver/api/links/reorder "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:25 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:25 [    INFO] server: request_received method=DELETE path=/api/links/7e6ff34c-056b-4394-b2f4-4871442d70ad client_ip=testclient
+2026-01-11 21:00:25 [    INFO] server: request_completed method=DELETE path=/api/links/7e6ff34c-056b-4394-b2f4-4871442d70ad status_code=401
+2026-01-11 21:00:25 [    INFO] httpx: HTTP Request: DELETE http://testserver/api/links/7e6ff34c-056b-4394-b2f4-4871442d70ad "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:25 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:25 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:25 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:25 [    INFO] httpx: HTTP Request: POST http://testserver/api/auth/register "HTTP/1.1 404 Not Found"
+2026-01-11 21:00:25 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:25 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:25 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:25 [    INFO] server: request_received method=POST path=/api/links client_ip=testclient
+2026-01-11 21:00:25 [    INFO] server: request_completed method=POST path=/api/links status_code=401
+2026-01-11 21:00:25 [    INFO] httpx: HTTP Request: POST http://testserver/api/links "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:25 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:25 [    INFO] server: request_received method=PUT path=/api/links/62431bac-281e-46aa-b5eb-5d4797896d89 client_ip=testclient
+2026-01-11 21:00:25 [    INFO] server: request_completed method=PUT path=/api/links/62431bac-281e-46aa-b5eb-5d4797896d89 status_code=401
+2026-01-11 21:00:25 [    INFO] httpx: HTTP Request: PUT http://testserver/api/links/62431bac-281e-46aa-b5eb-5d4797896d89 "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:25 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:25 [    INFO] server: request_received method=DELETE path=/api/links/62431bac-281e-46aa-b5eb-5d4797896d89 client_ip=testclient
+2026-01-11 21:00:25 [    INFO] server: request_completed method=DELETE path=/api/links/62431bac-281e-46aa-b5eb-5d4797896d89 status_code=401
+2026-01-11 21:00:25 [    INFO] httpx: HTTP Request: DELETE http://testserver/api/links/62431bac-281e-46aa-b5eb-5d4797896d89 "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:25 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:25 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:25 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:25 [    INFO] httpx: HTTP Request: POST http://testserver/api/admin/auth/login "HTTP/1.1 404 Not Found"
+2026-01-11 21:00:25 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:25 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:25 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [    INFO] server: request_received method=POST path=/api/links client_ip=testclient
+2026-01-11 21:00:26 [    INFO] server: request_completed method=POST path=/api/links status_code=401
+2026-01-11 21:00:26 [    INFO] httpx: HTTP Request: POST http://testserver/api/links "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [    INFO] server: request_received method=GET path=/api/links client_ip=testclient
+2026-01-11 21:00:26 [    INFO] server: request_completed method=GET path=/api/links status_code=401
+2026-01-11 21:00:26 [    INFO] httpx: HTTP Request: GET http://testserver/api/links "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [    INFO] server: request_received method=PUT path=/api/links/97f339fd-5c9a-4761-af5e-3e79ce616098 client_ip=testclient
+2026-01-11 21:00:26 [    INFO] server: request_completed method=PUT path=/api/links/97f339fd-5c9a-4761-af5e-3e79ce616098 status_code=401
+2026-01-11 21:00:26 [    INFO] httpx: HTTP Request: PUT http://testserver/api/links/97f339fd-5c9a-4761-af5e-3e79ce616098 "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [    INFO] server: request_received method=DELETE path=/api/links/3922d7c6-0ff5-4167-b9fa-e0afff8b9adf client_ip=testclient
+2026-01-11 21:00:26 [    INFO] server: request_completed method=DELETE path=/api/links/3922d7c6-0ff5-4167-b9fa-e0afff8b9adf status_code=401
+2026-01-11 21:00:26 [    INFO] httpx: HTTP Request: DELETE http://testserver/api/links/3922d7c6-0ff5-4167-b9fa-e0afff8b9adf "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [    INFO] server: request_received method=POST path=/api/items client_ip=testclient
+2026-01-11 21:00:26 [    INFO] server: request_completed method=POST path=/api/items status_code=401
+2026-01-11 21:00:26 [    INFO] httpx: HTTP Request: POST http://testserver/api/items "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [    INFO] server: request_received method=GET path=/api/items client_ip=testclient
+2026-01-11 21:00:26 [    INFO] server: request_completed method=GET path=/api/items status_code=401
+2026-01-11 21:00:26 [    INFO] httpx: HTTP Request: GET http://testserver/api/items "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [    INFO] server: request_received method=POST path=/api/auth/login client_ip=testclient
+2026-01-11 21:00:26 [    INFO] server: request_completed method=POST path=/api/auth/login status_code=500
+2026-01-11 21:00:26 [    INFO] httpx: HTTP Request: POST http://testserver/api/auth/login "HTTP/1.1 500 Internal Server Error"
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [    INFO] server: request_received method=PUT path=/api/links/e639f373-934a-4475-9770-e04e12ba3b10 client_ip=testclient
+2026-01-11 21:00:26 [    INFO] server: request_completed method=PUT path=/api/links/e639f373-934a-4475-9770-e04e12ba3b10 status_code=401
+2026-01-11 21:00:26 [    INFO] httpx: HTTP Request: PUT http://testserver/api/links/e639f373-934a-4475-9770-e04e12ba3b10 "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [    INFO] server: request_received method=POST path=/api/auth/register client_ip=testclient
+2026-01-11 21:00:26 [    INFO] server: request_completed method=POST path=/api/auth/register status_code=422
+2026-01-11 21:00:26 [    INFO] httpx: HTTP Request: POST http://testserver/api/auth/register "HTTP/1.1 422 Unprocessable Entity"
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [    INFO] server: request_received method=POST path=/api/auth/register client_ip=testclient
+2026-01-11 21:00:26 [    INFO] server: request_completed method=POST path=/api/auth/register status_code=422
+2026-01-11 21:00:26 [    INFO] httpx: HTTP Request: POST http://testserver/api/auth/register "HTTP/1.1 422 Unprocessable Entity"
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [    INFO] server: request_received method=POST path=/api/auth/register client_ip=testclient
+2026-01-11 21:00:26 [    INFO] server: request_completed method=POST path=/api/auth/register status_code=422
+2026-01-11 21:00:26 [    INFO] httpx: HTTP Request: POST http://testserver/api/auth/register "HTTP/1.1 422 Unprocessable Entity"
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [    INFO] server: request_received method=GET path=/api/links/87ab6c82-84e6-4748-a410-00e8111844e0 client_ip=testclient
+2026-01-11 21:00:26 [    INFO] server: request_completed method=GET path=/api/links/87ab6c82-84e6-4748-a410-00e8111844e0 status_code=405
+2026-01-11 21:00:26 [    INFO] httpx: HTTP Request: GET http://testserver/api/links/87ab6c82-84e6-4748-a410-00e8111844e0 "HTTP/1.1 405 Method Not Allowed"
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [    INFO] server: request_received method=GET path=/api/links client_ip=testclient
+2026-01-11 21:00:26 [    INFO] server: request_completed method=GET path=/api/links status_code=403
+2026-01-11 21:00:26 [    INFO] httpx: HTTP Request: GET http://testserver/api/links "HTTP/1.1 403 Forbidden"
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [    INFO] server: request_received method=POST path=/api/auth/register client_ip=testclient
+2026-01-11 21:00:26 [    INFO] server: request_completed method=POST path=/api/auth/register status_code=400
+2026-01-11 21:00:26 [    INFO] httpx: HTTP Request: POST http://testserver/api/auth/register "HTTP/1.1 400 Bad Request"
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [    INFO] server: request_received method=POST path=/api/auth/register client_ip=testclient
+2026-01-11 21:00:26 [    INFO] server: request_completed method=POST path=/api/auth/register status_code=500
+2026-01-11 21:00:26 [    INFO] httpx: HTTP Request: POST http://testserver/api/auth/register "HTTP/1.1 500 Internal Server Error"
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [    INFO] server: request_received method=POST path=/api/links client_ip=testclient
+2026-01-11 21:00:26 [    INFO] server: request_completed method=POST path=/api/links status_code=401
+2026-01-11 21:00:26 [    INFO] httpx: HTTP Request: POST http://testserver/api/links "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [    INFO] server: request_received method=POST path=/api/items client_ip=testclient
+2026-01-11 21:00:26 [    INFO] server: request_completed method=POST path=/api/items status_code=401
+2026-01-11 21:00:26 [    INFO] httpx: HTTP Request: POST http://testserver/api/items "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [    INFO] server: request_received method=POST path=/api/items client_ip=testclient
+2026-01-11 21:00:26 [    INFO] server: request_completed method=POST path=/api/items status_code=401
+2026-01-11 21:00:26 [    INFO] httpx: HTTP Request: POST http://testserver/api/items "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [    INFO] server: request_received method=POST path=/api/links client_ip=testclient
+2026-01-11 21:00:26 [    INFO] server: request_completed method=POST path=/api/links status_code=401
+2026-01-11 21:00:26 [    INFO] httpx: HTTP Request: POST http://testserver/api/links "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [    INFO] server: request_received method=POST path=/api/links client_ip=testclient
+2026-01-11 21:00:26 [    INFO] server: request_completed method=POST path=/api/links status_code=401
+2026-01-11 21:00:26 [    INFO] httpx: HTTP Request: POST http://testserver/api/links "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [    INFO] server: request_received method=POST path=/api/links client_ip=testclient
+2026-01-11 21:00:26 [    INFO] server: request_completed method=POST path=/api/links status_code=401
+2026-01-11 21:00:26 [    INFO] httpx: HTTP Request: POST http://testserver/api/links "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [    INFO] server: request_received method=POST path=/api/links client_ip=testclient
+2026-01-11 21:00:26 [    INFO] server: request_completed method=POST path=/api/links status_code=401
+2026-01-11 21:00:26 [    INFO] httpx: HTTP Request: POST http://testserver/api/links "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [    INFO] server: request_received method=POST path=/api/links client_ip=testclient
+2026-01-11 21:00:26 [    INFO] server: request_completed method=POST path=/api/links status_code=401
+2026-01-11 21:00:26 [    INFO] httpx: HTTP Request: POST http://testserver/api/links "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [    INFO] server: request_received method=PUT path=/api/me client_ip=testclient
+2026-01-11 21:00:26 [    INFO] server: request_completed method=PUT path=/api/me status_code=401
+2026-01-11 21:00:26 [    INFO] httpx: HTTP Request: PUT http://testserver/api/me "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [    INFO] server: request_received method=PUT path=/api/me client_ip=testclient
+2026-01-11 21:00:26 [    INFO] server: request_completed method=PUT path=/api/me status_code=401
+2026-01-11 21:00:26 [    INFO] httpx: HTTP Request: PUT http://testserver/api/me "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [    INFO] server: request_received method=PUT path=/api/me client_ip=testclient
+2026-01-11 21:00:26 [    INFO] server: request_completed method=PUT path=/api/me status_code=401
+2026-01-11 21:00:26 [    INFO] httpx: HTTP Request: PUT http://testserver/api/me "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [    INFO] server: request_received method=POST path=/api/auth/register client_ip=testclient
+2026-01-11 21:00:26 [    INFO] server: request_completed method=POST path=/api/auth/register status_code=422
+2026-01-11 21:00:26 [    INFO] httpx: HTTP Request: POST http://testserver/api/auth/register "HTTP/1.1 422 Unprocessable Entity"
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [    INFO] server: request_received method=PUT path=/api/links/2b9b79da-e5bd-486a-b52e-41b68831fd51 client_ip=testclient
+2026-01-11 21:00:26 [    INFO] server: request_completed method=PUT path=/api/links/2b9b79da-e5bd-486a-b52e-41b68831fd51 status_code=401
+2026-01-11 21:00:26 [    INFO] httpx: HTTP Request: PUT http://testserver/api/links/2b9b79da-e5bd-486a-b52e-41b68831fd51 "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [    INFO] server: request_received method=PUT path=/api/links/2b9b79da-e5bd-486a-b52e-41b68831fd51 client_ip=testclient
+2026-01-11 21:00:26 [    INFO] server: request_completed method=PUT path=/api/links/2b9b79da-e5bd-486a-b52e-41b68831fd51 status_code=401
+2026-01-11 21:00:26 [    INFO] httpx: HTTP Request: PUT http://testserver/api/links/2b9b79da-e5bd-486a-b52e-41b68831fd51 "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [    INFO] server: request_received method=POST path=/api/links client_ip=testclient
+2026-01-11 21:00:26 [    INFO] server: request_completed method=POST path=/api/links status_code=401
+2026-01-11 21:00:26 [    INFO] httpx: HTTP Request: POST http://testserver/api/links "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [    INFO] server: request_received method=POST path=/api/links client_ip=testclient
+2026-01-11 21:00:26 [    INFO] server: request_completed method=POST path=/api/links status_code=401
+2026-01-11 21:00:26 [    INFO] httpx: HTTP Request: POST http://testserver/api/links "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [    INFO] server: request_received method=POST path=/api/links client_ip=testclient
+2026-01-11 21:00:26 [    INFO] server: request_completed method=POST path=/api/links status_code=401
+2026-01-11 21:00:26 [    INFO] httpx: HTTP Request: POST http://testserver/api/links "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [    INFO] server: request_received method=POST path=/api/links client_ip=testclient
+2026-01-11 21:00:26 [    INFO] server: request_completed method=POST path=/api/links status_code=401
+2026-01-11 21:00:26 [    INFO] httpx: HTTP Request: POST http://testserver/api/links "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [    INFO] server: request_received method=POST path=/api/links client_ip=testclient
+2026-01-11 21:00:26 [    INFO] server: request_completed method=POST path=/api/links status_code=401
+2026-01-11 21:00:26 [    INFO] httpx: HTTP Request: POST http://testserver/api/links "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [    INFO] server: request_received method=POST path=/api/links client_ip=testclient
+2026-01-11 21:00:26 [    INFO] server: request_completed method=POST path=/api/links status_code=401
+2026-01-11 21:00:26 [    INFO] httpx: HTTP Request: POST http://testserver/api/links "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [    INFO] server: request_received method=POST path=/api/links client_ip=testclient
+2026-01-11 21:00:26 [    INFO] server: request_completed method=POST path=/api/links status_code=401
+2026-01-11 21:00:26 [    INFO] httpx: HTTP Request: POST http://testserver/api/links "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:26 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:26 [    INFO] server: request_received method=POST path=/api/links client_ip=testclient
+2026-01-11 21:00:26 [    INFO] server: request_completed method=POST path=/api/links status_code=401
+2026-01-11 21:00:27 [    INFO] httpx: HTTP Request: POST http://testserver/api/links "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [    INFO] server: request_received method=POST path=/api/links client_ip=testclient
+2026-01-11 21:00:27 [    INFO] server: request_completed method=POST path=/api/links status_code=401
+2026-01-11 21:00:27 [    INFO] httpx: HTTP Request: POST http://testserver/api/links "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [    INFO] server: request_received method=POST path=/api/links client_ip=testclient
+2026-01-11 21:00:27 [    INFO] server: request_completed method=POST path=/api/links status_code=401
+2026-01-11 21:00:27 [    INFO] httpx: HTTP Request: POST http://testserver/api/links "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [    INFO] server: request_received method=GET path=/api/items client_ip=testclient
+2026-01-11 21:00:27 [    INFO] server: request_completed method=GET path=/api/items status_code=401
+2026-01-11 21:00:27 [    INFO] httpx: HTTP Request: GET http://testserver/api/items "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [    INFO] server: request_received method=GET path=/api/items client_ip=testclient
+2026-01-11 21:00:27 [    INFO] server: request_completed method=GET path=/api/items status_code=401
+2026-01-11 21:00:27 [    INFO] httpx: HTTP Request: GET http://testserver/api/items "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [    INFO] server: request_received method=POST path=/api/auth/register client_ip=testclient
+2026-01-11 21:00:27 [    INFO] server: request_completed method=POST path=/api/auth/register status_code=422
+2026-01-11 21:00:27 [    INFO] httpx: HTTP Request: POST http://testserver/api/auth/register "HTTP/1.1 422 Unprocessable Entity"
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [    INFO] server: request_received method=POST path=/api/auth/register client_ip=testclient
+2026-01-11 21:00:27 [    INFO] server: request_completed method=POST path=/api/auth/register status_code=422
+2026-01-11 21:00:27 [    INFO] httpx: HTTP Request: POST http://testserver/api/auth/register "HTTP/1.1 422 Unprocessable Entity"
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [    INFO] server: request_received method=POST path=/api/auth/register client_ip=testclient
+2026-01-11 21:00:27 [    INFO] server: request_completed method=POST path=/api/auth/register status_code=422
+2026-01-11 21:00:27 [    INFO] httpx: HTTP Request: POST http://testserver/api/auth/register "HTTP/1.1 422 Unprocessable Entity"
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [    INFO] server: request_received method=POST path=/api/auth/register client_ip=testclient
+2026-01-11 21:00:27 [    INFO] server: request_completed method=POST path=/api/auth/register status_code=422
+2026-01-11 21:00:27 [    INFO] httpx: HTTP Request: POST http://testserver/api/auth/register "HTTP/1.1 422 Unprocessable Entity"
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [    INFO] server: request_received method=POST path=/api/auth/register client_ip=testclient
+2026-01-11 21:00:27 [    INFO] server: request_completed method=POST path=/api/auth/register status_code=422
+2026-01-11 21:00:27 [    INFO] httpx: HTTP Request: POST http://testserver/api/auth/register "HTTP/1.1 422 Unprocessable Entity"
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [    INFO] server: request_received method=POST path=/api/auth/register client_ip=testclient
+2026-01-11 21:00:27 [    INFO] server: request_completed method=POST path=/api/auth/register status_code=422
+2026-01-11 21:00:27 [    INFO] httpx: HTTP Request: POST http://testserver/api/auth/register "HTTP/1.1 422 Unprocessable Entity"
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [    INFO] server: request_received method=POST path=/api/auth/register client_ip=testclient
+2026-01-11 21:00:27 [    INFO] server: request_completed method=POST path=/api/auth/register status_code=422
+2026-01-11 21:00:27 [    INFO] httpx: HTTP Request: POST http://testserver/api/auth/register "HTTP/1.1 422 Unprocessable Entity"
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [    INFO] server: request_received method=POST path=/api/links client_ip=testclient
+2026-01-11 21:00:27 [    INFO] server: request_completed method=POST path=/api/links status_code=401
+2026-01-11 21:00:27 [    INFO] httpx: HTTP Request: POST http://testserver/api/links "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [    INFO] server: request_received method=POST path=/api/links client_ip=testclient
+2026-01-11 21:00:27 [    INFO] server: request_completed method=POST path=/api/links status_code=401
+2026-01-11 21:00:27 [    INFO] httpx: HTTP Request: POST http://testserver/api/links "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [    INFO] server: request_received method=POST path=/api/links client_ip=testclient
+2026-01-11 21:00:27 [    INFO] server: request_completed method=POST path=/api/links status_code=401
+2026-01-11 21:00:27 [    INFO] httpx: HTTP Request: POST http://testserver/api/links "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [    INFO] server: request_received method=POST path=/api/links client_ip=testclient
+2026-01-11 21:00:27 [    INFO] server: request_completed method=POST path=/api/links status_code=401
+2026-01-11 21:00:27 [    INFO] httpx: HTTP Request: POST http://testserver/api/links "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [    INFO] server: request_received method=POST path=/api/links client_ip=testclient
+2026-01-11 21:00:27 [    INFO] server: request_completed method=POST path=/api/links status_code=401
+2026-01-11 21:00:27 [    INFO] httpx: HTTP Request: POST http://testserver/api/links "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [    INFO] server: request_received method=PUT path=/api/me client_ip=testclient
+2026-01-11 21:00:27 [    INFO] server: request_completed method=PUT path=/api/me status_code=401
+2026-01-11 21:00:27 [    INFO] httpx: HTTP Request: PUT http://testserver/api/me "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [    INFO] server: request_received method=PUT path=/api/me client_ip=testclient
+2026-01-11 21:00:27 [    INFO] server: request_completed method=PUT path=/api/me status_code=401
+2026-01-11 21:00:27 [    INFO] httpx: HTTP Request: PUT http://testserver/api/me "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [    INFO] server: request_received method=PUT path=/api/me client_ip=testclient
+2026-01-11 21:00:27 [    INFO] server: request_completed method=PUT path=/api/me status_code=401
+2026-01-11 21:00:27 [    INFO] httpx: HTTP Request: PUT http://testserver/api/me "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [    INFO] server: request_received method=POST path=/api/auth/register client_ip=testclient
+2026-01-11 21:00:27 [    INFO] server: request_completed method=POST path=/api/auth/register status_code=422
+2026-01-11 21:00:27 [    INFO] httpx: HTTP Request: POST http://testserver/api/auth/register "HTTP/1.1 422 Unprocessable Entity"
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [    INFO] server: request_received method=POST path=/api/auth/register client_ip=testclient
+2026-01-11 21:00:27 [    INFO] server: request_completed method=POST path=/api/auth/register status_code=422
+2026-01-11 21:00:27 [    INFO] httpx: HTTP Request: POST http://testserver/api/auth/register "HTTP/1.1 422 Unprocessable Entity"
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [    INFO] server: request_received method=POST path=/api/auth/register client_ip=testclient
+2026-01-11 21:00:27 [    INFO] server: request_completed method=POST path=/api/auth/register status_code=422
+2026-01-11 21:00:27 [    INFO] httpx: HTTP Request: POST http://testserver/api/auth/register "HTTP/1.1 422 Unprocessable Entity"
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [    INFO] server: request_received method=POST path=/api/auth/register client_ip=testclient
+2026-01-11 21:00:27 [    INFO] server: request_completed method=POST path=/api/auth/register status_code=422
+2026-01-11 21:00:27 [    INFO] httpx: HTTP Request: POST http://testserver/api/auth/register "HTTP/1.1 422 Unprocessable Entity"
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [    INFO] server: request_received method=GET path=/api/links client_ip=testclient
+2026-01-11 21:00:27 [    INFO] server: request_completed method=GET path=/api/links status_code=401
+2026-01-11 21:00:27 [    INFO] httpx: HTTP Request: GET http://testserver/api/links "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [    INFO] server: request_received method=GET path=/api/links client_ip=testclient
+2026-01-11 21:00:27 [    INFO] server: request_completed method=GET path=/api/links status_code=401
+2026-01-11 21:00:27 [    INFO] httpx: HTTP Request: GET http://testserver/api/links "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [    INFO] server: request_received method=GET path=/api/links client_ip=testclient
+2026-01-11 21:00:27 [    INFO] server: request_completed method=GET path=/api/links status_code=401
+2026-01-11 21:00:27 [    INFO] httpx: HTTP Request: GET http://testserver/api/links "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [    INFO] server: request_received method=GET path=/api/links client_ip=testclient
+2026-01-11 21:00:27 [    INFO] server: request_completed method=GET path=/api/links status_code=401
+2026-01-11 21:00:27 [    INFO] httpx: HTTP Request: GET http://testserver/api/links "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [    INFO] server: request_received method=GET path=/api/links client_ip=testclient
+2026-01-11 21:00:27 [    INFO] server: request_completed method=GET path=/api/links status_code=403
+2026-01-11 21:00:27 [    INFO] httpx: HTTP Request: GET http://testserver/api/links "HTTP/1.1 403 Forbidden"
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [    INFO] server: request_received method=POST path=/api/auth/register client_ip=testclient
+2026-01-11 21:00:27 [    INFO] server: request_completed method=POST path=/api/auth/register status_code=422
+2026-01-11 21:00:27 [    INFO] httpx: HTTP Request: POST http://testserver/api/auth/register "HTTP/1.1 422 Unprocessable Entity"
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [    INFO] server: request_received method=POST path=/api/auth/register client_ip=testclient
+2026-01-11 21:00:27 [    INFO] server: request_completed method=POST path=/api/auth/register status_code=422
+2026-01-11 21:00:27 [    INFO] httpx: HTTP Request: POST http://testserver/api/auth/register "HTTP/1.1 422 Unprocessable Entity"
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [    INFO] server: request_received method=POST path=/api/auth/register client_ip=testclient
+2026-01-11 21:00:27 [    INFO] server: request_completed method=POST path=/api/auth/register status_code=422
+2026-01-11 21:00:27 [    INFO] httpx: HTTP Request: POST http://testserver/api/auth/register "HTTP/1.1 422 Unprocessable Entity"
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [    INFO] server: request_received method=POST path=/api/auth/register client_ip=testclient
+2026-01-11 21:00:27 [    INFO] server: request_completed method=POST path=/api/auth/register status_code=422
+2026-01-11 21:00:27 [    INFO] httpx: HTTP Request: POST http://testserver/api/auth/register "HTTP/1.1 422 Unprocessable Entity"
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [    INFO] server: request_received method=POST path=/api/auth/register client_ip=testclient
+2026-01-11 21:00:27 [    INFO] server: request_completed method=POST path=/api/auth/register status_code=422
+2026-01-11 21:00:27 [    INFO] httpx: HTTP Request: POST http://testserver/api/auth/register "HTTP/1.1 422 Unprocessable Entity"
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [    INFO] server: request_received method=POST path=/api/auth/register client_ip=testclient
+2026-01-11 21:00:27 [    INFO] server: request_completed method=POST path=/api/auth/register status_code=422
+2026-01-11 21:00:27 [    INFO] httpx: HTTP Request: POST http://testserver/api/auth/register "HTTP/1.1 422 Unprocessable Entity"
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [    INFO] server: request_received method=POST path=/api/auth/register client_ip=testclient
+2026-01-11 21:00:27 [    INFO] server: request_completed method=POST path=/api/auth/register status_code=422
+2026-01-11 21:00:27 [    INFO] httpx: HTTP Request: POST http://testserver/api/auth/register "HTTP/1.1 422 Unprocessable Entity"
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [    INFO] server: request_received method=POST path=/api/auth/register client_ip=testclient
+2026-01-11 21:00:27 [    INFO] server: request_completed method=POST path=/api/auth/register status_code=422
+2026-01-11 21:00:27 [    INFO] httpx: HTTP Request: POST http://testserver/api/auth/register "HTTP/1.1 422 Unprocessable Entity"
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [    INFO] server: request_received method=POST path=/api/auth/login client_ip=testclient
+2026-01-11 21:00:27 [    INFO] server: request_completed method=POST path=/api/auth/login status_code=401
+2026-01-11 21:00:27 [    INFO] httpx: HTTP Request: POST http://testserver/api/auth/login "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [    INFO] server: request_received method=POST path=/api/auth/login client_ip=testclient
+2026-01-11 21:00:27 [    INFO] server: request_completed method=POST path=/api/auth/login status_code=401
+2026-01-11 21:00:27 [    INFO] httpx: HTTP Request: POST http://testserver/api/auth/login "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [    INFO] server: request_received method=POST path=/api/auth/login client_ip=testclient
+2026-01-11 21:00:27 [    INFO] server: request_completed method=POST path=/api/auth/login status_code=401
+2026-01-11 21:00:27 [    INFO] httpx: HTTP Request: POST http://testserver/api/auth/login "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [    INFO] server: request_received method=POST path=/api/auth/login client_ip=testclient
+2026-01-11 21:00:27 [    INFO] server: request_completed method=POST path=/api/auth/login status_code=401
+2026-01-11 21:00:27 [    INFO] httpx: HTTP Request: POST http://testserver/api/auth/login "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [    INFO] server: request_received method=POST path=/api/auth/login client_ip=testclient
+2026-01-11 21:00:27 [    INFO] server: request_completed method=POST path=/api/auth/login status_code=401
+2026-01-11 21:00:27 [    INFO] httpx: HTTP Request: POST http://testserver/api/auth/login "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [    INFO] server: request_received method=POST path=/api/auth/login client_ip=testclient
+2026-01-11 21:00:27 [    INFO] server: request_completed method=POST path=/api/auth/login status_code=401
+2026-01-11 21:00:27 [    INFO] httpx: HTTP Request: POST http://testserver/api/auth/login "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [    INFO] server: request_received method=POST path=/api/auth/login client_ip=testclient
+2026-01-11 21:00:27 [    INFO] server: request_completed method=POST path=/api/auth/login status_code=401
+2026-01-11 21:00:27 [    INFO] httpx: HTTP Request: POST http://testserver/api/auth/login "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [    INFO] server: request_received method=POST path=/api/auth/login client_ip=testclient
+2026-01-11 21:00:27 [    INFO] server: request_completed method=POST path=/api/auth/login status_code=401
+2026-01-11 21:00:27 [    INFO] httpx: HTTP Request: POST http://testserver/api/auth/login "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [    INFO] server: request_received method=POST path=/api/auth/login client_ip=testclient
+2026-01-11 21:00:27 [    INFO] server: request_completed method=POST path=/api/auth/login status_code=401
+2026-01-11 21:00:27 [    INFO] httpx: HTTP Request: POST http://testserver/api/auth/login "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [    INFO] server: request_received method=POST path=/api/auth/login client_ip=testclient
+2026-01-11 21:00:27 [    INFO] server: request_completed method=POST path=/api/auth/login status_code=401
+2026-01-11 21:00:27 [    INFO] httpx: HTTP Request: POST http://testserver/api/auth/login "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [    INFO] server: request_received method=PUT path=/api/links/eb2c10e2-325f-4a90-b99c-65c3e6d9a82b client_ip=testclient
+2026-01-11 21:00:27 [    INFO] server: request_completed method=PUT path=/api/links/eb2c10e2-325f-4a90-b99c-65c3e6d9a82b status_code=401
+2026-01-11 21:00:27 [    INFO] httpx: HTTP Request: PUT http://testserver/api/links/eb2c10e2-325f-4a90-b99c-65c3e6d9a82b "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [    INFO] server: request_received method=GET path=/api/admin/stats client_ip=testclient
+2026-01-11 21:00:27 [    INFO] server: request_completed method=GET path=/api/admin/stats status_code=401
+2026-01-11 21:00:27 [    INFO] httpx: HTTP Request: GET http://testserver/api/admin/stats "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [    INFO] server: request_received method=POST path=/api/links client_ip=testclient
+2026-01-11 21:00:27 [    INFO] server: request_completed method=POST path=/api/links status_code=401
+2026-01-11 21:00:27 [    INFO] httpx: HTTP Request: POST http://testserver/api/links "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [    INFO] server: request_received method=POST path=/api/links client_ip=testclient
+2026-01-11 21:00:27 [    INFO] server: request_completed method=POST path=/api/links status_code=401
+2026-01-11 21:00:27 [    INFO] httpx: HTTP Request: POST http://testserver/api/links "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [    INFO] server: request_received method=POST path=/api/links client_ip=testclient
+2026-01-11 21:00:27 [    INFO] server: request_completed method=POST path=/api/links status_code=401
+2026-01-11 21:00:27 [    INFO] httpx: HTTP Request: POST http://testserver/api/links "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [    INFO] server: request_received method=POST path=/api/links client_ip=testclient
+2026-01-11 21:00:27 [    INFO] server: request_completed method=POST path=/api/links status_code=401
+2026-01-11 21:00:27 [    INFO] httpx: HTTP Request: POST http://testserver/api/links "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [    INFO] server: request_received method=POST path=/api/links client_ip=testclient
+2026-01-11 21:00:27 [    INFO] server: request_completed method=POST path=/api/links status_code=401
+2026-01-11 21:00:27 [    INFO] httpx: HTTP Request: POST http://testserver/api/links "HTTP/1.1 401 Unauthorized"
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:27 [    INFO] server: request_received method=POST path=/api/auth/register client_ip=testclient
+2026-01-11 21:00:28 [    INFO] server: request_completed method=POST path=/api/auth/register status_code=500
+2026-01-11 21:00:28 [    INFO] httpx: HTTP Request: POST http://testserver/api/auth/register "HTTP/1.1 500 Internal Server Error"
+2026-01-11 21:00:28 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:28 [    INFO] server: request_received method=POST path=/api/auth/register client_ip=testclient
+2026-01-11 21:00:28 [    INFO] server: request_completed method=POST path=/api/auth/register status_code=500
+2026-01-11 21:00:28 [    INFO] httpx: HTTP Request: POST http://testserver/api/auth/register "HTTP/1.1 500 Internal Server Error"
+2026-01-11 21:00:28 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:28 [    INFO] server: request_received method=POST path=/api/auth/register client_ip=testclient
+2026-01-11 21:00:28 [    INFO] server: request_completed method=POST path=/api/auth/register status_code=500
+2026-01-11 21:00:28 [    INFO] httpx: HTTP Request: POST http://testserver/api/auth/register "HTTP/1.1 500 Internal Server Error"
+2026-01-11 21:00:28 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:28 [    INFO] server: request_received method=POST path=/api/auth/register client_ip=testclient
+2026-01-11 21:00:29 [    INFO] server: request_completed method=POST path=/api/auth/register status_code=500
+2026-01-11 21:00:29 [    INFO] httpx: HTTP Request: POST http://testserver/api/auth/register "HTTP/1.1 500 Internal Server Error"
+2026-01-11 21:00:29 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:29 [    INFO] server: request_received method=POST path=/api/auth/register client_ip=testclient
+2026-01-11 21:00:29 [    INFO] server: request_completed method=POST path=/api/auth/register status_code=500
+2026-01-11 21:00:29 [    INFO] httpx: HTTP Request: POST http://testserver/api/auth/register "HTTP/1.1 500 Internal Server Error"
+2026-01-11 21:00:29 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:29 [    INFO] server: request_received method=POST path=/api/auth/register client_ip=testclient
+2026-01-11 21:00:29 [    INFO] server: request_completed method=POST path=/api/auth/register status_code=500
+2026-01-11 21:00:29 [    INFO] httpx: HTTP Request: POST http://testserver/api/auth/register "HTTP/1.1 500 Internal Server Error"
+2026-01-11 21:00:29 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:29 [    INFO] server: request_received method=POST path=/api/auth/register client_ip=testclient
+2026-01-11 21:00:30 [    INFO] server: request_completed method=POST path=/api/auth/register status_code=500
+2026-01-11 21:00:30 [    INFO] httpx: HTTP Request: POST http://testserver/api/auth/register "HTTP/1.1 500 Internal Server Error"
+2026-01-11 21:00:30 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:30 [    INFO] server: request_received method=POST path=/api/auth/register client_ip=testclient
+2026-01-11 21:00:30 [    INFO] server: request_completed method=POST path=/api/auth/register status_code=500
+2026-01-11 21:00:30 [    INFO] httpx: HTTP Request: POST http://testserver/api/auth/register "HTTP/1.1 500 Internal Server Error"
+2026-01-11 21:00:30 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:30 [    INFO] server: request_received method=POST path=/api/auth/register client_ip=testclient
+2026-01-11 21:00:30 [    INFO] server: request_completed method=POST path=/api/auth/register status_code=500
+2026-01-11 21:00:30 [    INFO] httpx: HTTP Request: POST http://testserver/api/auth/register "HTTP/1.1 500 Internal Server Error"
+2026-01-11 21:00:30 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:30 [    INFO] server: request_received method=POST path=/api/auth/register client_ip=testclient
+2026-01-11 21:00:30 [    INFO] server: request_completed method=POST path=/api/auth/register status_code=500
+2026-01-11 21:00:30 [    INFO] httpx: HTTP Request: POST http://testserver/api/auth/register "HTTP/1.1 500 Internal Server Error"
+2026-01-11 21:00:30 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:30 [    INFO] server: request_received method=POST path=/api/auth/register client_ip=testclient
+2026-01-11 21:00:31 [    INFO] server: request_completed method=POST path=/api/auth/register status_code=500
+2026-01-11 21:00:31 [    INFO] httpx: HTTP Request: POST http://testserver/api/auth/register "HTTP/1.1 500 Internal Server Error"
+2026-01-11 21:00:31 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:31 [    INFO] server: request_received method=POST path=/api/auth/register client_ip=testclient
+2026-01-11 21:00:31 [    INFO] server: request_completed method=POST path=/api/auth/register status_code=500
+2026-01-11 21:00:31 [    INFO] httpx: HTTP Request: POST http://testserver/api/auth/register "HTTP/1.1 500 Internal Server Error"
+2026-01-11 21:00:31 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:31 [    INFO] server: request_received method=POST path=/api/auth/register client_ip=testclient
+2026-01-11 21:00:31 [    INFO] server: request_completed method=POST path=/api/auth/register status_code=500
+2026-01-11 21:00:31 [    INFO] httpx: HTTP Request: POST http://testserver/api/auth/register "HTTP/1.1 500 Internal Server Error"
+2026-01-11 21:00:31 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:31 [    INFO] server: request_received method=POST path=/api/auth/register client_ip=testclient
+2026-01-11 21:00:32 [    INFO] server: request_completed method=POST path=/api/auth/register status_code=500
+2026-01-11 21:00:32 [    INFO] httpx: HTTP Request: POST http://testserver/api/auth/register "HTTP/1.1 500 Internal Server Error"
+2026-01-11 21:00:32 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:32 [    INFO] server: request_received method=POST path=/api/auth/register client_ip=testclient
+2026-01-11 21:00:32 [    INFO] server: request_completed method=POST path=/api/auth/register status_code=500
+2026-01-11 21:00:32 [    INFO] httpx: HTTP Request: POST http://testserver/api/auth/register "HTTP/1.1 500 Internal Server Error"
+2026-01-11 21:00:32 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:32 [    INFO] server: request_received method=POST path=/api/auth/register client_ip=testclient
+2026-01-11 21:00:32 [    INFO] server: request_completed method=POST path=/api/auth/register status_code=500
+2026-01-11 21:00:32 [    INFO] httpx: HTTP Request: POST http://testserver/api/auth/register "HTTP/1.1 500 Internal Server Error"
+2026-01-11 21:00:32 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:32 [    INFO] server: request_received method=POST path=/api/auth/register client_ip=testclient
+2026-01-11 21:00:33 [    INFO] server: request_completed method=POST path=/api/auth/register status_code=500
+2026-01-11 21:00:33 [    INFO] httpx: HTTP Request: POST http://testserver/api/auth/register "HTTP/1.1 500 Internal Server Error"
+2026-01-11 21:00:33 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:33 [    INFO] server: request_received method=POST path=/api/auth/register client_ip=testclient
+2026-01-11 21:00:33 [    INFO] server: request_completed method=POST path=/api/auth/register status_code=500
+2026-01-11 21:00:33 [    INFO] httpx: HTTP Request: POST http://testserver/api/auth/register "HTTP/1.1 500 Internal Server Error"
+2026-01-11 21:00:33 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:33 [    INFO] server: request_received method=POST path=/api/auth/register client_ip=testclient
+2026-01-11 21:00:33 [    INFO] server: request_completed method=POST path=/api/auth/register status_code=500
+2026-01-11 21:00:33 [    INFO] httpx: HTTP Request: POST http://testserver/api/auth/register "HTTP/1.1 500 Internal Server Error"
+2026-01-11 21:00:33 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:33 [    INFO] server: request_received method=POST path=/api/auth/register client_ip=testclient
+2026-01-11 21:00:33 [    INFO] server: request_completed method=POST path=/api/auth/register status_code=500
+2026-01-11 21:00:33 [    INFO] httpx: HTTP Request: POST http://testserver/api/auth/register "HTTP/1.1 500 Internal Server Error"
+2026-01-11 21:00:33 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:33 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:33 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:33 [    INFO] server: request_received method=GET path=/api/links/1 client_ip=testclient
+2026-01-11 21:00:33 [    INFO] server: request_completed method=GET path=/api/links/1 status_code=405
+2026-01-11 21:00:33 [    INFO] httpx: HTTP Request: GET http://testserver/api/links/1 "HTTP/1.1 405 Method Not Allowed"
+2026-01-11 21:00:33 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:33 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:33 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:33 [    INFO] server: request_received method=GET path=/api/profile/admin client_ip=testclient
+2026-01-11 21:00:33 [    INFO] server: request_completed method=GET path=/api/profile/admin status_code=404
+2026-01-11 21:00:33 [    INFO] httpx: HTTP Request: GET http://testserver/api/profile/admin "HTTP/1.1 404 Not Found"
+2026-01-11 21:00:33 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:33 [    INFO] server: request_received method=GET path=/api/profile/administrator client_ip=testclient
+2026-01-11 21:00:33 [    INFO] server: request_completed method=GET path=/api/profile/administrator status_code=404
+2026-01-11 21:00:33 [    INFO] httpx: HTTP Request: GET http://testserver/api/profile/administrator "HTTP/1.1 404 Not Found"
+2026-01-11 21:00:33 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:33 [    INFO] server: request_received method=GET path=/api/profile/root client_ip=testclient
+2026-01-11 21:00:34 [    INFO] server: request_completed method=GET path=/api/profile/root status_code=404
+2026-01-11 21:00:34 [    INFO] httpx: HTTP Request: GET http://testserver/api/profile/root "HTTP/1.1 404 Not Found"
+2026-01-11 21:00:34 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:34 [    INFO] server: request_received method=GET path=/api/profile/test client_ip=testclient
+2026-01-11 21:00:34 [    INFO] server: request_completed method=GET path=/api/profile/test status_code=404
+2026-01-11 21:00:34 [    INFO] httpx: HTTP Request: GET http://testserver/api/profile/test "HTTP/1.1 404 Not Found"
+2026-01-11 21:00:34 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:34 [    INFO] server: request_received method=GET path=/api/profile/user client_ip=testclient
+2026-01-11 21:00:34 [    INFO] server: request_completed method=GET path=/api/profile/user status_code=404
+2026-01-11 21:00:34 [    INFO] httpx: HTTP Request: GET http://testserver/api/profile/user "HTTP/1.1 404 Not Found"
+2026-01-11 21:00:34 [   DEBUG] asyncio: Using selector: KqueueSelector
+2026-01-11 21:00:34 [    INFO] server: request_received method=GET path=/api/profile/guest client_ip=testclient
+2026-01-11 21:00:34 [    INFO] server: request_completed method=GET path=/api/profile/guest status_code=404
+2026-01-11 21:00:34 [    INFO] httpx: HTTP Request: GET http://testserver/api/profile/guest "HTTP/1.1 404 Not Found"
+2026-01-11 21:00:34 [   DEBUG] asyncio: Using selector: KqueueSelector

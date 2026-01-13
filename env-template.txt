@@ -1,0 +1,155 @@
+# =============================================================================
+# OdinRing Environment Variables Template
+# =============================================================================
+# Copy this file to .env and update with your actual values
+# NEVER commit .env to version control!
+
+# =============================================================================
+# REQUIRED CONFIGURATION
+# =============================================================================
+
+# Firebase Configuration (REQUIRED)
+FIREBASE_PROJECT_ID=your-firebase-project-id
+FIREBASE_SERVICE_ACCOUNT_PATH=firebase-service-account.json
+
+# JWT Secret (REQUIRED - Must be at least 32 characters)
+JWT_SECRET=your-super-secure-jwt-secret-key-change-this-in-production-minimum-32-characters-required
+
+# =============================================================================
+# ENVIRONMENT SETTINGS
+# =============================================================================
+
+# Environment: development, staging, production, test
+ENV=development
+
+# Logging Level: DEBUG, INFO, WARNING, ERROR, CRITICAL
+LOG_LEVEL=INFO
+
+# =============================================================================
+# CORS CONFIGURATION
+# =============================================================================
+
+# Comma-separated list of allowed origins
+CORS_ORIGINS=http://localhost:3000,http://localhost:8000
+
+# Production CORS (uncomment for production):
+# CORS_ORIGINS=https://odinring.com,https://www.odinring.com,https://api.odinring.com
+
+# =============================================================================
+# AUTHENTICATION & SECURITY (Phase 1)
+# =============================================================================
+
+# JWT Legacy (for backward compatibility)
+JWT_EXPIRATION=168
+
+# Access Token (short-lived)
+ACCESS_TOKEN_EXPIRY_MINUTES=15
+
+# Refresh Token (long-lived)
+REFRESH_TOKEN_EXPIRY_DAYS=7
+
+# Rate Limiting
+RATE_LIMIT_ENABLED=true
+RATE_LIMIT_PER_MINUTE=60
+
+# =============================================================================
+# MONITORING & ERROR TRACKING
+# =============================================================================
+
+# Sentry DSN (optional - for error tracking)
+# Get from: https://sentry.io/settings/projects/your-project/keys/
+# SENTRY_DSN=https://your-sentry-dsn@sentry.io/project-id
+
+# =============================================================================
+# IDENTITY & SUBSCRIPTIONS (Phase 2)
+# =============================================================================
+
+# Subscription Trial Period (days)
+SUBSCRIPTION_TRIAL_DAYS=14
+
+# Grace Period for Expired Subscriptions (days)
+SUBSCRIPTION_GRACE_PERIOD_DAYS=3
+
+# Default Max Organization Members
+MAX_ORG_MEMBERS_DEFAULT=10
+
+# =============================================================================
+# PAYMENT PROCESSING (Stripe - Phase 2)
+# =============================================================================
+
+# Stripe API Keys (get from: https://dashboard.stripe.com/apikeys)
+# STRIPE_SECRET_KEY=sk_test_your_stripe_secret_key
+# STRIPE_PUBLISHABLE_KEY=pk_test_your_stripe_publishable_key
+
+# Stripe Webhook Secret (get from: https://dashboard.stripe.com/webhooks)
+# STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret
+
+# =============================================================================
+# FRONTEND ENVIRONMENT VARIABLES
+# =============================================================================
+
+# Backend API URL
+REACT_APP_BACKEND_URL=http://localhost:8000
+
+# Production Backend (uncomment for production):
+# REACT_APP_BACKEND_URL=https://api.odinring.com
+
+# Firebase Client Configuration (get from Firebase Console)
+REACT_APP_FIREBASE_API_KEY=your-firebase-api-key
+REACT_APP_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+REACT_APP_FIREBASE_PROJECT_ID=your-firebase-project-id
+REACT_APP_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
+REACT_APP_FIREBASE_MESSAGING_SENDER_ID=your-sender-id
+REACT_APP_FIREBASE_APP_ID=your-app-id
+
+# =============================================================================
+# DEPLOYMENT CONFIGURATION
+# =============================================================================
+
+# Vercel Deployment
+# The backend is deployed as serverless functions at /api/* endpoints
+# Frontend should call https://your-project.vercel.app/api/auth/register etc.
+
+# Render Deployment
+# Backend deployed as a container at https://your-service.onrender.com
+# Frontend calls https://your-service.onrender.com/api/* endpoints
+
+# =============================================================================
+# SECURITY NOTES
+# =============================================================================
+#
+# 1. JWT_SECRET must be at least 32 characters for security
+# 2. Use different JWT_SECRET for each environment
+# 3. Never commit .env file to git
+# 4. Rotate JWT_SECRET periodically in production
+# 5. Use strong, randomly generated secrets (openssl rand -base64 32)
+# 6. Set CORS_ORIGINS to your actual domains in production
+# 7. Enable SENTRY_DSN in production for error tracking
+# 8. Use Stripe test keys in development, live keys in production
+#
+# =============================================================================
+
+# =============================================================================
+# DEVELOPMENT QUICK START
+# =============================================================================
+#
+# 1. Copy this file:
+#    cp env-template.txt .env
+#
+# 2. Update FIREBASE_PROJECT_ID with your Firebase project ID
+#
+# 3. Download Firebase service account JSON:
+#    - Go to Firebase Console > Project Settings > Service Accounts
+#    - Click "Generate new private key"
+#    - Save as firebase-service-account.json in project root
+#
+# 4. Generate a secure JWT_SECRET:
+#    openssl rand -base64 32
+#
+# 5. Update REACT_APP_FIREBASE_* variables from Firebase Console
+#
+# 6. Start development:
+#    - Backend: cd backend && uvicorn server:app --reload
+#    - Frontend: cd frontend && npm start
+#
+# =============================================================================

@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Link Visibility Update</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 { margin-top: 0; color: #333; }
+        button {
+            background: #000;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+        }
+        button:hover { background: #333; }
+        .success { color: #16a34a; background: #dcfce7; padding: 12px; border-radius: 6px; margin-top: 12px; }
+        .error { color: #dc2626; background: #fee2e2; padding: 12px; border-radius: 6px; margin-top: 12px; }
+        .info { color: #0284c7; background: #e0f2fe; padding: 12px; border-radius: 6px; margin-top: 12px; }
+        pre { background: #f8fafc; padding: 16px; border-radius: 6px; overflow-x: auto; }
+        .link-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 12px;
+            margin: 8px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .badge.active { background: #dcfce7; color: #16a34a; }
+        .badge.hidden { background: #fee2e2; color: #dc2626; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>🔧 Link Visibility Toggle Test</h1>
+        <p>This page will help diagnose the "Failed to update link visibility" error.</p>
+    </div>
+
+    <div class="card">
+        <h2>Step 1: Check Authentication</h2>
+        <button onclick="checkAuth()">Check Token</button>
+        <div id="authResult"></div>
+    </div>
+
+    <div class="card">
+        <h2>Step 2: Load Your Links</h2>
+        <button onclick="loadLinks()">Load Links</button>
+        <div id="linksResult"></div>
+    </div>
+
+    <div class="card">
+        <h2>Step 3: Test Update</h2>
+        <p>After loading links, click on any link below to toggle its visibility.</p>
+        <div id="linksList"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000/api';
+        let currentLinks = [];
+
+        function getToken() {
+            return localStorage.getItem('token');
+        }
+
+        async function checkAuth() {
+            const token = getToken();
+            const resultDiv = document.getElementById('authResult');
+            
+            if (!token) {
+                resultDiv.innerHTML = '<div class="error">❌ No token found in localStorage. Please sign in to the dashboard first!</div>';
+                return;
+            }
+
+            try {
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                const expiresAt = new Date(payload.exp * 1000);
+                const isExpired = expiresAt < new Date();
+
+                resultDiv.innerHTML = `
+                    <div class="${isExpired ? 'error' : 'success'}">
+                        <h3>${isExpired ? '❌ Token Expired' : '✅ Token Valid'}</h3>
+                        <pre>${JSON.stringify(payload, null, 2)}</pre>
+                        <p><strong>Expires:</strong> ${expiresAt.toLocaleString()}</p>
+                        ${isExpired ? '<p><strong>Action:</strong> Sign out and sign in again to get a new token!</p>' : ''}
+                    </div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Invalid token format: ${error.message}</div>`;
+            }
+        }
+
+        async function loadLinks() {
+            const token = getToken();
+            const resultDiv = document.getElementById('linksResult');
+            const listDiv = document.getElementById('linksList');
+
+            if (!token) {
+                resultDiv.innerHTML = '<div class="error">❌ No token found. Check authentication first!</div>';
+                return;
+            }
+
+            resultDiv.innerHTML = '<div class="info">⏳ Loading links...</div>';
+            listDiv.innerHTML = '';
+
+            try {
+                const response = await fetch(`${API_BASE}/links`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(`API returned ${response.status}: ${errorData.detail || response.statusText}`);
+                }
+
+                currentLinks = await response.json();
+                
+                resultDiv.innerHTML = `
+                    <div class="success">
+                        ✅ Loaded ${currentLinks.length} links successfully!
+                    </div>
+                `;
+
+                // Display links
+                if (currentLinks.length === 0) {
+                    listDiv.innerHTML = '<div class="info">No links found. Add some links in the dashboard first!</div>';
+                } else {
+                    listDiv.innerHTML = currentLinks.map(link => `
+                        <div class="link-card">
+                            <div>
+                                <strong>${link.title}</strong>
+                                <span class="badge ${link.active ? 'active' : 'hidden'}">
+                                    ${link.active ? 'Active' : 'Hidden'}
+                                </span>
+                                <br>
+                                <small>${link.url}</small>
+                            </div>
+                            <button onclick="toggleLink('${link.id}', ${link.active})">
+                                Toggle to ${link.active ? 'Hidden' : 'Active'}
+                            </button>
+                        </div>
+                    `).join('');
+                }
+
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <h3>❌ Failed to load links</h3>
+                        <p><strong>Error:</strong> ${error.message}</p>
+                        <p><strong>Possible causes:</strong></p>
+                        <ul>
+                            <li>Backend not running on port 8000</li>
+                            <li>Token expired (check Step 1)</li>
+                            <li>CORS issue</li>
+                            <li>Network error</li>
+                        </ul>
+                    </div>
+                `;
+                console.error('Load links error:', error);
+            }
+        }
+
+        async function toggleLink(linkId, currentActive) {
+            const token = getToken();
+            const listDiv = document.getElementById('linksList');
+
+            if (!token) {
+                alert('No token found. Check authentication first!');
+                return;
+            }
+
+            const resultDiv = document.createElement('div');
+            resultDiv.className = 'info';
+            resultDiv.innerHTML = `⏳ Updating link ${linkId}...`;
+            listDiv.prepend(resultDiv);
+
+            try {
+                const response = await fetch(`${API_BASE}/links/${linkId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ active: !currentActive })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(`API returned ${response.status}: ${errorData.detail || response.statusText}`);
+                }
+
+                const updatedLink = await response.json();
+                
+                resultDiv.className = 'success';
+                resultDiv.innerHTML = `
+                    <h3>✅ Successfully updated!</h3>
+                    <p><strong>${updatedLink.title}</strong> is now <strong>${updatedLink.active ? 'Active' : 'Hidden'}</strong></p>
+                    <button onclick="loadLinks()">Refresh Links</button>
+                `;
+
+                // Update the current links array
+                currentLinks = currentLinks.map(link => 
+                    link.id === linkId ? updatedLink : link
+                );
+
+                // Reload links after a short delay
+                setTimeout(loadLinks, 1000);
+
+            } catch (error) {
+                resultDiv.className = 'error';
+                resultDiv.innerHTML = `
+                    <h3>❌ Failed to update link visibility</h3>
+                    <p><strong>Error:</strong> ${error.message}</p>
+                    <p><strong>This is the exact error your dashboard is experiencing!</strong></p>
+                    <details>
+                        <summary>Possible causes and solutions:</summary>
+                        <ul>
+                            <li><strong>404 Link not found:</strong> Link doesn't belong to your account</li>
+                            <li><strong>401 Unauthorized:</strong> Token expired - sign out and sign in again</li>
+                            <li><strong>403 Forbidden:</strong> Permission issue - check backend logs</li>
+                            <li><strong>500 Server error:</strong> Backend crash - check terminal logs</li>
+                        </ul>
+                    </details>
+                `;
+                console.error('Toggle link error:', error);
+            }
+        }
+
+        // Auto-check auth on page load
+        window.addEventListener('load', () => {
+            const token = getToken();
+            if (token) {
+                checkAuth();
+            } else {
+                document.getElementById('authResult').innerHTML = 
+                    '<div class="error">❌ Not authenticated. Please <a href="http://localhost:3000/dashboard">sign in to the dashboard</a> first, then return to this page.</div>';
+            }
+        });
+    </script>
+</body>
+</html>
+
+
+
+
+
+
+
+

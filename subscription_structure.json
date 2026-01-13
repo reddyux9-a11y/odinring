@@ -1,0 +1,496 @@
+{
+  "subscription_structure": {
+    "overview": {
+      "description": "OdinRing subscription system with three account types and subscription plans",
+      "phase": "Phase 2 - Identity & Subscriptions",
+      "status": "Active"
+    },
+    "account_types": {
+      "personal": {
+        "id": "personal",
+        "name": "Personal Account",
+        "description": "Individual user account",
+        "subscription_required": false,
+        "default_plan": "personal"
+      },
+      "business_solo": {
+        "id": "business_solo",
+        "name": "Solo Business",
+        "description": "Single-person business or micro enterprise",
+        "subscription_required": true,
+        "default_plan": "solo",
+        "trial_days": 14
+      },
+      "organization": {
+        "id": "organization",
+        "name": "Organization",
+        "description": "Multi-department organization with multiple members",
+        "subscription_required": true,
+        "default_plan": "org",
+        "trial_days": 14,
+        "max_members": 10,
+        "max_departments": 5
+      }
+    },
+    "subscription_plans": {
+      "personal": {
+        "id": "personal",
+        "name": "Personal Plan",
+        "description": "Free tier for individual users",
+        "price": {
+          "monthly": 0,
+          "yearly": 0,
+          "currency": "USD"
+        },
+        "features": {
+          "links": "unlimited",
+          "items": "unlimited",
+          "customization": "basic",
+          "analytics": "basic",
+          "custom_branding": false,
+          "qr_codes": false,
+          "trial": false
+        },
+        "account_types": ["personal"]
+      },
+      "solo": {
+        "id": "solo",
+        "name": "Solo Business Plan",
+        "description": "For solo businesses and micro enterprises",
+        "price": {
+          "monthly": "not_set",
+          "yearly": "not_set",
+          "currency": "USD"
+        },
+        "features": {
+          "links": "unlimited",
+          "items": "unlimited",
+          "customization": "advanced",
+          "analytics": "advanced",
+          "custom_branding": true,
+          "qr_codes": true,
+          "trial": true,
+          "trial_days": 14
+        },
+        "account_types": ["business_solo"]
+      },
+      "org": {
+        "id": "org",
+        "name": "Organization Plan",
+        "description": "For organizations with multiple members and departments",
+        "price": {
+          "monthly": "not_set",
+          "yearly": "not_set",
+          "currency": "USD"
+        },
+        "features": {
+          "links": "unlimited",
+          "items": "unlimited",
+          "customization": "advanced",
+          "analytics": "advanced",
+          "custom_branding": true,
+          "qr_codes": true,
+          "team_collaboration": true,
+          "departments": true,
+          "max_members": 10,
+          "max_departments": 5,
+          "trial": true,
+          "trial_days": 14
+        },
+        "account_types": ["organization"]
+      }
+    },
+    "subscription_statuses": {
+      "none": {
+        "id": "none",
+        "name": "No Subscription",
+        "description": "No active subscription",
+        "access_allowed": true,
+        "dashboard_access": true,
+        "routing": "/dashboard"
+      },
+      "trial": {
+        "id": "trial",
+        "name": "Trial",
+        "description": "Active trial period",
+        "access_allowed": true,
+        "dashboard_access": true,
+        "routing": "/dashboard",
+        "default_trial_days": 14,
+        "grace_period_days": 3
+      },
+      "active": {
+        "id": "active",
+        "name": "Active",
+        "description": "Active paid subscription",
+        "access_allowed": true,
+        "dashboard_access": true,
+        "routing": "/dashboard",
+        "billing_cycles": ["monthly", "yearly"]
+      },
+      "expired": {
+        "id": "expired",
+        "name": "Expired",
+        "description": "Subscription has expired",
+        "access_allowed": false,
+        "dashboard_access": false,
+        "routing": "/billing",
+        "grace_period_days": 3
+      }
+    },
+    "subscription_model": {
+      "fields": {
+        "id": {
+          "type": "string",
+          "description": "Unique subscription ID (UUID)",
+          "required": true
+        },
+        "subscriber_reference": {
+          "type": "object",
+          "description": "One of these will be set based on account type",
+          "properties": {
+            "user_id": {
+              "type": "string",
+              "description": "For personal accounts",
+              "required": false
+            },
+            "business_id": {
+              "type": "string",
+              "description": "For business_solo accounts",
+              "required": false
+            },
+            "organization_id": {
+              "type": "string",
+              "description": "For organization accounts",
+              "required": false
+            }
+          }
+        },
+        "plan": {
+          "type": "string",
+          "enum": ["personal", "solo", "org"],
+          "default": "personal",
+          "required": true
+        },
+        "status": {
+          "type": "string",
+          "enum": ["active", "trial", "expired", "none"],
+          "default": "none",
+          "required": true
+        },
+        "billing": {
+          "type": "object",
+          "properties": {
+            "billing_cycle": {
+              "type": "string",
+              "enum": ["monthly", "yearly"],
+              "default": "monthly"
+            },
+            "amount": {
+              "type": "number",
+              "default": 0.0
+            },
+            "currency": {
+              "type": "string",
+              "default": "USD"
+            }
+          }
+        },
+        "dates": {
+          "type": "object",
+          "properties": {
+            "trial_start_date": {
+              "type": "datetime",
+              "description": "When trial started",
+              "required": false
+            },
+            "trial_end_date": {
+              "type": "datetime",
+              "description": "When trial ends",
+              "required": false
+            },
+            "current_period_start": {
+              "type": "datetime",
+              "description": "Current billing period start",
+              "required": false
+            },
+            "current_period_end": {
+              "type": "datetime",
+              "description": "Current billing period end",
+              "required": false
+            },
+            "cancelled_at": {
+              "type": "datetime",
+              "description": "When subscription was cancelled",
+              "required": false
+            }
+          }
+        },
+        "payment_integration": {
+          "type": "object",
+          "properties": {
+            "stripe_customer_id": {
+              "type": "string",
+              "description": "Stripe customer ID",
+              "required": false
+            },
+            "stripe_subscription_id": {
+              "type": "string",
+              "description": "Stripe subscription ID",
+              "required": false
+            }
+          }
+        },
+        "metadata": {
+          "type": "object",
+          "properties": {
+            "created_at": {
+              "type": "datetime",
+              "description": "When subscription was created"
+            },
+            "updated_at": {
+              "type": "datetime",
+              "description": "Last update timestamp"
+            }
+          }
+        }
+      }
+    },
+    "subscription_flow": {
+      "onboarding": {
+        "step_1": {
+          "name": "Account Type Selection",
+          "description": "User selects account type (personal, business_solo, organization)",
+          "endpoint": "POST /onboarding/select-account-type",
+          "creates": {
+            "personal": {
+              "subscription": {
+                "plan": "personal",
+                "status": "none",
+                "trial_days": 0
+              }
+            },
+            "business_solo": {
+              "business": "Creates Business entity",
+              "subscription": {
+                "plan": "solo",
+                "status": "trial",
+                "trial_days": 14
+              }
+            },
+            "organization": {
+              "organization": "Creates Organization entity",
+              "subscription": {
+                "plan": "org",
+                "status": "trial",
+                "trial_days": 14
+              }
+            }
+          }
+        }
+      },
+      "identity_resolution": {
+        "endpoint": "GET /me/context",
+        "description": "Resolves user's account type, subscription status, and routing decision",
+        "returns": {
+          "authenticated": "boolean",
+          "account_type": "personal | business_solo | organization",
+          "subscription": {
+            "status": "active | trial | expired | none",
+            "plan": "personal | solo | org"
+          },
+          "next_route": "/dashboard | /onboarding | /billing",
+          "needs_onboarding": "boolean",
+          "needs_billing": "boolean"
+        }
+      },
+      "subscription_lifecycle": {
+        "creation": {
+          "trigger": "During onboarding",
+          "service": "SubscriptionService.create_subscription()",
+          "process": [
+            "1. Calculate trial dates if trial_days > 0",
+            "2. Set status to 'trial' if trial, otherwise 'none'",
+            "3. Create Subscription object",
+            "4. Save to Firestore 'subscriptions' collection"
+          ]
+        },
+        "activation": {
+          "trigger": "After successful payment",
+          "service": "SubscriptionService.activate_subscription()",
+          "process": [
+            "1. Set status to 'active'",
+            "2. Set current_period_start to now",
+            "3. Set current_period_end based on billing_cycle",
+            "4. Update Firestore"
+          ]
+        },
+        "expiration_check": {
+          "trigger": "Periodic cron job (daily recommended)",
+          "service": "SubscriptionService.check_and_update_expired_subscriptions()",
+          "process": [
+            "1. Find active subscriptions past current_period_end",
+            "2. Find trial subscriptions past trial_end_date",
+            "3. Update status to 'expired'",
+            "4. Update Firestore"
+          ]
+        },
+        "cancellation": {
+          "trigger": "User cancels or payment fails",
+          "service": "SubscriptionService.cancel_subscription()",
+          "process": [
+            "1. Set status to 'expired'",
+            "2. Set cancelled_at timestamp",
+            "3. Update Firestore"
+          ]
+        }
+      },
+      "access_control": {
+        "dashboard_access": {
+          "personal": {
+            "none": "allowed",
+            "trial": "allowed",
+            "active": "allowed",
+            "expired": "allowed (free tier)"
+          },
+          "business_solo": {
+            "none": "blocked",
+            "trial": "allowed",
+            "active": "allowed",
+            "expired": "blocked -> redirect to /billing"
+          },
+          "organization": {
+            "none": "blocked",
+            "trial": "allowed",
+            "active": "allowed",
+            "expired": {
+              "owner": "allowed (to renew)",
+              "members": "blocked -> redirect to /billing"
+            }
+          }
+        },
+        "middleware": {
+          "name": "ContextGuard",
+          "description": "Enforces subscription requirements for dashboard access",
+          "checks": [
+            "1. User authentication",
+            "2. Subscription status",
+            "3. Account type",
+            "4. Organization membership (if applicable)"
+          ],
+          "responses": {
+            "402": "Subscription expired",
+            "403": "Access forbidden"
+          }
+        }
+      }
+    },
+    "configuration": {
+      "trial_settings": {
+        "default_trial_days": 14,
+        "grace_period_days": 3,
+        "config_file": "backend/config.py",
+        "variables": [
+          "SUBSCRIPTION_TRIAL_DAYS",
+          "SUBSCRIPTION_GRACE_PERIOD_DAYS"
+        ]
+      },
+      "organization_limits": {
+        "max_members_default": 10,
+        "max_departments_default": 5,
+        "config_file": "backend/config.py",
+        "variable": "MAX_ORG_MEMBERS_DEFAULT"
+      },
+      "payment_integration": {
+        "provider": "Stripe",
+        "status": "configured but not fully implemented",
+        "config_file": "backend/config.py",
+        "variable": "STRIPE_SECRET_KEY"
+      }
+    },
+    "api_endpoints": {
+      "identity": {
+        "GET /me/context": {
+          "description": "Get identity context with subscription status",
+          "returns": "IdentityContext object"
+        }
+      },
+      "subscription": {
+        "GET /subscriptions/{id}": {
+          "description": "Get subscription by ID",
+          "status": "not_implemented"
+        },
+        "POST /subscriptions": {
+          "description": "Create subscription",
+          "status": "internal_only (via onboarding)"
+        },
+        "PUT /subscriptions/{id}/activate": {
+          "description": "Activate subscription",
+          "status": "internal_only"
+        },
+        "PUT /subscriptions/{id}/cancel": {
+          "description": "Cancel subscription",
+          "status": "internal_only"
+        }
+      },
+      "onboarding": {
+        "POST /onboarding/select-account-type": {
+          "description": "Select account type and create subscription",
+          "creates": "Account entity + Subscription"
+        }
+      }
+    },
+    "frontend_integration": {
+      "hook": "useIdentityContext",
+      "file": "frontend/src/hooks/useIdentityContext.js",
+      "functionality": [
+        "Fetches identity context from /me/context",
+        "Provides subscription status",
+        "Determines routing",
+        "Checks if billing is needed"
+      ],
+      "components": {
+        "SubscriptionBadge": {
+          "file": "frontend/src/components/SubscriptionBadge.jsx",
+          "description": "Displays subscription status badge"
+        },
+        "Dashboard": {
+          "file": "frontend/src/pages/Dashboard.jsx",
+          "description": "Checks subscription status and redirects if expired"
+        }
+      }
+    },
+    "data_storage": {
+      "database": "Firestore",
+      "collection": "subscriptions",
+      "indexes": [
+        "owner_id + owner_type",
+        "status + created_at"
+      ],
+      "relationships": {
+        "personal": "subscriptions.user_id -> users.id",
+        "business_solo": "subscriptions.business_id -> businesses.id",
+        "organization": "subscriptions.organization_id -> organizations.id"
+      }
+    },
+    "current_limitations": {
+      "payment_processing": "Stripe integration configured but not fully implemented",
+      "pricing": "Plan prices not set in system",
+      "billing_page": "Billing page route exists but UI not fully implemented",
+      "subscription_management": "Read-only operations available, write operations are internal only"
+    },
+    "future_enhancements": {
+      "planned": [
+        "Full Stripe payment integration",
+        "Subscription upgrade/downgrade flows",
+        "Billing history",
+        "Invoice generation",
+        "Payment method management",
+        "Subscription renewal automation",
+        "Usage-based billing",
+        "Plan comparison page"
+      ]
+    }
+  }
+}
+

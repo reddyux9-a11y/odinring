@@ -1,0 +1,20 @@
+# Render deployment configuration for OdinRing Backend
+# This file tells Render how to build and run your FastAPI application
+# Updated for Firebase/Firestore
+
+services:
+  - type: web
+    name: odinring-backend
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn server:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: FIREBASE_PROJECT_ID
+        sync: false
+      - key: FIREBASE_SERVICE_ACCOUNT_PATH
+        value: firebase-service-account.json
+      - key: JWT_SECRET
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false

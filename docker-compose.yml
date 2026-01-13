@@ -1,0 +1,146 @@
+# =============================================================================
+# OdinRing Docker Compose Configuration
+# =============================================================================
+# Local development environment with hot-reload
+
+version: '3.8'
+
+services:
+  # ===========================================================================
+  # Backend Service (FastAPI)
+  # ===========================================================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: odinring-backend
+    ports:
+      - "8000:8000"
+    environment:
+      # Environment
+      - ENV=development
+      - LOG_LEVEL=DEBUG
+      
+      # Firebase (from .env)
+      - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}
+      - FIREBASE_SERVICE_ACCOUNT_PATH=/app/firebase-service-account.json
+      
+      # JWT
+      - JWT_SECRET=${JWT_SECRET}
+      - ACCESS_TOKEN_EXPIRY_MINUTES=15
+      - REFRESH_TOKEN_EXPIRY_DAYS=7
+      
+      # CORS
+      - CORS_ORIGINS=http://localhost:3000,http://localhost:8000
+      
+      # Monitoring
+      - SENTRY_DSN=${SENTRY_DSN:-}
+      
+      # Rate Limiting
+      - RATE_LIMIT_ENABLED=true
+      - RATE_LIMIT_PER_MINUTE=100
+      
+      # Phase 2
+      - SUBSCRIPTION_TRIAL_DAYS=14
+      - SUBSCRIPTION_GRACE_PERIOD_DAYS=3
+      - MAX_ORG_MEMBERS_DEFAULT=10
+    volumes:
+      # Mount source code for hot-reload
+      - ./backend:/app:ro
+      # Mount Firebase service account (read-only)
+      - ./backend/firebase-service-account.json:/app/firebase-service-account.json:ro
+    command: >
+      uvicorn server:app 
+      --host 0.0.0.0 
+      --port 8000 
+      --reload 
+      --log-level debug
+    networks:
+      - odinring-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+
+  # ===========================================================================
+  # Frontend Service (React)
+  # ===========================================================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: development
+    container_name: odinring-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      # Backend API
+      - REACT_APP_BACKEND_URL=http://localhost:8000
+      
+      # Firebase Client
+      - REACT_APP_FIREBASE_API_KEY=${REACT_APP_FIREBASE_API_KEY}
+      - REACT_APP_FIREBASE_AUTH_DOMAIN=${REACT_APP_FIREBASE_AUTH_DOMAIN}
+      - REACT_APP_FIREBASE_PROJECT_ID=${REACT_APP_FIREBASE_PROJECT_ID}
+      - REACT_APP_FIREBASE_STORAGE_BUCKET=${REACT_APP_FIREBASE_STORAGE_BUCKET}
+      - REACT_APP_FIREBASE_MESSAGING_SENDER_ID=${REACT_APP_FIREBASE_MESSAGING_SENDER_ID}
+      - REACT_APP_FIREBASE_APP_ID=${REACT_APP_FIREBASE_APP_ID}
+      
+      # Development
+      - CHOKIDAR_USEPOLLING=true
+      - WDS_SOCKET_PORT=0
+    volumes:
+      # Mount source code for hot-reload
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+      # Prevent node_modules from being mounted
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - odinring-network
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  odinring-network:
+    driver: bridge
+
+# =============================================================================
+# Usage Instructions
+# =============================================================================
+#
+# Start all services:
+#   docker-compose up -d
+#
+# View logs:
+#   docker-compose logs -f
+#   docker-compose logs -f backend
+#   docker-compose logs -f frontend
+#
+# Stop all services:
+#   docker-compose down
+#
+# Rebuild and start:
+#   docker-compose up -d --build
+#
+# Run backend tests:
+#   docker-compose exec backend pytest
+#
+# Access backend shell:
+#   docker-compose exec backend sh
+#
+# Access frontend shell:
+#   docker-compose exec frontend sh
+#
+# Clean up everything (including volumes):
+#   docker-compose down -v
+#
+# =============================================================================
+

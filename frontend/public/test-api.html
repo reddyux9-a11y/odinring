@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OdinRing API Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        h1 {
+            color: #667eea;
+            margin-top: 0;
+        }
+        .section {
+            margin: 30px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        .section h2 {
+            margin-top: 0;
+            color: #333;
+        }
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            margin: 5px;
+            transition: transform 0.2s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        .success {
+            background: #28a745;
+            color: white;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 10px 0;
+        }
+        .error {
+            background: #dc3545;
+            color: white;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 10px 0;
+        }
+        .info {
+            background: #17a2b8;
+            color: white;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 10px 0;
+        }
+        .warning {
+            background: #ffc107;
+            color: #333;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 10px 0;
+        }
+        pre {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .link-card {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            transition: all 0.3s;
+        }
+        .link-card:hover {
+            border-color: #667eea;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
+        }
+        .link-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+        }
+        .link-url {
+            color: #667eea;
+            text-decoration: none;
+            word-break: break-all;
+        }
+        .link-meta {
+            display: flex;
+            gap: 15px;
+            margin-top: 10px;
+            font-size: 14px;
+            color: #666;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .badge-active {
+            background: #d4edda;
+            color: #155724;
+        }
+        .badge-inactive {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 36px;
+            font-weight: 700;
+            margin: 10px 0;
+        }
+        .stat-label {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 OdinRing API Test - Link Retrieval</h1>
+        
+        <div class="section">
+            <h2>📋 Step 1: Check JWT Token</h2>
+            <button onclick="checkToken()">Check Token in localStorage</button>
+            <div id="tokenResult"></div>
+        </div>
+
+        <div class="section">
+            <h2>🔌 Step 2: Test API Connection</h2>
+            <button onclick="testHealthEndpoint()">Test Backend Health</button>
+            <div id="healthResult"></div>
+        </div>
+
+        <div class="section">
+            <h2>🔗 Step 3: Fetch Links from API</h2>
+            <button onclick="fetchLinks()">Fetch My Links</button>
+            <button onclick="clearCache()">Clear Cache & Reload</button>
+            <div id="linksResult"></div>
+        </div>
+
+        <div class="section">
+            <h2>🎯 Quick Actions</h2>
+            <button onclick="signOut()">Sign Out & Clear Storage</button>
+            <button onclick="window.location.href='/signin'">Go to Sign In</button>
+            <button onclick="window.location.href='/dashboard'">Go to Dashboard</button>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000/api';
+
+        function checkToken() {
+            const resultDiv = document.getElementById('tokenResult');
+            const token = localStorage.getItem('token');
+            
+            if (!token) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <strong>❌ No Token Found</strong><br>
+                        You need to sign in first.
+                    </div>
+                `;
+                return;
+            }
+
+            try {
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                const expiryDate = new Date(payload.exp * 1000);
+                const isValid = payload.exp * 1000 > Date.now();
+                
+                resultDiv.innerHTML = `
+                    <div class="${isValid ? 'success' : 'error'}">
+                        <strong>${isValid ? '✅' : '❌'} Token ${isValid ? 'Valid' : 'Expired'}</strong><br>
+                        <strong>User ID:</strong> ${payload.user_id}<br>
+                        <strong>Session ID:</strong> ${payload.session_id || 'N/A'}<br>
+                        <strong>Expires:</strong> ${expiryDate.toLocaleString()}<br>
+                        <strong>Time Remaining:</strong> ${isValid ? Math.floor((payload.exp * 1000 - Date.now()) / 1000 / 60) + ' minutes' : 'Expired'}
+                    </div>
+                    <pre>${JSON.stringify(payload, null, 2)}</pre>
+                `;
+
+                // Store user_id for later use
+                window.currentUserId = payload.user_id;
+            } catch (e) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <strong>❌ Invalid Token Format</strong><br>
+                        ${e.message}
+                    </div>
+                `;
+            }
+        }
+
+        async function testHealthEndpoint() {
+            const resultDiv = document.getElementById('healthResult');
+            resultDiv.innerHTML = '<div class="info">⏳ Testing backend connection...</div>';
+
+            try {
+                const response = await fetch(`${API_BASE}/health`);
+                const data = await response.json();
+                
+                resultDiv.innerHTML = `
+                    <div class="success">
+                        <strong>✅ Backend is responding!</strong><br>
+                        Status: ${response.status}<br>
+                        Response: ${JSON.stringify(data)}
+                    </div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <strong>❌ Backend not responding</strong><br>
+                        Error: ${error.message}<br>
+                        Make sure backend is running on port 8000
+                    </div>
+                `;
+            }
+        }
+
+        async function fetchLinks() {
+            const resultDiv = document.getElementById('linksResult');
+            const token = localStorage.getItem('token');
+
+            if (!token) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <strong>❌ No Token</strong><br>
+                        Please sign in first.
+                    </div>
+                `;
+                return;
+            }
+
+            resultDiv.innerHTML = '<div class="info">⏳ Fetching links from backend...</div>';
+
+            try {
+                console.log('🔄 Fetching links from:', `${API_BASE}/links`);
+                console.log('🔐 Using token:', token.substring(0, 20) + '...');
+
+                const response = await fetch(`${API_BASE}/links`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                console.log('📡 Response status:', response.status);
+                console.log('📡 Response headers:', [...response.headers.entries()]);
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+
+                const links = await response.json();
+                console.log('✅ Links received:', links);
+
+                if (links.length === 0) {
+                    resultDiv.innerHTML = `
+                        <div class="warning">
+                            <strong>⚠️ No Links Found</strong><br>
+                            The API returned an empty array. This could mean:<br>
+                            - Wrong user_id in JWT token<br>
+                            - Links exist for a different user<br>
+                            - Database query issue
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Calculate stats
+                const activeLinks = links.filter(l => l.active).length;
+                const totalClicks = links.reduce((sum, l) => sum + (l.clicks || 0), 0);
+                const categories = [...new Set(links.map(l => l.category))];
+
+                let html = `
+                    <div class="success">
+                        <strong>✅ Successfully Retrieved ${links.length} Link(s)!</strong>
+                    </div>
+
+                    <div class="stats">
+                        <div class="stat-card">
+                            <div class="stat-label">Total Links</div>
+                            <div class="stat-value">${links.length}</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Active Links</div>
+                            <div class="stat-value">${activeLinks}</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Total Clicks</div>
+                            <div class="stat-value">${totalClicks}</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Categories</div>
+                            <div class="stat-value">${categories.length}</div>
+                        </div>
+                    </div>
+
+                    <h3>📋 Your Links:</h3>
+                `;
+
+                links.forEach((link, index) => {
+                    html += `
+                        <div class="link-card">
+                            <div class="link-title">
+                                ${index + 1}. ${link.title}
+                                <span class="badge ${link.active ? 'badge-active' : 'badge-inactive'}">
+                                    ${link.active ? 'Active' : 'Inactive'}
+                                </span>
+                            </div>
+                            <a href="${link.url}" target="_blank" class="link-url">${link.url}</a>
+                            <div class="link-meta">
+                                <span>🎨 ${link.icon || 'Link'}</span>
+                                <span>📂 ${link.category || 'N/A'}</span>
+                                <span>📊 ${link.clicks || 0} clicks</span>
+                                <span>🔢 Order: ${link.order}</span>
+                            </div>
+                            ${link.description ? `<div style="margin-top: 10px; color: #666;">📝 ${link.description}</div>` : ''}
+                            ${link.phone_number ? `<div style="margin-top: 5px; color: #666;">📞 ${link.phone_number}</div>` : ''}
+                            <div style="margin-top: 10px; font-size: 12px; color: #999;">
+                                ID: ${link.id}
+                            </div>
+                        </div>
+                    `;
+                });
+
+                html += `
+                    <h3>📦 Raw JSON Response:</h3>
+                    <pre>${JSON.stringify(links, null, 2)}</pre>
+                `;
+
+                resultDiv.innerHTML = html;
+
+            } catch (error) {
+                console.error('❌ Error fetching links:', error);
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <strong>❌ Failed to Fetch Links</strong><br>
+                        Error: ${error.message}<br><br>
+                        <strong>Possible causes:</strong><br>
+                        - Token expired (401)<br>
+                        - Backend not running<br>
+                        - CORS issue<br>
+                        - Network error
+                    </div>
+                    <pre>${error.stack}</pre>
+                `;
+            }
+        }
+
+        function clearCache() {
+            if (confirm('This will clear all localStorage data and reload the page. Continue?')) {
+                localStorage.clear();
+                window.location.reload();
+            }
+        }
+
+        function signOut() {
+            if (confirm('Sign out and clear all data?')) {
+                localStorage.clear();
+                sessionStorage.clear();
+                window.location.href = '/signin';
+            }
+        }
+
+        // Auto-check token on load
+        window.addEventListener('load', () => {
+            checkToken();
+        });
+    </script>
+</body>
+</html>
+
+
+
+
+
+
+
+

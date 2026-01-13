@@ -1,0 +1,218 @@
+{
+  "generated_at": "2026-01-02T20:36:56.728674",
+  "database_tests": {
+    "timestamp": "2026-01-02T20:29:50.751145",
+    "tests": {
+      "single_read": {
+        "operation": "single_read",
+        "iterations": 100,
+        "successful": 100,
+        "errors": 0,
+        "latency_ms": {
+          "min": 165.7739929999984,
+          "max": 677.3100969999995,
+          "mean": 386.85552372999996,
+          "median": 358.47995349999803,
+          "p95": 606.1721744000007,
+          "p99": 620.4535654000013,
+          "std_dev": 168.13775249680367
+        },
+        "throughput_ops_per_sec": 2.5849443491414004
+      },
+      "batch_read": {
+        "operation": "batch_read",
+        "batch_size": 10,
+        "iterations": 50,
+        "successful": 50,
+        "errors": 0,
+        "total_docs_read": 500,
+        "latency_ms": {
+          "min": 183.94103300000353,
+          "max": 317.6211290000026,
+          "mean": 232.92893623999987,
+          "median": 204.1290515000007,
+          "p95": 306.5325188000003,
+          "p99": 314.5729977600001,
+          "std_dev": 48.76588123066885
+        },
+        "throughput_docs_per_sec": 42.931548829538436
+      },
+      "single_write": {
+        "operation": "single_write",
+        "iterations": 100,
+        "successful": 100,
+        "errors": 0,
+        "latency_ms": {
+          "min": 183.2357999999914,
+          "max": 346.8105430000037,
+          "mean": 200.25872483000072,
+          "median": 196.48804350000404,
+          "p95": 221.26677300000492,
+          "p99": 246.76793736999622,
+          "std_dev": 18.815969603704108
+        },
+        "throughput_ops_per_sec": 4.993540235757009
+      },
+      "update": {
+        "operation": "update",
+        "iterations": 100,
+        "successful": 100,
+        "errors": 0,
+        "latency_ms": {
+          "min": 327.4649979999964,
+          "max": 1126.7356930000005,
+          "mean": 362.3910249500018,
+          "median": 343.6331879999983,
+          "p95": 411.0477025500046,
+          "p99": 763.5897330099997,
+          "std_dev": 91.70921824028855
+        },
+        "throughput_ops_per_sec": 2.7594502378693497
+      },
+      "concurrent_read": {
+        "operation": "concurrent_read",
+        "concurrency": 10,
+        "iterations_per_thread": 10,
+        "total_operations": 100,
+        "successful": 100,
+        "errors": 0,
+        "total_time_ms": 17279.364455000006,
+        "latency_ms": {
+          "min": 162.4985850000087,
+          "max": 277.78902200000744,
+          "mean": 172.74410187000115,
+          "median": 168.15235899998981,
+          "p95": 192.21600675001153,
+          "p99": 212.6726847800038,
+          "std_dev": 14.403371842943333
+        },
+        "throughput_ops_per_sec": 5.787249887600103
+      },
+      "concurrent_write": {
+        "operation": "concurrent_write",
+        "concurrency": 10,
+        "iterations_per_thread": 10,
+        "total_operations": 100,
+        "successful": 100,
+        "errors": 0,
+        "total_time_ms": 18363.17360999999,
+        "latency_ms": {
+          "min": 171.9157650000227,
+          "max": 333.6165899999912,
+          "mean": 183.0581940399992,
+          "median": 178.46833899999126,
+          "p95": 199.819187699984,
+          "p99": 236.50411311001216,
+          "std_dev": 18.856227819387698
+        },
+        "throughput_ops_per_sec": 5.445681782670902
+      },
+      "data_size_impact": {
+        "operation": "data_size_impact",
+        "results": {
+          "small": {
+            "write_latency_ms": 177.58915199999592,
+            "read_latency_ms": 157.61741500000426,
+            "data_size_bytes": 457
+          },
+          "medium": {
+            "write_latency_ms": 189.66644899998641,
+            "read_latency_ms": 163.9360230000193,
+            "data_size_bytes": 3362
+          },
+          "large": {
+            "write_latency_ms": 266.90538400001174,
+            "read_latency_ms": 205.75343600000906,
+            "data_size_bytes": 15601
+          }
+        }
+      },
+      "query_performance": {
+        "operation": "query_performance",
+        "results": {
+          "equality_query": {
+            "latency_ms": 421.4147890000106,
+            "results_count": 17
+          },
+          "limited_query": {
+            "latency_ms": 181.58127399999557,
+            "results_count": 10
+          }
+        }
+      }
+    },
+    "summary": {
+      "total_test_time_seconds": 306.32608183,
+      "total_tests": 8,
+      "timestamp": "2026-01-02T20:34:57.441014"
+    },
+    "recommendations": [
+      {
+        "severity": "high",
+        "category": "read_performance",
+        "issue": "High read latency: 386.86ms average",
+        "recommendation": "Consider implementing caching layer (Redis) or optimizing Firestore indexes"
+      },
+      {
+        "severity": "high",
+        "category": "write_performance",
+        "issue": "High write latency: 200.26ms average",
+        "recommendation": "Consider batch writes or optimizing document structure"
+      }
+    ]
+  },
+  "api_tests": {},
+  "summary": {
+    "overall_status": "critical",
+    "key_metrics": {
+      "avg_read_latency_ms": 386.85552372999996,
+      "avg_write_latency_ms": 200.25872483000072
+    },
+    "test_coverage": {
+      "database_tests": 8,
+      "api_tests": 0
+    },
+    "critical_issues": 4,
+    "warnings": 0
+  },
+  "diagnostics": {
+    "database_performance": {
+      "read_latency_ms": 386.85552372999996,
+      "write_latency_ms": 200.25872483000072,
+      "concurrent_read_throughput": 5.787249887600103
+    },
+    "api_performance": {},
+    "bottlenecks": [
+      "High read latency: 386.86ms",
+      "High write latency: 200.26ms",
+      "Low concurrent read throughput: 5.79 ops/sec"
+    ],
+    "strengths": []
+  },
+  "recommendations": [
+    {
+      "severity": "high",
+      "category": "read_performance",
+      "issue": "High read latency: 386.86ms average",
+      "recommendation": "Consider implementing caching layer (Redis) or optimizing Firestore indexes"
+    },
+    {
+      "severity": "high",
+      "category": "write_performance",
+      "issue": "High write latency: 200.26ms average",
+      "recommendation": "Consider batch writes or optimizing document structure"
+    },
+    {
+      "severity": "high",
+      "category": "database",
+      "issue": "High database read latency",
+      "recommendation": "Implement caching layer (Redis) for frequently accessed data"
+    },
+    {
+      "severity": "high",
+      "category": "database",
+      "issue": "High database write latency",
+      "recommendation": "Consider batch writes and optimize document structure"
+    }
+  ]
+}
