@@ -76,7 +76,7 @@ def get_env_var(key, default=None):
     """Get environment variable with fallback for serverless environments"""
     value = os.environ.get(key)
     if value is None and default is not None:
-        print(f"⚠️  Environment variable {key} not found during import, using default: {default}")
+        logger.warning(f"Environment variable {key} not found during import, using default: {default}")
         return default
     return value
 
@@ -1161,7 +1161,7 @@ async def track_ring_event(ring_id: str, event_type: str, user_id: str = None, l
         await ring_analytics_collection.insert_one(event.model_dump())
         return event
     except Exception as e:
-        print(f"Database error during ring event tracking: {e}")
+        logger.error(f"Database error during ring event tracking: {e}", exc_info=True)
         # Don't raise error for analytics tracking failures
         return None
 
@@ -2483,9 +2483,7 @@ async def register(request: Request, user_data: UserCreate):
         raise
     except Exception as e:
         # Log the actual error for debugging
-        print(f"❌ Database error during user lookup: {type(e).__name__}: {str(e)}")
-        import traceback
-        traceback.print_exc()
+        logger.error(f"Database error during user lookup: {type(e).__name__}: {str(e)}", exc_info=True)
         
         # Check if it's a connection-related error
         error_msg = str(e).lower()
@@ -2521,7 +2519,7 @@ async def register(request: Request, user_data: UserCreate):
                 user_agent=user_agent
             )
         except Exception as e:
-            print(f"Analytics tracking warning: {e}")
+            logger.warning(f"Analytics tracking warning: {e}", exc_info=True)
             # Continue even if analytics fails
 
         # Create default Standard plan subscription with 14-day trial
@@ -2603,9 +2601,7 @@ async def register(request: Request, user_data: UserCreate):
         raise
     except Exception as e:
         # Log the actual error for debugging
-        print(f"❌ Database error during user creation: {type(e).__name__}: {str(e)}")
-        import traceback
-        traceback.print_exc()
+        logger.error(f"Database error during user creation: {type(e).__name__}: {str(e)}", exc_info=True)
         
         # Check if it's a connection-related error
         error_msg = str(e).lower()
@@ -2732,9 +2728,7 @@ async def login(request: Request, login_data: UserLogin):
         raise
     except Exception as e:
         # Log the actual error for debugging
-        print(f"❌ Login error: {type(e).__name__}: {str(e)}")
-        import traceback
-        traceback.print_exc()
+        logger.error(f"Login error: {type(e).__name__}: {str(e)}", exc_info=True)
         
         # Check if it's a connection-related error
         error_msg = str(e).lower()
@@ -2804,7 +2798,7 @@ async def google_signin(request: Request, google_data: GoogleSignInRequest):
                 raise HTTPException(status_code=401, detail="Invalid Firebase token")
                 
         except Exception as e:
-            print(f"❌ Firebase token verification failed: {str(e)}")
+            logger.error(f"Firebase token verification failed: {str(e)}", exc_info=True)
             raise HTTPException(status_code=401, detail="Invalid Firebase token")
         
         # Check if user already exists
@@ -2930,9 +2924,7 @@ async def google_signin(request: Request, google_data: GoogleSignInRequest):
     except HTTPException:
         raise
     except Exception as e:
-        print(f"❌ Google Sign-In error: {type(e).__name__}: {str(e)}")
-        import traceback
-        traceback.print_exc()
+        logger.error(f"Google Sign-In error: {type(e).__name__}: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Google Sign-In failed: {str(e)}")
 
 # Firebase token-based login for email/password users
@@ -2991,7 +2983,7 @@ async def firebase_login(request: Request, login_data: FirebaseLoginRequest):
                 raise HTTPException(status_code=401, detail="Email mismatch in Firebase token")
                 
         except Exception as e:
-            print(f"❌ Firebase token verification failed: {str(e)}")
+            logger.error(f"Firebase token verification failed: {str(e)}", exc_info=True)
             raise HTTPException(status_code=401, detail="Invalid Firebase token")
         
         # Find user by email
@@ -3067,9 +3059,7 @@ async def firebase_login(request: Request, login_data: FirebaseLoginRequest):
     except HTTPException:
         raise
     except Exception as e:
-        print(f"❌ Firebase login error: {type(e).__name__}: {str(e)}")
-        import traceback
-        traceback.print_exc()
+        logger.error(f"Firebase login error: {type(e).__name__}: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Firebase login failed: {str(e)}")
 
 # Logout endpoint
@@ -3280,9 +3270,7 @@ async def forgot_password(request: ForgotPasswordRequest):
             "reset_link": reset_link  # Remove in production
         }
     except Exception as e:
-        print(f"❌ Forgot password error: {type(e).__name__}: {str(e)}")
-        import traceback
-        traceback.print_exc()
+        logger.error(f"Forgot password error: {type(e).__name__}: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Error processing password reset request: {str(e)}")
 
 @api_router.post("/auth/reset-password")
@@ -3331,9 +3319,7 @@ async def reset_password(request: ResetPasswordRequest):
     except HTTPException:
         raise
     except Exception as e:
-        print(f"❌ Reset password error: {type(e).__name__}: {str(e)}")
-        import traceback
-        traceback.print_exc()
+        logger.error(f"Reset password error: {type(e).__name__}: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Error resetting password: {str(e)}")
 
 # ==================== USER ROUTES ====================
@@ -5732,9 +5718,7 @@ async def health_check():
     except Exception as e:
         health_status["database"] = "error"
         health_status["database_error"] = f"{type(e).__name__}: {str(e)}"
-        print(f"❌ Health check database error: {e}")
-        import traceback
-        traceback.print_exc()
+        logger.error(f"Health check database error: {e}", exc_info=True)
     
     return health_status
 

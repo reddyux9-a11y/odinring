@@ -10,6 +10,12 @@
 
 # Firebase Configuration (REQUIRED)
 FIREBASE_PROJECT_ID=your-firebase-project-id
+
+# For Production/Serverless (Vercel, etc.): Use JSON string from environment variable
+# FIREBASE_SERVICE_ACCOUNT_JSON={"type":"service_account","project_id":"..."}
+# (Get the entire JSON content from Firebase Console and set as environment variable)
+
+# For Local Development: Use file path (only works in development environment)
 FIREBASE_SERVICE_ACCOUNT_PATH=firebase-service-account.json
 
 # JWT Secret (REQUIRED - Must be at least 32 characters)

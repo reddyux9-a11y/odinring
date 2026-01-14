@@ -35,6 +35,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { useIdentityContext } from "../hooks/useIdentityContext";
 import SubscriptionStatusBanner from "../components/SubscriptionStatusBanner";
 import api from "../lib/api";
+import logger from "../lib/logger";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -77,7 +78,7 @@ const Dashboard = () => {
     
     // Check if billing is required (subscription expired)
     if (needsBilling && identityContext?.next_route === '/billing/choose-plan') {
-      console.log('⚠️  Dashboard: Subscription expired, redirecting to billing...');
+      logger.warn('Dashboard: Subscription expired, redirecting to billing...');
       toast.error('Your subscription has expired. Please select a plan to continue.');
       navigate('/billing/choose-plan');
       return;
@@ -85,8 +86,8 @@ const Dashboard = () => {
     
     // Log account type for debugging
     if (accountType) {
-      console.log('📊 Dashboard: Account type:', accountType);
-      console.log('📊 Dashboard: Subscription status:', identityContext?.subscription?.status);
+      logger.debug('Dashboard: Account type:', accountType);
+      logger.debug('Dashboard: Subscription status:', identityContext?.subscription?.status);
     }
   }, [identityLoading, needsBilling, identityContext, accountType, navigate]);
 
@@ -172,14 +173,14 @@ const Dashboard = () => {
 
   const loadUserData = async (skipUserRefresh = false) => {
     try {
-      console.log('🔄 loadUserData() called');
+      logger.debug('loadUserData() called');
       
       const token = localStorage.getItem('token');
       if (!token) {
         // Don't log as error - this is expected when user is not logged in
         // Only log if we're actually on the dashboard (shouldn't happen due to ProtectedRoute)
         if (window.location.pathname === '/dashboard') {
-          console.warn('⚠️ No token found in localStorage - user should be redirected to login');
+          logger.warn('No token found in localStorage - user should be redirected to login');
         }
         return;
       }
@@ -187,11 +188,11 @@ const Dashboard = () => {
       // Decode JWT to see user_id
       try {
         const payload = JSON.parse(atob(token.split('.')[1]));
-        console.log('🔐 JWT Payload:', payload);
-        console.log('🆔 User ID from JWT:', payload.user_id);
-        console.log('⏰ Token expires:', new Date(payload.exp * 1000).toISOString());
+        logger.debug('JWT Payload:', payload);
+        logger.debug('User ID from JWT:', payload.user_id);
+        logger.debug('Token expires:', new Date(payload.exp * 1000).toISOString());
       } catch (e) {
-        console.error('❌ Failed to decode JWT:', e);
+        logger.error('Failed to decode JWT:', e);
       }
       
       // Only refresh user if explicitly needed (not on every load)
@@ -201,14 +202,14 @@ const Dashboard = () => {
       
       // PERFORMANCE FIX: Use combined endpoint for maximum performance
       // This reduces load time from 33s to 2-3s (90% improvement)
-      console.log('📡 Loading dashboard data from combined endpoint...');
+      logger.debug('Loading dashboard data from combined endpoint...');
       const startTime = performance.now();
       
       try {
         // Use combined endpoint - single request, all data
         const response = await api.get('/dashboard/data');
         const loadTime = ((performance.now() - startTime) / 1000).toFixed(2);
-        console.log(`⚡ All data loaded in ${loadTime}s (combined endpoint)`);
+        logger.debug(`All data loaded in ${loadTime}s (combined endpoint)`);
         
         if (!isMountedRef.current) return;
         
@@ -217,25 +218,25 @@ const Dashboard = () => {
         // Process links
         const links = data.links || [];
         if (links.length > 0) {
-          console.log('✅ Links found:', links.length);
+          logger.debug('Links found:', links.length);
           links.forEach((link, idx) => {
-            console.log(`   ${idx + 1}. ${link.title} (${link.id})`);
+            logger.debug(`   ${idx + 1}. ${link.title} (${link.id})`);
           });
         }
         // Reset auto-activation ref when loading new links
         hasAutoActivatedRef.current = false;
         setLinks(links);
-        console.log('✅ Links state updated');
+        logger.debug('Links state updated');
         
         // Process media
         const media = data.media || [];
-        console.log('✅ Media loaded:', media.length);
+        logger.debug('Media loaded:', media.length);
         setMedia(media);
         
         // Process items
         const fetchedItems = data.items || [];
-        console.log('📊 Number of items received from backend:', fetchedItems.length);
-        console.log('📦 Items from backend:', fetchedItems.map(item => ({ id: item.id, name: item.name })));
+        logger.debug('Number of items received from backend:', fetchedItems.length);
+        logger.debug('Items from backend:', fetchedItems.map(item => ({ id: item.id, name: item.name })));
         
         // Update items state - use functional update to ensure we have latest state
         setItems(prevItems => {
@@ -244,7 +245,7 @@ const Dashboard = () => {
           if (fetchedItems.length > 0) {
             return fetchedItems;
           } else if (prevItems.length > 0) {
-            console.log('⚠️ Backend returned empty items but state has items - keeping existing state');
+            logger.warn('Backend returned empty items but state has items - keeping existing state');
             return prevItems;
           } else {
             return fetchedItems;
@@ -254,36 +255,36 @@ const Dashboard = () => {
         // Ring settings removed (direct link mode killed)
         
       } catch (combinedError) {
-        console.warn('⚠️ Combined endpoint failed, falling back to individual calls:', combinedError);
+        logger.warn('Combined endpoint failed, falling back to individual calls:', combinedError);
         
         // FALLBACK: Use parallel individual calls if combined endpoint fails
-        console.log('📡 Falling back to parallel individual API calls...');
+        logger.debug('Falling back to parallel individual API calls...');
         const fallbackStartTime = performance.now();
         
         const [linksResponse, mediaResponse, itemsResponse] = await Promise.all([
           api.get('/links').catch(err => {
-            console.error('Failed to load links:', err);
+            logger.error('Failed to load links:', err);
             return { data: [] };
           }),
           api.get('/media').catch(err => {
-            console.error('Failed to load media:', err);
+            logger.error('Failed to load media:', err);
             return { data: [] };
           }),
           api.get('/items').catch(err => {
-            console.error('Failed to load items:', err);
+            logger.error('Failed to load items:', err);
             return { data: [] };
           })
         ]);
         
         const fallbackTime = ((performance.now() - fallbackStartTime) / 1000).toFixed(2);
-        console.log(`⚡ Fallback data loaded in ${fallbackTime}s (parallel)`);
+        logger.debug(`Fallback data loaded in ${fallbackTime}s (parallel)`);
         
         if (!isMountedRef.current) return;
         
         // Process fallback results
         const links = linksResponse.data || [];
         if (links.length > 0) {
-          console.log('✅ Links found (fallback):', links.length);
+          logger.debug('Links found (fallback):', links.length);
         }
         hasAutoActivatedRef.current = false;
         setLinks(links);
@@ -319,9 +320,9 @@ const Dashboard = () => {
         });
       }
     } catch (error) {
-      console.error('❌ Dashboard: Failed to load user data:', error);
-      console.error('❌ Error details:', error.response?.data);
-      console.error('❌ Error status:', error.response?.status);
+      logger.error('Dashboard: Failed to load user data:', error);
+      logger.error('Error details:', error.response?.data);
+      logger.error('Error status:', error.response?.status);
       mobileToast.error("Failed to load user data");
     }
   };
@@ -331,7 +332,7 @@ const Dashboard = () => {
       // Check if user is authenticated before making API call
       const token = localStorage.getItem('token');
       if (!token) {
-        console.log('ℹ️  loadRingSettings: No token found, skipping ring settings fetch');
+        logger.debug('loadRingSettings: No token found, skipping ring settings fetch');
         return;
       }
       
@@ -339,7 +340,7 @@ const Dashboard = () => {
     } catch (error) {
       // Only log error if it's not a 401/403 (expected when not authenticated)
       if (error.response?.status !== 401 && error.response?.status !== 403) {
-        console.error('Failed to load ring settings:', error);
+        logger.error('Failed to load ring settings:', error);
       }
     }
   };
@@ -419,7 +420,7 @@ const Dashboard = () => {
                 const response = await api.post('/links', linkData);
                 setLinks([...links, response.data]);
               } catch (error) {
-                console.error('Add link failed:', error);
+                logger.error('Add link failed:', error);
                 throw error;
               }
             }}
@@ -429,7 +430,7 @@ const Dashboard = () => {
                 const response = await api.put(`/links/${linkId}`, linkData);
                 setLinks(links.map(l => l.id === linkId ? response.data : l));
               } catch (error) {
-                console.error('Edit link failed:', error);
+                logger.error('Edit link failed:', error);
                 throw error;
               }
             }}
@@ -439,7 +440,7 @@ const Dashboard = () => {
                 await api.delete(`/links/${linkId}`);
                 setLinks(links.filter(l => l.id !== linkId));
               } catch (error) {
-                console.error('Delete link failed:', error);
+                logger.error('Delete link failed:', error);
                 throw error;
               }
             }}
@@ -452,7 +453,7 @@ const Dashboard = () => {
                 const response = await api.put(`/links/${linkId}`, { active: !link.active });
                 setLinks(links.map(l => l.id === linkId ? response.data : l));
               } catch (error) {
-                console.error('Toggle visibility failed:', error);
+                logger.error('Toggle visibility failed:', error);
                 throw error;
               }
             }}
@@ -672,14 +673,14 @@ const Dashboard = () => {
                                       addHapticFeedback('success');
                                       mobileToast.success("Profile URL copied to clipboard!");
                                     } catch (err) {
-                                      console.error('Failed to copy:', err);
+                                      logger.error('Failed to copy:', err);
                                       mobileToast.error("Failed to copy URL");
                                     } finally {
                                       document.body.removeChild(textArea);
                                     }
                                   }
                                 } catch (error) {
-                                  console.error('Clipboard error:', error);
+                                  logger.error('Clipboard error:', error);
                                   mobileToast.error("Failed to copy URL");
                                 }
                               }}

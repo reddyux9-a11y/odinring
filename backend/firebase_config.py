@@ -89,7 +89,14 @@ def initialize_firebase():
         return _db
     
     try:
-        project_id = os.getenv('FIREBASE_PROJECT_ID', 'studio-7743041576-fc16f')
+        # SECURITY: Require FIREBASE_PROJECT_ID - no hardcoded defaults in production
+        project_id = os.getenv('FIREBASE_PROJECT_ID')
+        if not project_id:
+            if os.getenv('ENV', 'development').lower() in ('production', 'prod'):
+                raise ValueError("FIREBASE_PROJECT_ID environment variable is required in production")
+            # Development fallback only
+            logger.warning("FIREBASE_PROJECT_ID not set, using development fallback")
+            project_id = 'studio-7743041576-fc16f'  # Development only
         
         # Check if service account JSON is provided as environment variable (for Vercel/serverless)
         service_account_json = os.getenv('FIREBASE_SERVICE_ACCOUNT_JSON')
@@ -121,7 +128,14 @@ def initialize_firebase():
                 logger.error(f"❌ Failed to parse FIREBASE_SERVICE_ACCOUNT_JSON: {e}")
                 raise ValueError(f"Invalid JSON in FIREBASE_SERVICE_ACCOUNT_JSON: {e}")
         
-        # Fallback to file-based initialization (for local development)
+        # Fallback to file-based initialization (for local development only)
+        # SECURITY: In production, only allow JSON environment variable
+        env = os.getenv('ENV', 'development').lower()
+        if env in ('production', 'prod'):
+            logger.error("❌ FIREBASE_SERVICE_ACCOUNT_JSON environment variable is required in production")
+            logger.error("File-based authentication is not allowed in production for security reasons")
+            raise ValueError("FIREBASE_SERVICE_ACCOUNT_JSON must be set in production environment")
+        
         ROOT_DIR = Path(__file__).parent
         
         # Try to get service account path from environment
@@ -132,8 +146,8 @@ def initialize_firebase():
         if not full_path.exists():
             logger.error(f"❌ Firebase service account file not found at: {full_path}")
             logger.error("Please either:")
-            logger.error("  1. Set FIREBASE_SERVICE_ACCOUNT_JSON environment variable (for serverless)")
-            logger.error("  2. Or follow instructions in GET_FIREBASE_KEY.md to download the key file")
+            logger.error("  1. Set FIREBASE_SERVICE_ACCOUNT_JSON environment variable (required for production)")
+            logger.error("  2. Or follow instructions in GET_FIREBASE_KEY.md to download the key file for local development")
             raise FileNotFoundError(f"Firebase service account file not found: {full_path}")
         
         # Initialize Firebase from file

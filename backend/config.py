@@ -118,6 +118,34 @@ class Settings(BaseSettings):
             raise ValueError(f'LOG_LEVEL must be one of: {", ".join(valid_levels)}')
         return v.upper()
     
+    @field_validator('FIREBASE_PROJECT_ID')
+    @classmethod
+    def validate_firebase_project_id(cls, v: str) -> str:
+        """Validate Firebase project ID is provided"""
+        if not v or not v.strip():
+            raise ValueError('FIREBASE_PROJECT_ID is required and cannot be empty')
+        return v.strip()
+    
+    def validate_required_for_production(self):
+        """Validate that all required settings are present for production"""
+        if self.ENV.lower() in ('production', 'prod'):
+            # Check for service account (either JSON or path)
+            service_account_json = os.getenv('FIREBASE_SERVICE_ACCOUNT_JSON')
+            service_account_path = os.getenv('FIREBASE_SERVICE_ACCOUNT_PATH', self.FIREBASE_SERVICE_ACCOUNT_PATH)
+            
+            if not service_account_json:
+                # Check if file exists (for development/testing only)
+                from pathlib import Path
+                if not Path(service_account_path).exists():
+                    raise ValueError(
+                        "FIREBASE_SERVICE_ACCOUNT_JSON environment variable is required in production. "
+                        "File-based authentication is not allowed in production for security."
+                    )
+            
+            # Validate CORS is set in production
+            if not os.getenv('CORS_ORIGINS'):
+                raise ValueError("CORS_ORIGINS environment variable is required in production")
+    
     @field_validator('ENV')
     @classmethod
     def validate_environment(cls, v: str) -> str:
@@ -132,9 +160,17 @@ class Settings(BaseSettings):
         errors = []
         warnings = []
         
-        # Check Firebase service account file exists
-        if not os.path.exists(self.FIREBASE_SERVICE_ACCOUNT_PATH):
-            errors.append(f"Firebase service account file not found: {self.FIREBASE_SERVICE_ACCOUNT_PATH}")
+        # Production-specific validation
+        try:
+            if self.ENV.lower() in ('production', 'prod'):
+                self.validate_required_for_production()
+        except ValueError as e:
+            errors.append(str(e))
+        
+        # Check Firebase service account file exists (only for development)
+        if self.ENV.lower() not in ('production', 'prod'):
+            if not os.path.exists(self.FIREBASE_SERVICE_ACCOUNT_PATH):
+                errors.append(f"Firebase service account file not found: {self.FIREBASE_SERVICE_ACCOUNT_PATH}")
         
         # Production-specific checks
         if self.ENV == 'production':
@@ -152,42 +188,32 @@ class Settings(BaseSettings):
             if self.STRIPE_SECRET_KEY and not self.STRIPE_WEBHOOK_SECRET:
                 warnings.append("STRIPE_SECRET_KEY set but STRIPE_WEBHOOK_SECRET missing")
         
-        # Print validation results
+        # Validation results
         if errors:
-            print("\n❌ Configuration validation FAILED:")
+            error_msg = "\n❌ Configuration validation FAILED:\n"
             for error in errors:
-                print(f"   ERROR: {error}")
-            sys.exit(1)
+                error_msg += f"   ERROR: {error}\n"
+            raise ValueError(error_msg)
         
+        # Log warnings if any
         if warnings:
-            print("\n⚠️  Configuration warnings:")
+            import logging
+            logger = logging.getLogger(__name__)
             for warning in warnings:
-                print(f"   WARNING: {warning}")
+                logger.warning(f"Configuration warning: {warning}")
         
-        print("\n✅ Configuration validated successfully")
-        print(f"┌{'─' * 60}┐")
-        print(f"│ {'Environment Configuration':<58} │")
-        print(f"├{'─' * 60}┤")
-        print(f"│ Environment:         {self.ENV:<39} │")
-        print(f"│ Project ID:          {self.FIREBASE_PROJECT_ID:<39} │")
-        print(f"│ Log Level:           {self.LOG_LEVEL:<39} │")
-        print(f"├{'─' * 60}┤")
-        print(f"│ {'JWT Configuration':<58} │")
-        print(f"├{'─' * 60}┤")
-        print(f"│ Access Token Expiry: {self.ACCESS_TOKEN_EXPIRY_MINUTES} minutes{' ' * 31} │")
-        print(f"│ Refresh Token Expiry:{self.REFRESH_TOKEN_EXPIRY_DAYS} days{' ' * 34} │")
-        print(f"├{'─' * 60}┤")
-        print(f"│ {'Monitoring':<58} │")
-        print(f"├{'─' * 60}┤")
-        print(f"│ Sentry:              {'Enabled' if self.SENTRY_DSN else 'Disabled':<39} │")
-        print(f"│ Rate Limiting:       {'Enabled' if self.RATE_LIMIT_ENABLED else 'Disabled':<39} │")
-        print(f"├{'─' * 60}┤")
-        print(f"│ {'Phase 2 Features':<58} │")
-        print(f"├{'─' * 60}┤")
-        print(f"│ Trial Period:        {self.SUBSCRIPTION_TRIAL_DAYS} days{' ' * 32} │")
-        print(f"│ Grace Period:        {self.SUBSCRIPTION_GRACE_PERIOD_DAYS} days{' ' * 33} │")
-        print(f"│ Stripe:              {'Configured' if self.STRIPE_SECRET_KEY else 'Not Configured':<39} │")
-        print(f"└{'─' * 60}┘\n")
+        # Log successful validation (only in development or if LOG_LEVEL is DEBUG)
+        import logging
+        logger = logging.getLogger(__name__)
+        if self.ENV.lower() in ('development', 'dev') or self.LOG_LEVEL == 'DEBUG':
+            logger.info("✅ Configuration validated successfully")
+            logger.debug(f"Environment: {self.ENV}")
+            logger.debug(f"Project ID: {self.FIREBASE_PROJECT_ID}")
+            logger.debug(f"Log Level: {self.LOG_LEVEL}")
+            logger.debug(f"Access Token Expiry: {self.ACCESS_TOKEN_EXPIRY_MINUTES} minutes")
+            logger.debug(f"Refresh Token Expiry: {self.REFRESH_TOKEN_EXPIRY_DAYS} days")
+            logger.debug(f"Sentry: {'Enabled' if self.SENTRY_DSN else 'Disabled'}")
+            logger.debug(f"Rate Limiting: {'Enabled' if self.RATE_LIMIT_ENABLED else 'Disabled'}")
 
 
 # Global settings instance

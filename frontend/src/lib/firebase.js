@@ -21,6 +21,7 @@ import {
   verifyPasswordResetCode,
   applyActionCode
 } from 'firebase/auth';
+import logger from './logger';
 
 // Firebase configuration from environment variables
 const firebaseConfig = {
@@ -34,7 +35,7 @@ const firebaseConfig = {
 
 // Debug: Log configuration (only in development)
 if (process.env.NODE_ENV === 'development') {
-  console.log('🔥 Firebase Config Check:', {
+  logger.debug('Firebase Config Check:', {
     apiKey: firebaseConfig.apiKey ? '✅ Set' : '❌ Missing',
     authDomain: firebaseConfig.authDomain ? '✅ Set' : '❌ Missing',
     projectId: firebaseConfig.projectId ? '✅ Set' : '❌ Missing',
@@ -46,17 +47,17 @@ if (process.env.NODE_ENV === 'development') {
   // Check if any required fields are missing
   const missingFields = Object.keys(firebaseConfig).filter(key => !firebaseConfig[key]);
   if (missingFields.length > 0) {
-    console.error('❌ Missing Firebase config fields:', missingFields);
-    console.error('📖 Please check your frontend/.env file');
-    console.error('📖 All variables must start with REACT_APP_');
-    console.error('📖 Restart frontend server after changing .env');
+    logger.error('Missing Firebase config fields:', missingFields);
+    logger.error('Please check your frontend/.env file');
+    logger.error('All variables must start with REACT_APP_');
+    logger.error('Restart frontend server after changing .env');
   }
 }
 
 // Validate configuration before initializing
 if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
   const errorMsg = 'Firebase configuration is missing. Please check your frontend/.env file and ensure all REACT_APP_FIREBASE_* variables are set correctly. Then restart the frontend server.';
-  console.error('❌', errorMsg);
+  logger.error(errorMsg);
   throw new Error(errorMsg);
 }
 
@@ -67,20 +68,20 @@ const auth = getAuth(app);
 // Set auth persistence to LOCAL (survives page reloads and redirects)
 setPersistence(auth, browserLocalPersistence)
   .then(() => {
-    console.log('✅ Firebase Auth persistence set to LOCAL');
+    logger.debug('Firebase Auth persistence set to LOCAL');
   })
   .catch((error) => {
-    console.error('❌ Failed to set Firebase Auth persistence:', error);
-    console.warn('⚠️ Auth will work but may not persist across page reloads');
-    console.warn('💡 Try clearing browser data if you see repeated IndexedDB errors');
+    logger.error('Failed to set Firebase Auth persistence:', error);
+    logger.warn('Auth will work but may not persist across page reloads');
+    logger.warn('Try clearing browser data if you see repeated IndexedDB errors');
   });
 
 // Add global error handler for IndexedDB errors to prevent spam
 window.addEventListener('unhandledrejection', (event) => {
   if (event.reason?.message?.includes('IndexedDB') || 
       event.reason?.message?.includes('Indexed Database')) {
-    console.warn('⚠️ IndexedDB error suppressed:', event.reason.message);
-    console.warn('💡 Clear browser data: localStorage.clear(); indexedDB.deleteDatabase("firebaseLocalStorageDb"); location.reload();');
+    logger.warn('IndexedDB error suppressed:', event.reason.message);
+    logger.warn('Clear browser data: localStorage.clear(); indexedDB.deleteDatabase("firebaseLocalStorageDb"); location.reload();');
     event.preventDefault(); // Prevent error spam in console
   }
 });
@@ -104,20 +105,20 @@ googleProvider.setCustomParameters({
  */
 export const signInWithGoogle = async () => {
   try {
-    console.log('🔄 Starting Google Sign-In...');
+    logger.debug('Starting Google Sign-In...');
     
     
     // Ensure persistence is set
-    console.log('🔧 Setting auth persistence to LOCAL...');
+    logger.debug('Setting auth persistence to LOCAL...');
     await setPersistence(auth, browserLocalPersistence);
-    console.log('✅ Auth persistence set successfully');
+    logger.debug('Auth persistence set successfully');
     
     // Try popup first (faster and more reliable for localhost)
     try {
-      console.log('🪟 Attempting popup sign-in...');
+      logger.debug('Attempting popup sign-in...');
       const result = await signInWithPopup(auth, googleProvider);
       
-      console.log('✅ Popup sign-in successful!', result.user.email);
+      logger.debug('Popup sign-in successful!', result.user.email);
       const idToken = await result.user.getIdToken();
       
       // Get OAuth credential for Google APIs
@@ -132,14 +133,14 @@ export const signInWithGoogle = async () => {
       };
     } catch (popupError) {
       // If popup fails (blocked or closed), fall back to redirect
-      console.warn('⚠️ Popup failed, falling back to redirect:', popupError.code);
+      logger.warn('Popup failed, falling back to redirect:', popupError.code);
       
       if (popupError.code === 'auth/popup-blocked' || 
           popupError.code === 'auth/popup-closed-by-user' ||
           popupError.code === 'auth/cancelled-popup-request') {
         
         
-        console.log('🌐 Initiating redirect to Google...');
+        logger.debug('Initiating redirect to Google...');
         await signInWithRedirect(auth, googleProvider);
         return null; // Redirect will reload page
       }
@@ -148,8 +149,8 @@ export const signInWithGoogle = async () => {
       throw popupError;
     }
   } catch (error) {
-    console.error('❌ Google Sign-In Error:', error);
-    console.error('❌ Error details:', {
+    logger.error('Google Sign-In Error:', error);
+    logger.error('Error details:', {
       code: error.code,
       message: error.message,
       stack: error.stack
@@ -166,25 +167,25 @@ export const signInWithGoogle = async () => {
 export const handleGoogleRedirectResult = async () => {
   try {
     // Check if localStorage is available
-    console.log('🔍 firebase.js: Checking localStorage availability...');
+      logger.debug('firebase.js: Checking localStorage availability...');
     try {
       const testKey = '__firebase_test__';
       localStorage.setItem(testKey, 'test');
       localStorage.removeItem(testKey);
-      console.log('✅ firebase.js: localStorage is available');
+      logger.debug('firebase.js: localStorage is available');
     } catch (e) {
-      console.error('❌ firebase.js: localStorage is NOT available!', e);
+      logger.error('firebase.js: localStorage is NOT available!', e);
     }
     
-    console.log('🔍 firebase.js: Calling getRedirectResult()...');
-    console.log('🔍 firebase.js: Current URL:', window.location.href);
+    logger.debug('firebase.js: Calling getRedirectResult()...');
+    logger.debug('firebase.js: Current URL:', window.location.href);
     
     // Get current auth state using onAuthStateChanged (more reliable than auth.currentUser)
     let currentAuthUser = null;
     const authStatePromise = new Promise((resolve) => {
       const unsubscribe = onAuthStateChanged(auth, (user) => {
         currentAuthUser = user;
-        console.log('🔍 firebase.js: Auth state via onAuthStateChanged:', user ? `User logged in (${user.email})` : 'No user');
+        logger.debug('firebase.js: Auth state via onAuthStateChanged:', user ? `User logged in (${user.email})` : 'No user');
         unsubscribe(); // Unsubscribe after first callback
         resolve(user);
       });
@@ -194,19 +195,19 @@ export const handleGoogleRedirectResult = async () => {
     await authStatePromise;
     
     const result = await getRedirectResult(auth);
-    console.log('🔍 firebase.js: getRedirectResult() returned:', result ? 'User found' : 'No result');
+    logger.debug('firebase.js: getRedirectResult() returned:', result ? 'User found' : 'No result');
     
     
     if (result) {
-      console.log('✅ firebase.js: User authenticated!', {
+      logger.debug('firebase.js: User authenticated!', {
         email: result.user.email,
         uid: result.user.uid,
         displayName: result.user.displayName
       });
       
-      console.log('🔑 firebase.js: Getting ID token...');
+      logger.debug('firebase.js: Getting ID token...');
       const idToken = await result.user.getIdToken();
-      console.log('✅ firebase.js: ID token obtained (length:', idToken.length, ')');
+      logger.debug('firebase.js: ID token obtained (length:', idToken.length, ')');
       
       // Get OAuth credential for Google APIs
       const credential = GoogleAuthProvider.credentialFromResult(result);
@@ -222,19 +223,19 @@ export const handleGoogleRedirectResult = async () => {
     
     // Check if there's a current user even without redirect result using onAuthStateChanged
     if (currentAuthUser) {
-      console.log('⚠️ firebase.js: No redirect result, but user is already logged in!');
-      console.log('👤 firebase.js: Current user:', currentAuthUser.email);
+      logger.warn('firebase.js: No redirect result, but user is already logged in!');
+      logger.debug('firebase.js: Current user:', currentAuthUser.email);
       
       
       // FIX: If user is authenticated but redirect result is null,
       // this means Firebase auth completed but the redirect result was consumed/lost.
       // Return the user data so the app can complete the login flow.
-      console.log('🔧 firebase.js: Recovering user from auth state (redirect result was lost)');
-      console.log('🔑 firebase.js: Getting ID token from current user...');
+      logger.debug('firebase.js: Recovering user from auth state (redirect result was lost)');
+      logger.debug('firebase.js: Getting ID token from current user...');
       
       try {
         const idToken = await currentAuthUser.getIdToken();
-        console.log('✅ firebase.js: ID token obtained (length:', idToken.length, ')');
+        logger.debug('firebase.js: ID token obtained (length:', idToken.length, ')');
         
         return {
           user: currentAuthUser,
@@ -243,7 +244,7 @@ export const handleGoogleRedirectResult = async () => {
           credential: null // No credential available without redirect result
         };
       } catch (tokenError) {
-        console.error('❌ firebase.js: Failed to get ID token:', tokenError);
+        logger.error('firebase.js: Failed to get ID token:', tokenError);
         return null;
       }
     } else {
@@ -251,8 +252,8 @@ export const handleGoogleRedirectResult = async () => {
     
     return null;
   } catch (error) {
-    console.error('❌ firebase.js: Google Redirect Result Error:', error);
-    console.error('❌ firebase.js: Error details:', {
+    logger.error('firebase.js: Google Redirect Result Error:', error);
+    logger.error('firebase.js: Error details:', {
       message: error.message,
       code: error.code,
       name: error.name
@@ -277,7 +278,7 @@ export const signInWithEmail = async (email, password) => {
       idToken
     };
   } catch (error) {
-    console.error('Email Sign-In Error:', error);
+    logger.error('Email Sign-In Error:', error);
     throw error;
   }
 };
@@ -298,7 +299,7 @@ export const registerWithEmail = async (email, password) => {
       idToken
     };
   } catch (error) {
-    console.error('Email Registration Error:', error);
+    logger.error('Email Registration Error:', error);
     throw error;
   }
 };
@@ -311,7 +312,7 @@ export const signOut = async () => {
   try {
     await firebaseSignOut(auth);
   } catch (error) {
-    console.error('Sign Out Error:', error);
+    logger.error('Sign Out Error:', error);
     throw error;
   }
 };
@@ -330,7 +331,7 @@ export const getCurrentUserToken = async () => {
           const token = await user.getIdToken();
           resolve(token);
         } catch (error) {
-          console.error('❌ firebase.js: Error getting ID token:', error);
+          logger.error('firebase.js: Error getting ID token:', error);
           resolve(null);
         }
       } else {
@@ -367,7 +368,7 @@ export const sendPasswordReset = async (email) => {
   try {
     // Only log in development
     if (process.env.NODE_ENV === 'development') {
-      console.log('📧 firebase.js: Sending password reset email to:', email);
+      logger.debug('firebase.js: Sending password reset email to:', email);
     }
     
     // Validate Firebase Auth is initialized (early return for performance)
@@ -386,12 +387,12 @@ export const sendPasswordReset = async (email) => {
     await sendPasswordResetEmail(auth, email, actionCodeSettings);
     
     if (process.env.NODE_ENV === 'development') {
-      console.log('✅ firebase.js: Password reset email sent successfully');
+      logger.debug('firebase.js: Password reset email sent successfully');
     }
   } catch (error) {
     // Only log errors in development
     if (process.env.NODE_ENV === 'development') {
-      console.error('❌ firebase.js: Password reset email error:', error.code || error.message);
+      logger.error('firebase.js: Password reset email error:', error.code || error.message);
     }
     
     // Optimize error handling - check codes first (faster than string matching)
@@ -418,16 +419,16 @@ export const sendPasswordReset = async (email) => {
 export const verifyResetCode = async (actionCode) => {
   try {
     if (process.env.NODE_ENV === 'development') {
-      console.log('🔍 firebase.js: Verifying password reset code...');
+      logger.debug('firebase.js: Verifying password reset code...');
     }
     const email = await verifyPasswordResetCode(auth, actionCode);
     if (process.env.NODE_ENV === 'development') {
-      console.log('✅ firebase.js: Password reset code verified for:', email);
+      logger.debug('firebase.js: Password reset code verified for:', email);
     }
     return email;
   } catch (error) {
     if (process.env.NODE_ENV === 'development') {
-      console.error('❌ firebase.js: Password reset code verification failed:', error);
+      logger.error('firebase.js: Password reset code verification failed:', error);
     }
     throw error;
   }
@@ -442,15 +443,15 @@ export const verifyResetCode = async (actionCode) => {
 export const confirmResetPassword = async (actionCode, newPassword) => {
   try {
     if (process.env.NODE_ENV === 'development') {
-      console.log('🔐 firebase.js: Confirming password reset...');
+      logger.debug('firebase.js: Confirming password reset...');
     }
     await confirmPasswordReset(auth, actionCode, newPassword);
     if (process.env.NODE_ENV === 'development') {
-      console.log('✅ firebase.js: Password reset confirmed successfully');
+      logger.debug('firebase.js: Password reset confirmed successfully');
     }
   } catch (error) {
     if (process.env.NODE_ENV === 'development') {
-      console.error('❌ firebase.js: Password reset confirmation failed:', error);
+      logger.error('firebase.js: Password reset confirmation failed:', error);
     }
     throw error;
   }
@@ -463,11 +464,11 @@ export const confirmResetPassword = async (actionCode, newPassword) => {
  */
 export const applyActionCodeWrapper = async (actionCode) => {
   try {
-    console.log('🔄 firebase.js: Applying action code...');
+    logger.debug('firebase.js: Applying action code...');
     await applyActionCode(auth, actionCode);
-    console.log('✅ firebase.js: Action code applied successfully');
+    logger.debug('firebase.js: Action code applied successfully');
   } catch (error) {
-    console.error('❌ firebase.js: Action code application failed:', error);
+    logger.error('firebase.js: Action code application failed:', error);
     throw error;
   }
 };
