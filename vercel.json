@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "buildCommand": "cd frontend && yarn install --frozen-lockfile && yarn build",
+  "buildCommand": "cd frontend && npm ci && npm run build",
   "outputDirectory": "frontend/build",
   "framework": null,
   "rewrites": [
