@@ -12,7 +12,12 @@ module.exports = {
       '@': path.resolve(__dirname, 'src'),
     },
     configure: (webpackConfig) => {
-      
+      // react-scripts pulls fork-ts-checker + old ajv-keywords; npm's tree can hoist ajv@8
+      // (required by terser/schema-utils) and break that plugin. This app is JS-only.
+      webpackConfig.plugins = (webpackConfig.plugins || []).filter(
+        (p) => p && p.constructor && p.constructor.name !== 'ForkTsCheckerWebpackPlugin'
+      );
+
       // Disable hot reload completely if environment variable is set
       if (config.disableHotReload) {
         // Remove hot reload related plugins
