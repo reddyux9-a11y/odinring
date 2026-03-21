@@ -27,7 +27,6 @@ export const getUserId = () => {
     
     return null;
   } catch (error) {
-    console.error('getUserId: Error reading user ID:', error);
     return null;
   }
 };
@@ -44,7 +43,6 @@ export const getUserData = () => {
     }
     return null;
   } catch (error) {
-    console.error('getUserData: Error parsing user data:', error);
     return null;
   }
 };
@@ -59,7 +57,6 @@ export const isUserLoggedIn = () => {
     const hasUserId = !!localStorage.getItem('user_id');
     return hasToken && hasUserId;
   } catch (error) {
-    console.error('isUserLoggedIn: Error checking login status:', error);
     return false;
   }
 };
@@ -73,7 +70,6 @@ export const getUserEmail = () => {
     const userData = getUserData();
     return userData?.email || null;
   } catch (error) {
-    console.error('getUserEmail: Error getting email:', error);
     return null;
   }
 };
@@ -87,7 +83,6 @@ export const getUserName = () => {
     const userData = getUserData();
     return userData?.name || null;
   } catch (error) {
-    console.error('getUserName: Error getting name:', error);
     return null;
   }
 };
@@ -101,7 +96,6 @@ export const getUsername = () => {
     const userData = getUserData();
     return userData?.username || null;
   } catch (error) {
-    console.error('getUsername: Error getting username:', error);
     return null;
   }
 };
@@ -115,7 +109,6 @@ export const getUserAvatar = () => {
     const userData = getUserData();
     return userData?.avatar || null;
   } catch (error) {
-    console.error('getUserAvatar: Error getting avatar:', error);
     return null;
   }
 };
@@ -129,7 +122,6 @@ export const getUserRingId = () => {
     const userData = getUserData();
     return userData?.ring_id || null;
   } catch (error) {
-    console.error('getUserRingId: Error getting ring ID:', error);
     return null;
   }
 };
@@ -214,10 +206,8 @@ export const clearUserData = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user_data');
     localStorage.removeItem('user_id');
-    console.log('✅ User data cleared from localStorage');
     return true;
   } catch (error) {
-    console.error('clearUserData: Error clearing user data:', error);
     return false;
   }
 };
@@ -227,7 +217,6 @@ export const clearUserData = () => {
  */
 export const debugUserPersistence = () => {
   const state = getUserPersistenceState();
-  console.log('🔍 User Persistence Debug:', state);
   return state;
 };
 

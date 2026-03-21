@@ -25,9 +25,9 @@ if (process.env.REACT_APP_SENTRY_DSN) {
     replaysOnErrorSampleRate: 1.0, // Sample 100% of sessions with errors
     environment: process.env.NODE_ENV || "development",
   });
-  console.log("✅ Sentry initialized for frontend");
+  // Sentry initialized for frontend
 } else {
-  console.log("⚠️ Sentry DSN not configured - error tracking disabled");
+  // Sentry DSN not configured - error tracking disabled
 }
 
 const root = ReactDOM.createRoot(document.getElementById("root"));

@@ -17,11 +17,13 @@ import Checkout from "./pages/Checkout";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentFailed from "./pages/PaymentFailed";
 import SubscriptionManagement from "./pages/SubscriptionManagement";
+import MobileLanding from "./components/MobileLanding";
 import { Toaster } from "./components/ui/sonner";
-import { initializeMobileEnvironment } from "./utils/mobileUtils";
+import { initializeMobileEnvironment, isMobileDevice } from "./utils/mobileUtils";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import ErrorBoundary from "./components/ErrorBoundary";
+import logger from "./lib/logger";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -31,7 +33,7 @@ const ProtectedRoute = ({ children, requiredAuth = 'user' }) => {
   const { user, admin, loading, authChecked } = useAuth();
 
 
-  console.log('🛡️ ProtectedRoute: Checking access', {
+  logger.debug('ProtectedRoute: Checking access', {
     requiredAuth,
     user: user ? user.email : null,
     admin: admin ? admin.email : null,
@@ -41,7 +43,7 @@ const ProtectedRoute = ({ children, requiredAuth = 'user' }) => {
   });
 
   if (!authChecked || loading) {
-    console.log('⏳ ProtectedRoute: Still loading, showing spinner...');
+    logger.debug('ProtectedRoute: Still loading, showing spinner...');
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -50,16 +52,16 @@ const ProtectedRoute = ({ children, requiredAuth = 'user' }) => {
   }
 
   if (requiredAuth === 'user' && !user) {
-    console.log('❌ ProtectedRoute: No user found, redirecting to /auth');
+    logger.debug('ProtectedRoute: No user found, redirecting to /auth');
     return <Navigate to="/auth" replace />;
   }
 
   if (requiredAuth === 'admin' && !admin) {
-    console.log('❌ ProtectedRoute: No admin found, redirecting to /admin/login');
+    logger.debug('ProtectedRoute: No admin found, redirecting to /admin/login');
     return <Navigate to="/admin/login" replace />;
   }
 
-  console.log('✅ ProtectedRoute: Access granted!');
+  logger.debug('ProtectedRoute: Access granted!');
   return children;
 };
 
@@ -68,7 +70,7 @@ const AuthRedirect = ({ children, authType = 'user' }) => {
   const { user, admin, loading, authChecked } = useAuth();
 
 
-  console.log('🔀 AuthRedirect: Checking auth status', {
+  logger.debug('AuthRedirect: Checking auth status', {
     authType,
     user: user ? user.email : null,
     admin: admin ? admin.email : null,
@@ -78,7 +80,7 @@ const AuthRedirect = ({ children, authType = 'user' }) => {
   });
 
   if (!authChecked || loading) {
-    console.log('⏳ AuthRedirect: Still loading, showing spinner...');
+    logger.debug('AuthRedirect: Still loading, showing spinner...');
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -87,16 +89,16 @@ const AuthRedirect = ({ children, authType = 'user' }) => {
   }
 
   if (authType === 'user' && user) {
-    console.log('✅ AuthRedirect: User authenticated, redirecting to /dashboard');
+    logger.debug('AuthRedirect: User authenticated, redirecting to /dashboard');
     return <Navigate to="/dashboard" replace />;
   }
 
   if (authType === 'admin' && admin) {
-    console.log('✅ AuthRedirect: Admin authenticated, redirecting to /admin/dashboard');
+    logger.debug('AuthRedirect: Admin authenticated, redirecting to /admin/dashboard');
     return <Navigate to="/admin/dashboard" replace />;
   }
 
-  console.log('ℹ️ AuthRedirect: Not authenticated, showing auth page');
+  logger.debug('AuthRedirect: Not authenticated, showing auth page');
   return children;
 };
 
@@ -121,7 +123,13 @@ function AppContent() {
       <BrowserRouter>
         <Routes>
           {/* Public Routes */}
-          <Route path="/" element={<Landing />} />
+          {/* Mobile Landing - Shows on mobile devices at root */}
+          <Route 
+            path="/" 
+            element={
+              isMobileDevice() ? <MobileLanding /> : <Landing />
+            } 
+          />
           <Route path="/install" element={<Install />} />
           <Route path="/profile/:username" element={<Profile />} />
           <Route path="/ring/:ringId" element={<Profile />} />

@@ -17,27 +17,16 @@ const GoogleSignInButton = ({ mode = 'signin', onSuccess }) => {
   useEffect(() => {
     // Prevent multiple checks
     if (checkedRedirect) {
-      console.log('ℹ️ GoogleSignInButton: Already checked for redirect, skipping');
       return;
     }
-    
     const checkRedirectResult = async () => {
       try {
-        console.log('🔍 GoogleSignInButton: Checking for redirect result (one-time check)...');
         const result = await handleGoogleRedirectResult();
         
         if (result) {
           // User just completed Google sign-in, sync with backend
-          console.log('✅ GoogleSignInButton: Redirect result found!', {
-            email: result.user.email,
-            name: result.user.displayName,
-            uid: result.user.uid
-          });
           setLoading(true);
           const { user, idToken, accessToken } = result;
-          
-          console.log('📤 GoogleSignInButton: Sending token to backend...');
-          
           // Send to backend
           await loginWithGoogle({
             firebaseToken: idToken,
@@ -47,19 +36,13 @@ const GoogleSignInButton = ({ mode = 'signin', onSuccess }) => {
             uid: user.uid,
             accessToken: accessToken  // ✅ NEW: Google API access token
           });
-          
-          console.log('✅ GoogleSignInButton: Backend login successful!');
           toast.success(`Welcome ${user.displayName || 'back'}! 🎉`);
           
           if (onSuccess) {
             onSuccess(user);
           }
-        } else {
-          // No redirect result - this is normal on page load
-          console.log('ℹ️ GoogleSignInButton: No redirect result (normal page load)');
         }
       } catch (error) {
-        console.error('❌ GoogleSignInButton: Redirect result error:', error);
         toast.error('Sign-in failed. Please try again.');
       } finally {
         setLoading(false);
@@ -76,9 +59,7 @@ const GoogleSignInButton = ({ mode = 'signin', onSuccess }) => {
     
     try {
       // Sign in with Google using Firebase (popup with redirect fallback)
-      console.log('🚀 Starting Google Sign-In flow...');
       const result = await signInWithGoogle();
-      console.log('📥 signInWithGoogle returned:', result);
       
       // If redirect flow is used, result will be null and page will reload
       if (result) {
@@ -105,11 +86,8 @@ const GoogleSignInButton = ({ mode = 'signin', onSuccess }) => {
       // If result is null, redirect flow is in progress, keep loading state
       
     } catch (error) {
-      console.error('Google Sign-In Error:', error);
-      
       // Filter out technical errors
       if (error.message === 'No refresh token available') {
-        console.log('ℹ️  Session expired, user can sign in again');
         setLoading(false);
         return; // Don't show error toast for expected session expiry
       }

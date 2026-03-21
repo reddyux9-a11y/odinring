@@ -17,6 +17,8 @@ const BillingChoosePlan = () => {
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [subscription, setSubscription] = useState(null);
+  const [startingTrial, setStartingTrial] = useState(null);
+  const [subscribingPlan, setSubscribingPlan] = useState(null);
 
   useEffect(() => {
     loadPlans();
@@ -28,19 +30,10 @@ const BillingChoosePlan = () => {
       const response = await api.get('/billing/plans');
       const plansData = Object.values(response.data.plans || {});
       
-      // Filter plans based on account type
-      let availablePlans = plansData;
-      if (identityContext?.account_type === 'business_solo') {
-        availablePlans = plansData.filter(p => p.id.startsWith('solo_') || p.id === 'personal');
-      } else if (identityContext?.account_type === 'organization') {
-        availablePlans = plansData.filter(p => p.id === 'org' || p.id === 'personal');
-      } else {
-        availablePlans = plansData.filter(p => p.id === 'personal');
-      }
-      
-      setPlans(availablePlans);
+      // For now, show all available plans (including paid "dummy" plans)
+      // regardless of account type so Stripe checkout can be tested easily.
+      setPlans(plansData);
     } catch (error) {
-      console.error('Failed to load plans:', error);
       toast.error('Failed to load subscription plans');
     } finally {
       setLoading(false);
@@ -52,13 +45,56 @@ const BillingChoosePlan = () => {
       const response = await api.get('/billing/subscription');
       setSubscription(response.data);
     } catch (error) {
-      console.error('Failed to load subscription:', error);
     }
   };
 
   const handleActivatePlan = async (planId) => {
-    // Navigate to checkout page with selected plan
-    navigate(`/checkout?plan=${planId}`);
+    setSubscribingPlan(planId);
+    try {
+      const response = await api.post('/billing/checkout-session', {
+        plan_id: planId,
+        billing_cycle: 'yearly',
+      });
+
+      const checkoutUrl = response.data?.checkout_url;
+      if (!checkoutUrl) {
+        toast.error('Failed to start checkout. Please try again.');
+        setSubscribingPlan(null);
+        return;
+      }
+
+      // Redirect to Stripe Checkout
+      window.location.href = checkoutUrl;
+    } catch (error) {
+      const message =
+        error.response?.data?.detail ||
+        'Failed to start checkout. Please try again.';
+      toast.error(message);
+      setSubscribingPlan(null);
+    }
+  };
+
+  const handleStartTrial = async (planId) => {
+    setStartingTrial(planId);
+    try {
+      const response = await api.post('/billing/trial/start', {
+        plan_id: planId
+      });
+      
+      if (response.data.success) {
+        toast.success('🎉 Free trial started! Enjoy 14 days of premium features.');
+        // Refresh subscription data
+        await loadSubscription();
+        await refetchContext();
+        // Navigate to dashboard
+        navigate('/dashboard');
+      }
+    } catch (error) {
+      const errorMessage = error.response?.data?.detail || 'Failed to start free trial. Please try again.';
+      toast.error(errorMessage);
+    } finally {
+      setStartingTrial(null);
+    }
   };
 
   const getDaysRemaining = () => {
@@ -194,18 +230,51 @@ const BillingChoosePlan = () => {
                     })}
                   </ul>
 
-                  <Button
-                    className="w-full"
-                    variant={isFree ? 'outline' : 'default'}
-                    disabled={isFree}
-                    onClick={() => handleActivatePlan(plan.id)}
-                  >
-                    {isFree ? (
-                      'Current Plan'
-                    ) : (
-                      'Select Plan'
+                  {/* Free Trial Badge */}
+                  {!isFree && (
+                    <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                      <p className="text-sm font-medium text-blue-900 dark:text-blue-100 text-center">
+                        🎁 14-Day Free Trial
+                      </p>
+                      <p className="text-xs text-blue-700 dark:text-blue-300 text-center mt-1">
+                        Try all features risk-free
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Action Buttons */}
+                  <div className="space-y-2">
+                    {!isFree && (
+                      <Button
+                        className="w-full"
+                        variant="default"
+                        disabled={startingTrial === plan.id || subscribingPlan === plan.id}
+                        onClick={() => handleStartTrial(plan.id)}
+                      >
+                        {startingTrial === plan.id ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Starting Trial...
+                          </>
+                        ) : (
+                          'Start Free Trial'
+                        )}
+                      </Button>
                     )}
-                  </Button>
+                    
+                    <Button
+                      className="w-full"
+                      variant={isFree ? 'outline' : 'outline'}
+                      disabled={isFree || startingTrial === plan.id || subscribingPlan === plan.id}
+                      onClick={() => handleActivatePlan(plan.id)}
+                    >
+                      {isFree ? (
+                        'Current Plan'
+                      ) : (
+                        subscribingPlan === plan.id ? 'Redirecting to Stripe...' : 'Subscribe Now'
+                      )}
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             );

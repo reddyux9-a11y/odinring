@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import api from '../lib/api';
-import { onAuthChange } from '../lib/firebase';
+import { onAuthChange, signOut as firebaseSignOut } from '../lib/firebase';
 import logger from '../lib/logger';
 
 const AuthContext = createContext();
@@ -118,18 +118,33 @@ return { token: accessToken, refresh_token: refreshToken, user: userData };
   };
 
   const logout = () => {
-logger.debug('🚪 AuthContext: Logging out...');
+    logger.debug('🚪 AuthContext: Logging out...');
     logger.debug('🚪 AuthContext: Stack trace:', new Error().stack);
-// Clear all auth-related data including refresh token
+
+    // Best-effort sign out from Firebase so Google session doesn't silently persist
+    try {
+      firebaseSignOut()
+        .then(() => {
+          logger.debug('✅ AuthContext: Firebase sign-out completed');
+        })
+        .catch((error) => {
+          logger.warn('⚠️ AuthContext: Firebase sign-out failed (continuing logout):', error);
+        });
+    } catch (error) {
+      logger.warn('⚠️ AuthContext: Error triggering Firebase sign-out (continuing logout):', error);
+    }
+
+    // Clear all auth-related data including refresh token
     localStorage.removeItem('token');
     localStorage.removeItem('refresh_token');
     localStorage.removeItem('user_data');
     localStorage.removeItem('user_id');
     localStorage.removeItem('admin_token');
+    localStorage.removeItem('google_access_token');
 
-setUser(null);
+    setUser(null);
     setAdmin(null);
-};
+  };
 
   const adminLogout = () => {
     localStorage.removeItem('admin_token');
@@ -500,6 +515,18 @@ throw error;
     }
   };
 
+  const verifyResetOtp = async (email, otp) => {
+    try {
+      logger.debug('🔎 AuthContext: Verifying reset OTP for:', email);
+      const response = await api.post(`/auth/verify-reset-otp`, { email, otp });
+      logger.debug('✅ AuthContext: Reset OTP verified');
+      return response.data;
+    } catch (error) {
+      logger.error('❌ AuthContext: Reset OTP verification failed:', error);
+      throw error;
+    }
+  };
+
   const value = {
     user,
     admin,
@@ -514,6 +541,7 @@ throw error;
     refreshUser,
     updateUserData,
     forgotPassword,
+    verifyResetOtp,
     resetPassword,
     isAuthenticated: !!user,
     isAdmin: !!admin,

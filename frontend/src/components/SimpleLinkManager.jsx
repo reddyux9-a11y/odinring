@@ -35,6 +35,25 @@ import api from "../lib/api";
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
+// Sanitize phone number input to keep it reasonably short and valid
+const normalizePhoneNumber = (value, countryMeta) => {
+  if (!value) return "";
+  // Allow digits, +, spaces, dashes, dots, parentheses
+  let cleaned = value.replace(/[^0-9+()\-\s.]/g, "");
+  // Prevent multiple '+' signs
+  const plusIndex = cleaned.indexOf("+");
+  if (plusIndex > 0) {
+    cleaned = cleaned.replace(/\+/g, "");
+  } else if (plusIndex === 0) {
+    cleaned = "+" + cleaned.slice(1).replace(/\+/g, "");
+  }
+  // Hard cap length to avoid absurdly long entries
+  const maxLen = countryMeta?.maxDigits ?? 15;
+  // We only care about limiting the digits; country code is applied separately
+  const digitsOnly = cleaned.replace(/\D/g, "");
+  return digitsOnly.slice(0, maxLen);
+};
+
 // Custom DialogContent without close button
 const CustomDialogContent = React.forwardRef(({ className, children, ...props }, ref) => (
   <DialogPrimitive.Portal>
@@ -42,7 +61,7 @@ const CustomDialogContent = React.forwardRef(({ className, children, ...props },
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg",
+        "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg max-h-[90vh] translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 overflow-y-auto data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg",
         className
       )}
       {...props}>
@@ -53,16 +72,18 @@ const CustomDialogContent = React.forwardRef(({ className, children, ...props },
 CustomDialogContent.displayName = "CustomDialogContent";
 
 const SimpleLinkManager = ({ links, setLinks, onBack }) => {
-  console.log('🔗 SimpleLinkManager: Component rendered with links:', links);
-  console.log('🔗 SimpleLinkManager: Links count:', links?.length);
-  console.log('🔗 SimpleLinkManager: Links type:', typeof links);
-  console.log('🔗 SimpleLinkManager: Links is array:', Array.isArray(links));
-  
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingLink, setEditingLink] = useState(null);
   const [loading, setLoading] = useState(false);
   
+  const PHONE_COUNTRIES = [
+    { code: "IN", label: "India (+91)", dialCode: "+91", maxDigits: 10 },
+    { code: "US", label: "USA (+1)", dialCode: "+1", maxDigits: 10 },
+    { code: "GB", label: "UK (+44)", dialCode: "+44", maxDigits: 10 },
+    { code: "EU", label: "Europe (+49)", dialCode: "+49", maxDigits: 11 },
+  ];
+
   const [formData, setFormData] = useState({
     title: "",
     url: "",
@@ -71,6 +92,9 @@ const SimpleLinkManager = ({ links, setLinks, onBack }) => {
     icon: "Link",
     category: "social"
   });
+
+  const [phoneCountry, setPhoneCountry] = useState("IN");
+  const [phoneLocal, setPhoneLocal] = useState("");
 
   // Icon dropdown state
   const [iconDropdownOpen, setIconDropdownOpen] = useState(false);
@@ -144,7 +168,6 @@ const SimpleLinkManager = ({ links, setLinks, onBack }) => {
       await Promise.all(updatePromises);
       mobileToast.success("Link order updated! 🔄");
     } catch (error) {
-      console.error('Failed to update link order:', error);
       mobileToast.error("Failed to save link order");
     }
   };
@@ -211,7 +234,6 @@ const SimpleLinkManager = ({ links, setLinks, onBack }) => {
       addHapticFeedback('success');
 
     } catch (error) {
-      console.error('Link operation failed:', error);
       addHapticFeedback('error');
       mobileToast.error("Operation failed. Please try again.");
     } finally {
@@ -221,6 +243,21 @@ const SimpleLinkManager = ({ links, setLinks, onBack }) => {
 
   const handleEdit = (link) => {
     setEditingLink(link);
+    // Infer country from stored phone_number if possible
+    let inferredCountry = "IN";
+    let localPart = "";
+    if (link.phone_number && typeof link.phone_number === "string") {
+      const match = PHONE_COUNTRIES.find(c => link.phone_number.startsWith(c.dialCode));
+      if (match) {
+        inferredCountry = match.code;
+        localPart = link.phone_number.slice(match.dialCode.length).replace(/\D/g, "").slice(0, match.maxDigits);
+      } else {
+        // Fallback: keep digits only, assume current default country
+        localPart = link.phone_number.replace(/\D/g, "");
+      }
+    }
+    setPhoneCountry(inferredCountry);
+    setPhoneLocal(localPart);
     setFormData({
       title: link.title,
       url: link.url,
@@ -264,7 +301,6 @@ const SimpleLinkManager = ({ links, setLinks, onBack }) => {
       mobileToast.success("Link deleted successfully");
 
     } catch (error) {
-      console.error('Delete failed:', error);
       addHapticFeedback('error');
       mobileToast.error("Failed to delete link");
     } finally {
@@ -289,7 +325,6 @@ const SimpleLinkManager = ({ links, setLinks, onBack }) => {
       mobileToast.success(!currentActive ? "Link activated" : "Link hidden");
 
     } catch (error) {
-      console.error('Toggle visibility failed:', error);
       addHapticFeedback('error');
       mobileToast.error("Failed to update link visibility");
     } finally {
@@ -390,12 +425,7 @@ const SimpleLinkManager = ({ links, setLinks, onBack }) => {
           </CardHeader>
           <CardContent className="w-full p-3 sm:p-6 ml-0">
             {(() => {
-              console.log('🔗 SimpleLinkManager: Rendering links list, links.length:', links?.length);
-              console.log('🔗 SimpleLinkManager: Links array:', links);
-              console.log('🔗 SimpleLinkManager: Will show empty state?', !links || links.length === 0);
-              
               if (!links || links.length === 0) {
-                console.log('🔗 SimpleLinkManager: Showing empty state');
                 return (
                   <div className="text-center py-8 sm:py-12">
                     <Globe className="w-12 h-12 sm:w-16 sm:h-16 text-muted mx-auto mb-4" />
@@ -411,11 +441,9 @@ const SimpleLinkManager = ({ links, setLinks, onBack }) => {
                   </div>
                 );
               } else {
-                console.log('🔗 SimpleLinkManager: Rendering', links.length, 'links');
                 return (
                   <div className="w-full space-y-3 overflow-x-hidden">
                     {links.map((link, index) => {
-                      console.log(`🔗 SimpleLinkManager: Rendering link ${index}:`, link);
                       return (
                   <div key={link.id} className="border border-border rounded-2xl transition-all duration-300 bg-card/80 backdrop-blur-sm hover:bg-card/90 hover:shadow-lg hover:border-border sm:border sm:rounded-lg sm:bg-card sm:hover:bg-muted sm:hover:shadow-md" style={{ width: '100%' }}>
                     {/* Mobile-optimized compact layout */}
@@ -682,15 +710,50 @@ const SimpleLinkManager = ({ links, setLinks, onBack }) => {
                   <span className="w-2 h-2 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full"></span>
                   Mobile Number (Optional)
                 </Label>
-                <Input
-                  id="add-phone"
-                  type="tel"
-                  value={formData.phone_number}
-                  onChange={(e) => setFormData(prev => ({ ...prev, phone_number: e.target.value }))}
-                  placeholder="+1234567890"
-                  className="h-12 border-2 border-border focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 dark:focus:ring-indigo-800 rounded-xl transition-all duration-200 bg-background/80 backdrop-blur-sm"
-                />
-                <p className="text-xs text-muted-foreground">For WhatsApp and Call buttons</p>
+                <div className="flex gap-2">
+                  <select
+                    value={phoneCountry}
+                    onChange={(e) => {
+                      const code = e.target.value;
+                      setPhoneCountry(code);
+                      const meta = PHONE_COUNTRIES.find(c => c.code === code);
+                      const normalized = normalizePhoneNumber(phoneLocal, meta);
+                      setPhoneLocal(normalized);
+                      setFormData(prev => ({
+                        ...prev,
+                        phone_number: normalized ? `${meta.dialCode}${normalized}` : ""
+                      }));
+                    }}
+                    className="h-12 rounded-xl border-2 border-border bg-background px-2 text-sm"
+                  >
+                    {PHONE_COUNTRIES.map(country => (
+                      <option key={country.code} value={country.code}>
+                        {country.label}
+                      </option>
+                    ))}
+                  </select>
+                  <Input
+                    id="add-phone"
+                    type="tel"
+                    value={phoneLocal}
+                    inputMode="tel"
+                    maxLength={PHONE_COUNTRIES.find(c => c.code === phoneCountry)?.maxDigits ?? 15}
+                    onChange={(e) => {
+                      const meta = PHONE_COUNTRIES.find(c => c.code === phoneCountry);
+                      const normalized = normalizePhoneNumber(e.target.value, meta);
+                      setPhoneLocal(normalized);
+                      setFormData(prev => ({
+                        ...prev,
+                        phone_number: normalized ? `${meta.dialCode}${normalized}` : ""
+                      }));
+                    }}
+                    placeholder="1234567890"
+                    className="h-12 border-2 border-border focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 dark:focus:ring-indigo-800 rounded-xl transition-all duration-200 bg-background/80 backdrop-blur-sm flex-1"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  For WhatsApp and Call buttons. We’ll format it as full international number.
+                </p>
               </div>
 
               <div className="space-y-2">
@@ -878,7 +941,11 @@ const SimpleLinkManager = ({ links, setLinks, onBack }) => {
                   id="edit-phone"
                   type="tel"
                   value={formData.phone_number}
-                  onChange={(e) => setFormData(prev => ({ ...prev, phone_number: e.target.value }))}
+                  inputMode="tel"
+                  maxLength={20}
+                  onChange={(e) =>
+                    setFormData(prev => ({ ...prev, phone_number: normalizePhoneNumber(e.target.value) }))
+                  }
                   placeholder="+1234567890"
                   className="mt-1 h-10 sm:h-11"
                 />

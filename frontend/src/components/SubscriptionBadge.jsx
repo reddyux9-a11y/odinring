@@ -6,9 +6,10 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from './ui/badge';
+import { Skeleton } from './ui/skeleton';
 import { AlertCircle, CheckCircle, Clock, XCircle } from 'lucide-react';
 
-const SubscriptionBadge = ({ subscription, size = 'default', clickable = false, onClick, title }) => {
+const SubscriptionBadge = ({ subscription, loading = false, size = 'default', clickable = false, onClick, title }) => {
   const navigate = useNavigate();
 
   const handleClick = (e) => {
@@ -30,19 +31,53 @@ const SubscriptionBadge = ({ subscription, size = 'default', clickable = false, 
     return planMap[plan.toLowerCase()] || plan.charAt(0).toUpperCase() + plan.slice(1);
   };
 
-  // Get badge label based on status and plan
-  const getBadgeLabel = (status, plan) => {
+  // Compute days remaining from trial_end_date (ISO string) if not provided
+  const getDaysRemaining = (sub) => {
+    if (sub?.days_remaining != null && typeof sub.days_remaining === 'number') {
+      return sub.days_remaining;
+    }
+    const endStr = sub?.trial_end_date;
+    if (!endStr) return null;
+    try {
+      const end = new Date(typeof endStr === 'string' ? endStr.replace('Z', '') : endStr);
+      if (Number.isNaN(end.getTime())) return null;
+      const now = new Date();
+      const diff = Math.ceil((end - now) / (1000 * 60 * 60 * 24));
+      return Math.max(0, diff);
+    } catch {
+      return null;
+    }
+  };
+
+  // Get badge label based on status, plan, and trial days remaining
+  const getBadgeLabel = (status, plan, sub) => {
     if (status === 'active' && plan) {
       return formatPlanName(plan);
     }
-    if (status === 'trial' || !status || status === 'none') {
+    if (status === 'trial') {
+      const days = getDaysRemaining(sub);
+      if (days != null) {
+        return days === 0 ? 'Trial ends today' : `${days} day${days !== 1 ? 's' : ''} left`;
+      }
+      return 'Trial';
+    }
+    if (!status || status === 'none') {
       return '14-days trial';
     }
     if (status === 'expired') {
       return 'Expired';
     }
-    return '14-days trial'; // Default fallback
+    return 'Trial';
   };
+
+  if (loading) {
+    return (
+      <Skeleton
+        className={size === 'small' ? 'h-5 w-20' : 'h-6 w-24'}
+        aria-label="Loading subscription"
+      />
+    );
+  }
 
   if (!subscription) {
     const defaultLabel = '14-days trial';
@@ -61,7 +96,7 @@ const SubscriptionBadge = ({ subscription, size = 'default', clickable = false, 
   }
 
   const { status, plan } = subscription;
-  const badgeLabel = getBadgeLabel(status, plan);
+  const badgeLabel = getBadgeLabel(status, plan, subscription);
 
   const statusConfig = {
     active: {

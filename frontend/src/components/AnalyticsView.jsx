@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { format } from "date-fns";
+import { format, subDays } from "date-fns";
 import api from "../lib/api";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
@@ -22,9 +22,10 @@ const AnalyticsView = ({ links }) => {
   const [qrAnalytics, setQrAnalytics] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-  const [dateRange, setDateRange] = useState({
-    from: null,
-    to: null
+  const [dateRange, setDateRange] = useState(() => {
+    const to = new Date();
+    const from = subDays(to, 6);
+    return { from, to };
   });
   const [isMobile, setIsMobile] = useState(false);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
@@ -102,17 +103,26 @@ const AnalyticsView = ({ links }) => {
     return () => { isMounted = false; };
   }, [dateRange]);
 
-  const totalVisits = analytics?.profile_views ?? 0;
-  const totalClicks = analytics?.total_clicks ?? totalClicksLocal;
-  
-  // Calculate dynamic metrics
-  const totalTaps = useMemo(() => qrAnalytics?.total_scans || 0, [qrAnalytics]);
-  const engagement = useMemo(() => totalClicksLocal, [totalClicksLocal]);
+  const weeklyData = analytics?.weekly_stats || [];
+
+  // Use API totals for cards (total_taps, total_engagements); fallback to range sums when API lacks them
+  const tapsInRange = useMemo(
+    () => weeklyData.reduce((sum, d) => sum + (d.visits ?? 0), 0),
+    [weeklyData]
+  );
+  const engagementsInRange = useMemo(
+    () => weeklyData.reduce((sum, d) => sum + (d.clicks ?? 0), 0),
+    [weeklyData]
+  );
+  const totalTaps = analytics?.total_taps ?? qrAnalytics?.total_scans ?? 0;
+  const totalEngagements = analytics?.total_engagements ?? totalClicksLocal;
+  const displayTaps = totalTaps ?? tapsInRange;
+  const displayEngagements = totalEngagements ?? engagementsInRange;
   const performance = useMemo(() => {
-    if (totalVisits === 0) return 0;
-    return Math.round((totalClicksLocal / totalVisits) * 100);
-  }, [totalClicksLocal, totalVisits]);
-  const activeLinks = useMemo(() => links.filter(l => l.active).length, [links]);
+    if (displayTaps === 0) return 0;
+    return Math.round((displayEngagements / displayTaps) * 100);
+  }, [displayTaps, displayEngagements]);
+  const activeLinks = analytics?.active_links ?? links.filter(l => l.active).length;
 
   // Calculate top performing link (prefer backend top_link)
   const topLink = useMemo(() => {
@@ -142,8 +152,6 @@ const AnalyticsView = ({ links }) => {
         icon: link.icon || "Globe"
       }));
   }, [analytics, links, totalClicksLocal]);
-
-  const weeklyData = analytics?.weekly_stats || [];
 
   const ChartTooltip = ({ active, payload, label }) => {
     if (!active || !payload || payload.length === 0) return null;
@@ -239,13 +247,45 @@ const AnalyticsView = ({ links }) => {
         </Card>
       </div> */}
 
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
         <Card className="border-0 shadow-sm">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                  <Target className="w-5 h-5 text-green-600" />
+                <div className="w-10 h-10 bg-emerald-100 dark:bg-emerald-900/40 rounded-lg flex items-center justify-center">
+                  <QrCode className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                </div>
+                <div>
+                  <p className="text-lg sm:text-2xl font-bold text-foreground">{displayTaps.toLocaleString()}</p>
+                  <p className="text-xs sm:text-sm font-medium text-muted-foreground">Total Taps</p>
+                </div>
+              </div>
+            </div>
+            <div className="mt-3 text-xs text-muted-foreground">Profile views in selected range</div>
+          </CardContent>
+        </Card>
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/40 rounded-lg flex items-center justify-center">
+                  <Activity className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div>
+                  <p className="text-lg sm:text-2xl font-bold text-foreground">{displayEngagements.toLocaleString()}</p>
+                  <p className="text-xs sm:text-sm font-medium text-muted-foreground">Engagements</p>
+                </div>
+              </div>
+            </div>
+            <div className="mt-3 text-xs text-muted-foreground">Link & media clicks in range</div>
+          </CardContent>
+        </Card>
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/40 rounded-lg flex items-center justify-center">
+                  <Target className="w-5 h-5 text-purple-600 dark:text-purple-400" />
                 </div>
                 <div>
                   <p className="text-lg sm:text-2xl font-bold text-foreground">{performance}%</p>
@@ -253,16 +293,15 @@ const AnalyticsView = ({ links }) => {
                 </div>
               </div>
             </div>
-            <div className="mt-3 text-xs text-muted-foreground">Click-through rate</div>
+            <div className="mt-3 text-xs text-muted-foreground">Click-through rate (taps → engagements)</div>
           </CardContent>
         </Card>
-
         <Card className="border-0 shadow-sm">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                  <CalendarIcon className="w-5 h-5 text-purple-600" />
+                <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900/40 rounded-lg flex items-center justify-center">
+                  <Zap className="w-5 h-5 text-orange-600 dark:text-orange-400" />
                 </div>
                 <div>
                   <p className="text-lg sm:text-2xl font-bold text-foreground">{activeLinks}</p>
@@ -450,9 +489,9 @@ const AnalyticsView = ({ links }) => {
             <div>
               <CardTitle className="text-base sm:text-lg font-semibold text-foreground">Weekly Activity</CardTitle>
               <CardDescription className="text-xs sm:text-sm text-muted-foreground">
-                {dateRange.from && dateRange.to 
-                  ? `Activity from ${format(dateRange.from, 'MMM dd')} to ${format(dateRange.to, 'MMM dd')}`
-                  : 'Smooth line chart for views and clicks (last 7 days)'}
+                {dateRange.from && dateRange.to
+                  ? `Taps and engagements from ${format(dateRange.from, 'MMM d')} to ${format(dateRange.to, 'MMM d, yyyy')}`
+                  : 'Select a date range to see activity'}
               </CardDescription>
             </div>
             {isMobile ? (
@@ -512,21 +551,30 @@ const AnalyticsView = ({ links }) => {
                     <div className="px-6 py-4 border-t flex gap-3 sticky bottom-0 bg-background">
                       <Button
                         variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const to = new Date();
+                          setDateRange({ from: subDays(to, 6), to });
+                          setIsDatePickerOpen(false);
+                        }}
+                      >
+                        Last 7 days
+                      </Button>
+                      <Button
+                        variant="outline"
                         className="flex-1"
                         onClick={() => {
                           setDateRange({ from: null, to: null });
                           setIsDatePickerOpen(false);
                         }}
                       >
-                        Clear Filter
+                        Clear
                       </Button>
                       <Button
                         className="flex-1"
-                        onClick={() => {
-                          setIsDatePickerOpen(false);
-                        }}
+                        onClick={() => setIsDatePickerOpen(false)}
                       >
-                        Apply
+                        Done
                       </Button>
                     </div>
                   </DialogContent>
@@ -566,6 +614,27 @@ const AnalyticsView = ({ links }) => {
                     onSelect={setDateRange}
                     numberOfMonths={2}
                   />
+                  <div className="p-2 border-t flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => {
+                        const to = new Date();
+                        setDateRange({ from: subDays(to, 6), to });
+                      }}
+                    >
+                      Last 7 days
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => setDateRange({ from: null, to: null })}
+                    >
+                      Clear
+                    </Button>
+                  </div>
                 </PopoverContent>
               </Popover>
             )}
@@ -594,7 +663,7 @@ const AnalyticsView = ({ links }) => {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400">Total Taps</p>
-                      <p className="text-lg font-bold text-emerald-900 dark:text-emerald-100">{totalTaps}</p>
+                      <p className="text-lg font-bold text-emerald-900 dark:text-emerald-100">{displayTaps}</p>
                     </div>
                     <QrCode className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
                   </div>
@@ -603,7 +672,7 @@ const AnalyticsView = ({ links }) => {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-xs font-medium text-blue-600 dark:text-blue-400">Engagements</p>
-                      <p className="text-lg font-bold text-blue-900 dark:text-blue-100">{engagement}</p>
+                      <p className="text-lg font-bold text-blue-900 dark:text-blue-100">{displayEngagements}</p>
                     </div>
                     <Activity className="w-4 h-4 text-blue-500 dark:text-blue-400" />
                   </div>
@@ -632,8 +701,17 @@ const AnalyticsView = ({ links }) => {
             {/* Premium Area Chart */}
             <div className="w-full bg-card rounded-xl border border-border p-4">
               <div className="mb-3">
-                <h4 className="text-lg font-semibold text-foreground mb-1">Taps Over 7 Days</h4>
-                <p className="text-sm text-muted-foreground">Weekly activity trends</p>
+                <h4 className="text-lg font-semibold text-foreground mb-1">
+                  Taps & Engagements
+                  {dateRange.from && dateRange.to && (
+                    <span className="text-sm font-normal text-muted-foreground ml-2">
+                      {format(dateRange.from, "MMM d")} – {format(dateRange.to, "MMM d, yyyy")}
+                    </span>
+                  )}
+                </h4>
+                <p className="text-sm text-muted-foreground">
+                  Daily profile views (taps) and link/media clicks (engagements)
+                </p>
               </div>
               
               {isLoading ? (
@@ -641,14 +719,7 @@ const AnalyticsView = ({ links }) => {
               ) : (
                 <div className="h-64 sm:h-80">
                   <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={weeklyData} margin={{ top: 10, right: 10, left: 5, bottom: 10 }}>
-                      <defs>
-                        <linearGradient id="areaTaps" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#6366f1" stopOpacity={0.6} />
-                          <stop offset="50%" stopColor="#6366f1" stopOpacity={0.3} />
-                          <stop offset="100%" stopColor="#6366f1" stopOpacity={0.05} />
-                        </linearGradient>
-                      </defs>
+                    <LineChart data={weeklyData} margin={{ top: 10, right: 10, left: 5, bottom: 10 }}>
                       <CartesianGrid className="stroke-muted" strokeDasharray="3 3" />
                       <XAxis 
                         dataKey="day" 
@@ -663,28 +734,35 @@ const AnalyticsView = ({ links }) => {
                         axisLine={false}
                         tickMargin={5}
                         width={30}
+                        allowDecimals={false}
                       />
                       <Tooltip 
                         content={<ChartTooltip />}
-                        cursor={{ stroke: '#6366f1', strokeWidth: 1, strokeDasharray: '3 3' }}
+                        cursor={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1, strokeDasharray: '3 3' }}
                       />
-                      <Area 
+                      <Legend 
+                        wrapperStyle={{ fontSize: 12 }}
+                        formatter={(value) => value}
+                      />
+                      <Line 
                         type="monotone" 
                         dataKey="visits" 
                         name="Taps" 
-                        stroke="#6366f1" 
-                        strokeWidth={3} 
-                        fill="url(#areaTaps)" 
-                        dot={false}
-                        activeDot={{ 
-                          r: 6, 
-                          stroke: '#6366f1', 
-                          strokeWidth: 3, 
-                          fill: '#fff',
-                          filter: 'drop-shadow(0 2px 4px rgba(99, 102, 241, 0.3))'
-                        }} 
+                        stroke="#10b981" 
+                        strokeWidth={2.5} 
+                        dot={{ r: 3, fill: '#10b981' }}
+                        activeDot={{ r: 5, stroke: '#10b981', strokeWidth: 2, fill: '#fff' }}
                       />
-                    </AreaChart>
+                      <Line 
+                        type="monotone" 
+                        dataKey="clicks" 
+                        name="Engagements" 
+                        stroke="#3b82f6" 
+                        strokeWidth={2.5} 
+                        dot={{ r: 3, fill: '#3b82f6' }}
+                        activeDot={{ r: 5, stroke: '#3b82f6', strokeWidth: 2, fill: '#fff' }}
+                      />
+                    </LineChart>
                   </ResponsiveContainer>
                 </div>
               )}

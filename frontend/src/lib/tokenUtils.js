@@ -23,7 +23,6 @@ export const decodeToken = (token) => {
     
     return JSON.parse(jsonPayload);
   } catch (error) {
-    console.error('❌ Failed to decode token:', error);
     return null;
   }
 };
@@ -129,7 +128,6 @@ export const getTokenInfo = (token) => {
       issuedAt: decoded.iat ? new Date(decoded.iat * 1000) : null
     };
   } catch (error) {
-    console.error('❌ Failed to get token info:', error);
     return {
       valid: false,
       expired: true,

@@ -5,9 +5,15 @@ import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { Label } from "./ui/label";
 import { Badge } from "./ui/badge";
-import { Lock, Shield, Power } from "lucide-react";
+import { Lock, Shield, Power, CheckCircle2, Circle, Eye, EyeOff } from "lucide-react";
 import { mobileToast } from "./MobileOptimizedToast";
-import { validatePassword } from "../lib/passwordValidation";
+import { 
+  validatePassword,
+  PASSWORD_MIN_LENGTH,
+  PASSWORD_UPPERCASE_REGEX,
+  PASSWORD_LOWERCASE_REGEX,
+  PASSWORD_DIGIT_REGEX
+} from "../lib/passwordValidation";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -16,8 +22,16 @@ const SecuritySettings = ({ user }) => {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState(user?.is_active !== false);
+
+  const hasMinLength = newPassword.length >= PASSWORD_MIN_LENGTH;
+  const hasUppercase = PASSWORD_UPPERCASE_REGEX.test(newPassword);
+  const hasLowercase = PASSWORD_LOWERCASE_REGEX.test(newPassword);
+  const hasDigit = PASSWORD_DIGIT_REGEX.test(newPassword);
 
   const changePassword = async () => {
     if (newPassword !== confirmPassword) {
@@ -92,16 +106,95 @@ const SecuritySettings = ({ user }) => {
         <CardContent className="space-y-4">
           <div>
             <Label>Current Password</Label>
-            <Input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
+            <div className="relative mt-1">
+              <Input
+                type={showCurrentPassword ? "text" : "password"}
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                className="pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowCurrentPassword((v) => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                aria-label={showCurrentPassword ? "Hide password" : "Show password"}
+              >
+                {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label>New Password</Label>
-              <Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+              <div className="relative mt-1">
+                <Input
+                  type={showNewPassword ? "text" : "password"}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowNewPassword((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  aria-label={showNewPassword ? "Hide password" : "Show password"}
+                >
+                  {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              <div className="mt-2 space-y-1 text-xs text-muted-foreground">
+                <div className="flex items-center gap-2">
+                  {hasMinLength ? (
+                    <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                  ) : (
+                    <Circle className="w-3 h-3" />
+                  )}
+                  <span>At least {PASSWORD_MIN_LENGTH} characters</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {hasUppercase ? (
+                    <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                  ) : (
+                    <Circle className="w-3 h-3" />
+                  )}
+                  <span>At least one uppercase letter</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {hasLowercase ? (
+                    <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                  ) : (
+                    <Circle className="w-3 h-3" />
+                  )}
+                  <span>At least one lowercase letter</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {hasDigit ? (
+                    <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                  ) : (
+                    <Circle className="w-3 h-3" />
+                  )}
+                  <span>At least one digit</span>
+                </div>
+              </div>
             </div>
             <div>
               <Label>Confirm Password</Label>
-              <Input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+              <div className="relative mt-1">
+                <Input
+                  type={showConfirmPassword ? "text" : "password"}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                >
+                  {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
           </div>
           <Button onClick={changePassword} disabled={loading} className="bg-gradient-to-r from-red-500 to-pink-500">

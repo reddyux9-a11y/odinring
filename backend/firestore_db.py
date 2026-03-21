@@ -174,24 +174,47 @@ class FirestoreDB:
                 return all_results
             
             query = self.db.collection(coll_name)
-            
+            range_field = None  # Firestore requires order_by on inequality field
+
             if filt:
                 for key, value in filt.items():
                     # Skip $or as it's handled above
                     if key == '$or':
                         continue
+                    # Handle $in (e.g. event: {"$in": ["media_click", "click"]})
+                    if isinstance(value, dict) and '$in' in value:
+                        in_list = value['$in']
+                        if in_list:
+                            query = query.where(filter=FieldFilter(key, 'in', in_list))
+                    # Handle range $gte / $lte (e.g. timestamp: {"$gte": start, "$lte": end})
+                    elif isinstance(value, dict) and ('$gte' in value or '$lte' in value):
+                        range_field = key
+                        if '$gte' in value:
+                            query = query.where(filter=FieldFilter(key, '>=', value['$gte']))
+                        if '$lte' in value:
+                            query = query.where(filter=FieldFilter(key, '<=', value['$lte']))
                     # Handle regex queries (case-insensitive search)
-                    if isinstance(value, dict) and '$regex' in value:
+                    elif isinstance(value, dict) and '$regex' in value:
                         regex_pattern = value['$regex']
-                        # Firestore doesn't support regex directly
-                        # For case-insensitive prefix matching, use range queries
-                        # Note: This is a simplified implementation - full regex is not supported
                         pattern_lower = regex_pattern.lower()
                         query = query.where(filter=FieldFilter(key, '>=', pattern_lower))
                         query = query.where(filter=FieldFilter(key, '<=', pattern_lower + '\uf8ff'))
                     else:
                         query = query.where(filter=FieldFilter(key, '==', value))
-            
+
+            # Firestore requires order_by on the inequality field when using range filters.
+            # Prefer DESC for timestamps to match our deployed indexes.
+            def _default_range_direction(field: str) -> str:
+                return 'DESCENDING' if field == 'timestamp' else 'ASCENDING'
+
+            if range_field:
+                if sort:
+                    sort_fields = [f for (f, _d) in sort]
+                    if range_field not in sort_fields:
+                        query = query.order_by(range_field, direction=_default_range_direction(range_field))
+                else:
+                    query = query.order_by(range_field, direction=_default_range_direction(range_field))
+
             if sort:
                 for field, direction in sort:
                     query = query.order_by(field, direction='DESCENDING' if direction == -1 else 'ASCENDING')
@@ -274,14 +297,28 @@ class FirestoreDB:
             
             if doc:
                 doc_id = doc['id']
-                
+                update_data = {}
+
+                # Handle MongoDB $inc operator (Firestore has no $inc; do read-then-write)
+                if '$inc' in upd:
+                    for field, delta in upd['$inc'].items():
+                        current = doc.get(field, 0)
+                        try:
+                            current = int(current) if current is not None else 0
+                        except (TypeError, ValueError):
+                            current = 0
+                        update_data[field] = current + delta
+
                 # Handle MongoDB $set operator
                 if '$set' in upd:
-                    update_data = dict_to_firestore(upd['$set'])
-                else:
+                    set_data = dict_to_firestore(upd['$set'])
+                    update_data = {**update_data, **set_data}
+
+                if not update_data:
                     update_data = dict_to_firestore(upd)
-                
-                self.db.collection(coll_name).document(doc_id).update(update_data)
+
+                if update_data:
+                    self.db.collection(coll_name).document(doc_id).update(dict_to_firestore(update_data))
                 # Invalidate cache
                 if self.enable_cache and self.cache:
                     self.cache.delete(coll_name, doc_id)

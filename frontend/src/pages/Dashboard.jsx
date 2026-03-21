@@ -4,7 +4,7 @@ import { Button } from "../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
 import { Badge } from "../components/ui/badge";
-import { Eye, LogOut, Palette, QrCode, Calendar, Shield, ExternalLink, Link as LinkIcon, Copy } from "lucide-react";
+import { Eye, LogOut, Palette, QrCode, Calendar, Shield, ExternalLink, Link as LinkIcon, Copy, Mail, Download, AlertCircle } from "lucide-react";
 import SimpleLinkManager from "../components/SimpleLinkManager";
 import LinksAndMediaManager from "../components/LinksAndMediaManager";
 import MediaManager from "../components/MediaManager";
@@ -31,6 +31,7 @@ import { mobileToast } from "../components/MobileOptimizedToast";
 import { toast } from "sonner";
 import { initializeMobileEnvironment, addHapticFeedback, isMobileDevice, isMobileScreen } from "../utils/mobileUtils";
 import MobileNavigation from "../components/MobileNavigation";
+import LogoutConfirmDialog from "../components/LogoutConfirmDialog";
 import { useAuth } from "../contexts/AuthContext";
 import { useIdentityContext } from "../hooks/useIdentityContext";
 import SubscriptionStatusBanner from "../components/SubscriptionStatusBanner";
@@ -71,25 +72,19 @@ const Dashboard = () => {
     backgroundColor: "#ffffff"
   });
 
-  // Handle identity-based routing and subscription enforcement
+  // Handle identity-based subscription logging (no hard redirect)
   useEffect(() => {
-    // Wait for identity context to load
     if (identityLoading) return;
-    
-    // Check if billing is required (subscription expired)
+
     if (needsBilling && identityContext?.next_route === '/billing/choose-plan') {
-      logger.warn('Dashboard: Subscription expired, redirecting to billing...');
-      toast.error('Your subscription has expired. Please select a plan to continue.');
-      navigate('/billing/choose-plan');
-      return;
+      logger.warn('Dashboard: Subscription expired, billing required – dashboard will be blurred.');
     }
-    
-    // Log account type for debugging
+
     if (accountType) {
       logger.debug('Dashboard: Account type:', accountType);
       logger.debug('Dashboard: Subscription status:', identityContext?.subscription?.status);
     }
-  }, [identityLoading, needsBilling, identityContext, accountType, navigate]);
+  }, [identityLoading, needsBilling, identityContext, accountType]);
 
   useEffect(() => {
     let isMounted = true;
@@ -345,7 +340,77 @@ const Dashboard = () => {
     }
   };
 
+  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
+
+  // Subscription/billing state helpers
+  const isSubscriptionExpired = identityContext?.subscription?.status === 'expired';
+  const isBillingBlocked = needsBilling && isSubscriptionExpired;
+
+  const getProfileUrl = () => {
+    if (!user?.username) return window.location.origin;
+    const sanitized = sanitizeUsernameForUrl(user.username);
+    return `${window.location.origin}/profile/${sanitized}`;
+  };
+
+  const handleSendEmail = () => {
+    const email = user?.email;
+    if (!email) {
+      toast.error("No email configured for this profile.");
+      return;
+    }
+    window.location.href = `mailto:${email}`;
+  };
+
+  const handleSaveContact = () => {
+    try {
+      const name = profile?.name || user?.name || "Contact";
+      const email = user?.email || "";
+      const phone = user?.phone_number || profile?.phone_number || "";
+      const bio = profile?.bio || user?.bio || "";
+
+      let vCard = "BEGIN:VCARD\n";
+      vCard += "VERSION:3.0\n";
+      vCard += `FN:${name}\n`;
+      if (email) {
+        vCard += `EMAIL:${email}\n`;
+      }
+      if (phone) {
+        vCard += `TEL:${phone}\n`;
+      }
+      if (bio) {
+        vCard += `NOTE:${bio}\n`;
+      }
+
+      const socialLinks = links.filter(link => link.active && link.category === "social");
+      socialLinks.forEach(link => {
+        vCard += `URL;TYPE=${link.title}:${link.url}\n`;
+      });
+
+      vCard += `URL;TYPE=Website:${getProfileUrl()}\n`;
+      vCard += "END:VCARD";
+
+      const blob = new Blob([vCard], { type: "text/vcard" });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${name.replace(/\s+/g, "_")}.vcf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+
+      toast.success("Contact downloaded.");
+    } catch (error) {
+      logger.error("Failed to save contact from dashboard:", error);
+      toast.error("Failed to download contact.");
+    }
+  };
+
   const handleLogout = () => {
+    setLogoutDialogOpen(true);
+  };
+
+  const handleLogoutConfirmed = () => {
     addHapticFeedback('medium');
     logout();
     mobileToast.info("You've been logged out. See you soon! 👋");
@@ -557,16 +622,22 @@ const Dashboard = () => {
 
   return (
     <PageTransition>
+      {/* Global logout confirmation dialog */}
+      <LogoutConfirmDialog
+        open={logoutDialogOpen}
+        onOpenChange={setLogoutDialogOpen}
+        onConfirm={handleLogoutConfirmed}
+      />
       {isMobile ? (
         // Mobile Layout - Full Screen
-        <div className="min-h-screen bg-background pb-20">
+        <div className="min-h-screen bg-background pb-20 relative">
           {/* Subscription Status Banner */}
           <div className="px-4 pt-4">
             <SubscriptionStatusBanner />
           </div>
           
-          {/* Main Content */}
-          <div className="min-h-screen pb-20">
+          {/* Main Content (blurred when billing is blocked) */}
+          <div className={`min-h-screen pb-20 transition duration-200 ${isBillingBlocked ? 'opacity-50 blur-[2px] pointer-events-none select-none' : ''}`}>
             {renderMainContent()}
           </div>
           
@@ -581,10 +652,38 @@ const Dashboard = () => {
               setActiveSection(section);
             }}
           />
+
+          {/* Billing overlay for expired subscription */}
+          {isBillingBlocked && (
+            <div className="absolute inset-0 z-40 flex items-center justify-center px-4">
+              <div className="max-w-md w-full rounded-xl border border-red-500 bg-background/95 shadow-lg p-4 space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="h-9 w-9 rounded-full bg-red-100 flex items-center justify-center">
+                    <AlertCircle className="h-5 w-5 text-red-600" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-sm">Subscription expired</p>
+                    <p className="text-xs text-muted-foreground">
+                      Your trial or subscription has ended. Choose a plan to continue using all dashboard features.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-2 justify-end">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => navigate('/billing/choose-plan')}
+                  >
+                    View plans
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         // Desktop Layout - Existing Layout
-        <div className="min-h-screen bg-background flex">
+        <div className="min-h-screen bg-background flex relative">
           {/* Premium Sidebar */}
           <PremiumSidebar
             user={user}
@@ -603,8 +702,9 @@ const Dashboard = () => {
             </div>
             
             {/* Main Content */}
-            <div className="flex-1 overflow-auto">
-              <div className="pt-6 pb-28 px-6 w-full flex justify-start items-start gap-6">
+            <div className="flex-1 overflow-auto relative">
+              {/* Blurred content when billing is blocked */}
+              <div className={`pt-6 pb-28 px-6 w-full flex justify-start items-start gap-6 transition duration-200 ${isBillingBlocked ? 'opacity-50 blur-[2px] pointer-events-none select-none' : ''}`}>
                 <div className="flex-1 min-w-0">
                   <FadeInUp>
                     {renderMainContent()}
@@ -618,15 +718,35 @@ const Dashboard = () => {
                       <div className="sticky top-6">
                         <div className="flex items-center justify-between mb-4">
                           <h3 className="font-semibold text-foreground">Live Preview</h3>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 p-0"
-                            onClick={() => window.open(`/profile/${sanitizeUsernameForUrl(user.username)}`, '_blank')}
-                            title="View public profile"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </Button>
+                          <div className="flex items-center gap-1.5">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0"
+                              onClick={handleSendEmail}
+                              title="Send message"
+                            >
+                              <Mail className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0"
+                              onClick={handleSaveContact}
+                              title="Download contact"
+                            >
+                              <Download className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0"
+                              onClick={() => window.open(`/profile/${sanitizeUsernameForUrl(user.username)}`, '_blank')}
+                              title="View public profile"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                          </div>
                         </div>
                         
                         {/* Public Profile URL Preview Link */}
@@ -652,13 +772,11 @@ const Dashboard = () => {
                               onClick={async () => {
                                 const profileUrl = `${window.location.origin}/profile/${sanitizeUsernameForUrl(user.username)}`;
                                 try {
-                                  // Check if clipboard API is available and document is focused
                                   if (navigator.clipboard && document.hasFocus()) {
                                     await navigator.clipboard.writeText(profileUrl);
                                     addHapticFeedback('success');
                                     mobileToast.success("Profile URL copied to clipboard!");
                                   } else {
-                                    // Fallback for mobile or when document is not focused
                                     const textArea = document.createElement('textarea');
                                     textArea.value = profileUrl;
                                     textArea.style.position = 'fixed';
@@ -713,6 +831,35 @@ const Dashboard = () => {
                   </div>
                 )}
               </div>
+
+              {/* Billing overlay for expired subscription */}
+              {isBillingBlocked && (
+                <div className="absolute inset-0 z-40 flex items-start justify-center pt-24 px-6 pointer-events-none">
+                  <div className="max-w-xl w-full rounded-xl border border-red-500 bg-background/95 shadow-xl p-4 space-y-3 pointer-events-auto">
+                    <div className="flex items-center gap-3">
+                      <div className="h-9 w-9 rounded-full bg-red-100 flex items-center justify-center">
+                        <AlertCircle className="h-5 w-5 text-red-600" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-sm">Subscription expired</p>
+                        <p className="text-xs text-muted-foreground">
+                          Your trial or subscription has ended. You can still see your dashboard in read‑only mode,
+                          but changes are disabled until you choose a plan.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => navigate('/billing/choose-plan')}
+                      >
+                        Go to billing
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

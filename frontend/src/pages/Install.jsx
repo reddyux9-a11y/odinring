@@ -20,9 +20,6 @@ const Install = () => {
         });
       } catch (err) {
         // User cancelled or share failed, that's okay
-        if (err.name !== 'AbortError') {
-          console.log('Share cancelled or failed');
-        }
       }
     }
     setIsLoading(false);
@@ -38,7 +35,6 @@ const Install = () => {
         await openIOSShareSheet();
       }
     } catch (error) {
-      console.log('Install prompt error:', error);
     } finally {
       setIsLoading(false);
     }

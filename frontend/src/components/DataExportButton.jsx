@@ -15,7 +15,6 @@ const DataExportButton = ({ variant = 'outline', size = 'default', className = '
     setIsExporting(true);
     
     try {
-      console.log('📦 Exporting user data...');
       const response = await api.get('/users/export');
       
       // Create downloadable JSON file
@@ -35,9 +34,7 @@ const DataExportButton = ({ variant = 'outline', size = 'default', className = '
       URL.revokeObjectURL(url);
       
       toast.success('Your data has been exported successfully!');
-      console.log('✅ Data export complete');
     } catch (error) {
-      console.error('❌ Data export failed:', error);
       toast.error(error.response?.data?.detail || 'Failed to export data');
     } finally {
       setIsExporting(false);

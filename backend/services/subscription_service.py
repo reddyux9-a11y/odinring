@@ -409,11 +409,26 @@ class SubscriptionService:
                 SubscriptionStatus.TRIAL
             ]
             
-            # Calculate days remaining
-            if subscription.status == SubscriptionStatus.TRIAL and subscription.trial_end_date:
-                days_remaining = (subscription.trial_end_date - now).days
-            elif subscription.status == SubscriptionStatus.ACTIVE and subscription.current_period_end:
-                days_remaining = (subscription.current_period_end - now).days
+            # Helper to normalize datetimes to offset-naive UTC for subtraction
+            def _to_naive_utc(dt: Optional[datetime]) -> Optional[datetime]:
+                if not dt:
+                    return None
+                if isinstance(dt, datetime):
+                    # If timezone-aware, convert to UTC then drop tzinfo
+                    if dt.tzinfo is not None:
+                        return dt.astimezone(tz=None).replace(tzinfo=None)
+                    return dt
+                return None
+
+            # Normalize subscription dates
+            trial_end = _to_naive_utc(subscription.trial_end_date)
+            period_end = _to_naive_utc(subscription.current_period_end)
+
+            # Calculate days remaining using normalized datetimes
+            if subscription.status == SubscriptionStatus.TRIAL and trial_end:
+                days_remaining = (trial_end - now).days
+            elif subscription.status == SubscriptionStatus.ACTIVE and period_end:
+                days_remaining = (period_end - now).days
             
             message = ""
             if subscription.status == SubscriptionStatus.TRIAL:

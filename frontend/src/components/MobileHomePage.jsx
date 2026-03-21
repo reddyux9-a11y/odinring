@@ -69,7 +69,6 @@ const MobileHomePage = ({
       // Track click analytics
       await fetch(`/api/links/${link.id}/click`, { method: 'POST' });
     } catch (error) {
-      console.error('Failed to track click:', error);
     }
     window.open(link.url, '_blank');
   };
@@ -103,7 +102,6 @@ const MobileHomePage = ({
       setQrCodeData(response.data.qr_code);
       addHapticFeedback('success');
     } catch (error) {
-      console.error('Failed to generate QR code:', error);
       addHapticFeedback('error');
       toast.error("Failed to generate QR code", { duration: 1500 });
     } finally {
@@ -154,14 +152,12 @@ const MobileHomePage = ({
           addHapticFeedback('success');
           toast.success("URL copied to clipboard!", { duration: 1500 });
         } catch (err) {
-          console.error('Failed to copy:', err);
           toast.error("Failed to copy URL", { duration: 1500 });
         } finally {
           document.body.removeChild(textArea);
         }
       }
     } catch (error) {
-      console.error('Clipboard error:', error);
       toast.error("Failed to copy URL", { duration: 1500 });
     }
   };
@@ -177,7 +173,6 @@ const MobileHomePage = ({
         });
         addHapticFeedback('success');
       } catch (error) {
-        console.error('Error sharing:', error);
         // If sharing fails, try to copy to clipboard
         await copyQRUrl();
       }
@@ -310,8 +305,8 @@ const MobileHomePage = ({
             className="h-14 w-14 p-0 flex items-center justify-center border border-gray-200 hover:border-gray-300 bg-white hover:bg-gray-50/50 transition-all rounded-lg shadow-sm hover:shadow"
             onClick={() => {
               addHapticFeedback('light');
-              // Use phone number from user profile first, then fallback to links
-              let phone = user?.phone_number || null;
+              // Prefer WhatsApp number if user set it; otherwise use mobile number; then fallback to links
+              let phone = user?.whatsapp_number || user?.phone_number || null;
               
               if (!phone) {
                 const phoneLink = links.find(link => link.phone_number);
@@ -347,7 +342,7 @@ const MobileHomePage = ({
                 });
               }
             }}
-            disabled={!user?.phone_number && !links.some(link => link.phone_number)}
+            disabled={!(user?.whatsapp_number || user?.phone_number) && !links.some(link => link.phone_number)}
           >
             <WhatsAppIcon className="w-5 h-5" style={{ color: "#25D366" }} />
           </Button>

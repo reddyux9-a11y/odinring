@@ -7,7 +7,7 @@ Resolves identity context based on existing data in Firestore.
 """
 
 from typing import Optional, Dict, Any
-from datetime import datetime
+from datetime import datetime, timezone
 import logging
 
 from firestore_db import FirestoreDB
@@ -226,24 +226,24 @@ class IdentityResolver:
             
             # Convert Firestore timestamps to datetime if needed
             def to_datetime(value):
-                """Convert Firestore timestamp to datetime"""
+                """Convert Firestore timestamp (dict / ISO string / datetime) to naive UTC datetime"""
                 if value is None:
                     return None
                 if isinstance(value, datetime):
+                    # Normalize to naive UTC for consistency
+                    if value.tzinfo is not None:
+                        return value.astimezone(timezone.utc).replace(tzinfo=None)
                     return value
                 # If it's a dict with timestamp fields (Firestore format)
-                if isinstance(value, dict):
-                    # Firestore timestamps can be in different formats
-                    if '_seconds' in value:
-                        from datetime import datetime, timezone
-                        return datetime.fromtimestamp(value['_seconds'], tz=timezone.utc).replace(tzinfo=None)
+                if isinstance(value, dict) and '_seconds' in value:
+                    return datetime.fromtimestamp(value['_seconds'], tz=timezone.utc).replace(tzinfo=None)
                 # If it's already a string ISO format
                 if isinstance(value, str):
                     try:
                         return datetime.fromisoformat(value.replace('Z', '+00:00')).replace(tzinfo=None)
-                    except:
-                        pass
-                return value
+                    except Exception:
+                        return None
+                return None
             
             if status == SubscriptionStatus.ACTIVE:
                 # Verify current period hasn't ended
@@ -282,28 +282,28 @@ class IdentityResolver:
                         except Exception as e:
                             logger.warning(f"Failed to update expired trial status: {e}")
             
-            # Return subscription with calculated status
+            # Serialize dates to ISO for API response (trial_end_date, current_period_end)
+            trial_end_dt = to_datetime(subscription.get('trial_end_date')) if subscription.get('trial_end_date') else None
+            period_end_dt = to_datetime(subscription.get('current_period_end')) if subscription.get('current_period_end') else None
+            trial_start_dt = to_datetime(subscription.get('trial_start_date')) if subscription.get('trial_start_date') else None
+
             result = {
                 "status": status,
                 "plan": subscription.get('plan'),
-                "current_period_end": subscription.get('current_period_end'),
-                "trial_end_date": subscription.get('trial_end_date'),
-                "trial_start_date": subscription.get('trial_start_date'),
+                "current_period_end": period_end_dt.isoformat() if isinstance(period_end_dt, datetime) else subscription.get('current_period_end'),
+                "trial_end_date": trial_end_dt.isoformat() if isinstance(trial_end_dt, datetime) else subscription.get('trial_end_date'),
+                "trial_start_date": trial_start_dt.isoformat() if isinstance(trial_start_dt, datetime) else subscription.get('trial_start_date'),
                 "days_remaining": None
             }
-            
-            # Calculate days remaining for trial or active subscriptions
-            if status == SubscriptionStatus.TRIAL and subscription.get('trial_end_date'):
-                trial_end = to_datetime(subscription.get('trial_end_date'))
-                if isinstance(trial_end, datetime):
-                    days_remaining = (trial_end - now).days
-                    result["days_remaining"] = max(0, days_remaining)  # Don't return negative days
-            elif status == SubscriptionStatus.ACTIVE and subscription.get('current_period_end'):
-                period_end = to_datetime(subscription.get('current_period_end'))
-                if isinstance(period_end, datetime):
-                    days_remaining = (period_end - now).days
-                    result["days_remaining"] = max(0, days_remaining)
-            
+
+            # Calculate days remaining for trial or active subscriptions (based on creation/trial end)
+            if status == SubscriptionStatus.TRIAL and trial_end_dt and isinstance(trial_end_dt, datetime):
+                days_remaining = (trial_end_dt - now).days
+                result["days_remaining"] = max(0, days_remaining)
+            elif status == SubscriptionStatus.ACTIVE and period_end_dt and isinstance(period_end_dt, datetime):
+                days_remaining = (period_end_dt - now).days
+                result["days_remaining"] = max(0, days_remaining)
+
             return result
             
         except Exception as e:

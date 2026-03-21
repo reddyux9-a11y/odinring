@@ -52,8 +52,6 @@ const Onboarding = () => {
     setLoading(true);
 
     try {
-      console.log('📝 Onboarding: Submitting account type:', accountType);
-      
       const payload = {
         account_type: accountType
       };
@@ -65,20 +63,15 @@ const Onboarding = () => {
       }
 
       const response = await api.post('/onboarding/account-type', payload);
-      
-      console.log('✅ Onboarding: Success:', response.data);
       toast.success(`${accountType === 'personal' ? 'Personal' : accountType === 'business_solo' ? 'Business' : 'Organization'} account created successfully!`);
 
       // Navigate to the suggested route
       const nextRoute = response.data.next_route || '/dashboard';
-      console.log('🚀 Onboarding: Navigating to:', nextRoute);
       
       setTimeout(() => {
         navigate(nextRoute);
       }, 1000);
     } catch (error) {
-      console.error('❌ Onboarding: Failed:', error);
-      
       const errorMessage = error.response?.data?.detail || 
                           error.response?.data?.message || 
                           'Failed to create account';

@@ -31,6 +31,7 @@ import {
   X
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
+import { Checkbox } from "./ui/checkbox";
 import { addHapticFeedback } from "../utils/mobileUtils";
 import { toast } from "sonner";
 import api from "../lib/api";
@@ -70,8 +71,14 @@ const MobileSettingsPage = ({
     bio: profile.bio || "",
     email: user.email || "",
     phone_number: user.phone_number || "",
+    whatsapp_number: user.whatsapp_number || "",
     avatar: profile.avatar || "",
     custom_logo: profile.custom_logo || ""
+  });
+  const [isWhatsAppSameAsMobile, setIsWhatsAppSameAsMobile] = useState(() => {
+    const phone = (user.phone_number || "").trim();
+    const wa = (user.whatsapp_number || "").trim();
+    return !wa || wa === phone;
   });
   const [imagePreview, setImagePreview] = useState(null);
 
@@ -82,6 +89,7 @@ const MobileSettingsPage = ({
       bio: profile.bio || "",
       email: user.email || "",
       phone_number: user.phone_number || "",
+      whatsapp_number: user.whatsapp_number || "",
       avatar: profile.avatar || "",
       custom_logo: profile.custom_logo || ""
     });
@@ -137,7 +145,8 @@ const MobileSettingsPage = ({
         name: formData.name,
         bio: formData.bio,
         avatar: formData.avatar,
-        phone_number: formData.phone_number || null
+        phone_number: formData.phone_number || null,
+        whatsapp_number: isWhatsAppSameAsMobile ? null : (formData.whatsapp_number || null)
       });
       
       // Update local state with response - the response contains updated user data
@@ -154,7 +163,6 @@ const MobileSettingsPage = ({
       addHapticFeedback('success');
       toast.success("Profile updated successfully!", { duration: 1500 });
     } catch (error) {
-      console.error('Profile update failed:', error);
       addHapticFeedback('error');
       const errorMessage = error?.response?.data?.detail || error?.response?.data?.message || "Failed to update profile";
       toast.error(errorMessage, { duration: 1500 });
@@ -242,7 +250,6 @@ const MobileSettingsPage = ({
         }
       }
     } catch (error) {
-      console.error('Image upload failed:', error);
       addHapticFeedback('error');
       const errorMessage = error?.response?.data?.detail || error?.response?.data?.message || "Failed to upload image";
       toast.error(errorMessage, { duration: 1500 });
@@ -293,14 +300,12 @@ const MobileSettingsPage = ({
           addHapticFeedback('success');
           toast.success("URL copied to clipboard!", { duration: 1500 });
         } catch (err) {
-          console.error('Failed to copy:', err);
           toast.error("Failed to copy URL", { duration: 1500 });
         } finally {
           document.body.removeChild(textArea);
         }
       }
     } catch (error) {
-      console.error('Clipboard error:', error);
       toast.error("Failed to copy URL", { duration: 1500 });
     }
   };
@@ -314,7 +319,7 @@ const MobileSettingsPage = ({
   };
 
 
-  const renderSettingItem = (icon: React.ComponentType, label: string, value: string, action?: React.ReactNode, onClick?: () => void) => (
+  const renderSettingItem = (icon, label, value, action, onClick) => (
     <motion.div 
       className={`flex items-center justify-between py-3 px-4 bg-card rounded-xl border border-border ${onClick ? 'cursor-pointer hover:bg-muted/50' : ''}`}
       onClick={onClick}
@@ -333,7 +338,7 @@ const MobileSettingsPage = ({
     </motion.div>
   );
 
-  const renderLinkCategory = (icon: React.ComponentType, title: string, subtitle: string, count: number, onEdit: () => void) => (
+  const renderLinkCategory = (icon, title, subtitle, count, onEdit) => (
     <motion.div 
       className="flex items-center justify-between py-3 px-4 bg-card rounded-xl border border-border hover:bg-muted/50 cursor-pointer"
       whileTap={{ scale: 0.98 }}
@@ -479,6 +484,32 @@ const MobileSettingsPage = ({
               placeholder="+1234567890"
               className="h-12"
             />
+            <div className="flex items-center gap-2 pt-1">
+              <Checkbox
+                checked={isWhatsAppSameAsMobile}
+                onCheckedChange={(checked) => {
+                  const next = checked === true;
+                  setIsWhatsAppSameAsMobile(next);
+                  if (next) {
+                    setFormData(prev => ({ ...prev, whatsapp_number: "" }));
+                  }
+                }}
+              />
+              <span className="text-xs text-muted-foreground">Same as WhatsApp number</span>
+            </div>
+            {!isWhatsAppSameAsMobile && (
+              <div className="space-y-2 pt-2">
+                <Label htmlFor="whatsapp_number" className="text-sm font-medium">WhatsApp Number</Label>
+                <Input
+                  id="whatsapp_number"
+                  type="tel"
+                  value={formData.whatsapp_number}
+                  onChange={(e) => setFormData({ ...formData, whatsapp_number: e.target.value })}
+                  placeholder="+1234567890"
+                  className="h-12"
+                />
+              </div>
+            )}
             <p className="text-xs text-muted-foreground">
               Used for WhatsApp and Call buttons on your profile
             </p>

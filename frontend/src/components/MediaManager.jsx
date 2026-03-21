@@ -15,6 +15,7 @@ import {
   Trash2, 
   Image as ImageIcon,
   Video,
+  Play,
   Eye,
   EyeOff,
   X,
@@ -29,6 +30,8 @@ const MediaManager = ({ media, setMedia, onBack }) => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingMedia, setEditingMedia] = useState(null);
+  const [isVideoPreviewOpen, setIsVideoPreviewOpen] = useState(false);
+  const [previewVideo, setPreviewVideo] = useState(null);
   const [loading, setLoading] = useState(false);
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
@@ -43,6 +46,51 @@ const MediaManager = ({ media, setMedia, onBack }) => {
     thumbnail_url: "",
     description: ""
   });
+
+  // Helper to extract src from an iframe embed snippet.
+  const extractEmbedSrc = (value) => {
+    if (!value) return "";
+    const trimmed = value.trim();
+    const iframeMatch = trimmed.match(/<iframe[^>]+src=['"]([^'"]+)['"][^>]*>/i);
+    if (iframeMatch && iframeMatch[1]) {
+      return iframeMatch[1];
+    }
+    return trimmed;
+  };
+
+  const getYouTubeId = (url) => {
+    if (!url) return null;
+    try {
+      const u = new URL(url);
+      const host = u.hostname.replace(/^www\./, "");
+      if (host === "youtu.be") {
+        return u.pathname.replace("/", "") || null;
+      }
+      if (host === "youtube.com" || host === "m.youtube.com") {
+        if (u.pathname === "/watch") return u.searchParams.get("v");
+        const m1 = u.pathname.match(/^\/embed\/([^/]+)/);
+        if (m1?.[1]) return m1[1];
+        const m2 = u.pathname.match(/^\/shorts\/([^/]+)/);
+        if (m2?.[1]) return m2[1];
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  };
+
+  const normalizeVideoSrc = (value) => {
+    const src = extractEmbedSrc(value);
+    const ytId = getYouTubeId(src);
+    if (ytId) return `https://www.youtube.com/embed/${ytId}`;
+    return src;
+  };
+
+  const getAutoThumbnailUrl = (src) => {
+    const ytId = getYouTubeId(src);
+    if (!ytId) return null;
+    return `https://i.ytimg.com/vi/${ytId}/hqdefault.jpg`;
+  };
 
   const MAX_MEDIA_FILES = 6;
 
@@ -64,7 +112,6 @@ const MediaManager = ({ media, setMedia, onBack }) => {
     // Double-check token before making request
     const token = localStorage.getItem('token');
     if (!token) {
-      console.log('No token available, skipping media load');
       if (setMedia) {
         setMedia([]);
       }
@@ -81,11 +128,9 @@ const MediaManager = ({ media, setMedia, onBack }) => {
     } catch (error) {
       // Only show error if it's not a 401/403 (authentication issue)
       if (error.response?.status !== 401 && error.response?.status !== 403) {
-        console.error('Failed to load media:', error);
         mobileToast.error("Failed to load media files");
       } else {
         // Silent fail for auth errors - user will be redirected by ProtectedRoute
-        console.log('Media load skipped - authentication required');
         if (setMedia) {
           setMedia([]);
         }
@@ -147,7 +192,6 @@ const MediaManager = ({ media, setMedia, onBack }) => {
         mobileToast.success("Image uploaded and optimized successfully");
       }
     } catch (error) {
-      console.error('Image upload failed:', error);
       addHapticFeedback('error');
       mobileToast.error("Failed to upload image");
       setImageFile(null);
@@ -197,9 +241,17 @@ const MediaManager = ({ media, setMedia, onBack }) => {
       }
     }
 
-    if (formData.type === "video" && !formData.url.trim()) {
-      mobileToast.error("Please provide a video embed URL");
-      return;
+    if (formData.type === "video") {
+      if (!formData.url.trim()) {
+        mobileToast.error("Please provide a video embed URL or iframe");
+        return;
+      }
+      const src = normalizeVideoSrc(formData.url);
+      const urlPattern = /^https?:\/\//i;
+      if (!src.match(urlPattern)) {
+        mobileToast.error("Video URL must start with http:// or https:// (check the iframe src)");
+        return;
+      }
     }
 
     // Check if we're at the limit
@@ -213,6 +265,18 @@ const MediaManager = ({ media, setMedia, onBack }) => {
     try {
       // Prepare data for submission - only include media_file_url and thumbnail_url if they have values
       const submitData = { ...formData };
+
+      // Normalize payload so backend receives the correct URL format based on type
+      if (submitData.type === "video") {
+        // Store just the iframe src or direct video URL (normalize YouTube to /embed/...)
+        const normalizedSrc = normalizeVideoSrc(formData.url);
+        submitData.url = normalizedSrc;
+        // If user didn't provide a thumbnail, auto-generate one for YouTube
+        if (!submitData.thumbnail_url || !submitData.thumbnail_url.trim()) {
+          const autoThumb = getAutoThumbnailUrl(normalizedSrc);
+          if (autoThumb) submitData.thumbnail_url = autoThumb;
+        }
+      }
       if (!submitData.media_file_url || submitData.media_file_url.trim() === '') {
         delete submitData.media_file_url;
       }
@@ -274,7 +338,6 @@ const MediaManager = ({ media, setMedia, onBack }) => {
         setImagePreview(null);
       }
     } catch (error) {
-      console.error('Save failed:', error);
       let errorMessage = "Failed to save media";
       
       if (error.response?.data?.detail) {
@@ -334,7 +397,6 @@ const MediaManager = ({ media, setMedia, onBack }) => {
       addHapticFeedback('success');
       mobileToast.success("Media deleted successfully");
     } catch (error) {
-      console.error('Delete failed:', error);
       addHapticFeedback('error');
       mobileToast.error("Failed to delete media");
     } finally {
@@ -350,13 +412,18 @@ const MediaManager = ({ media, setMedia, onBack }) => {
       }
       mobileToast.success(currentActive ? "Media hidden" : "Media shown");
     } catch (error) {
-      console.error('Toggle visibility failed:', error);
       mobileToast.error("Failed to update visibility");
     }
   };
 
   const currentCount = media?.length || 0;
   const canAddMore = currentCount < MAX_MEDIA_FILES;
+
+  const openVideoPreview = (mediaItem) => {
+    setPreviewVideo(mediaItem);
+    setIsVideoPreviewOpen(true);
+    addHapticFeedback('light');
+  };
 
   return (
     <div className="w-full">
@@ -608,17 +675,27 @@ const MediaManager = ({ media, setMedia, onBack }) => {
                         />
                       </div>
                     ) : mediaItem.type === "video" ? (
-                      <div className="aspect-video bg-gray-800 overflow-hidden flex items-center justify-center">
-                        {mediaItem.thumbnail_url ? (
+                      <button
+                        type="button"
+                        className="aspect-video bg-gray-800 overflow-hidden flex items-center justify-center w-full text-left"
+                        onClick={() => openVideoPreview(mediaItem)}
+                        title="Preview video"
+                      >
+                        {mediaItem.thumbnail_url || getAutoThumbnailUrl(mediaItem.url) ? (
                           <img
-                            src={mediaItem.thumbnail_url}
+                            src={mediaItem.thumbnail_url || getAutoThumbnailUrl(mediaItem.url)}
                             alt={mediaItem.title}
                             className="w-full h-full object-cover"
                           />
                         ) : (
                           <Video className="h-12 w-12 text-gray-600" />
                         )}
-                      </div>
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="h-12 w-12 rounded-full bg-black/50 flex items-center justify-center">
+                            <Play className="h-6 w-6 text-white translate-x-0.5" />
+                          </div>
+                        </div>
+                      </button>
                     ) : null}
                   </div>
                   
@@ -816,6 +893,35 @@ const MediaManager = ({ media, setMedia, onBack }) => {
               </Button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Video Preview Dialog */}
+      <Dialog open={isVideoPreviewOpen} onOpenChange={(open) => {
+        setIsVideoPreviewOpen(open);
+        if (!open) setPreviewVideo(null);
+      }}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>{previewVideo?.title || "Video preview"}</DialogTitle>
+          </DialogHeader>
+          {previewVideo?.url ? (
+            <div className="w-full aspect-video rounded-lg overflow-hidden bg-black">
+              <iframe
+                src={previewVideo.url}
+                title={previewVideo.title || "Video"}
+                className="w-full h-full"
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+              />
+            </div>
+          ) : (
+            <div className="text-sm text-muted-foreground">No video URL</div>
+          )}
+          {previewVideo?.description && (
+            <p className="text-sm text-muted-foreground">{previewVideo.description}</p>
+          )}
         </DialogContent>
       </Dialog>
     </div>

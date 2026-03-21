@@ -31,11 +31,28 @@ dist/
 dist
 
 # Environment files (comprehensive coverage)
-
+*.env
+*.env.*
 *token.json*
 *credentials.json*
 
+# JSON files (ignore all, then allow specific ones)
+*.json
+# Exceptions: Allow legitimate JSON files that need to be tracked
+!package.json
+!package-lock.json
+!firebase.json
+!firestore.indexes.json
+!jsconfig.json
+!tsconfig.json
+!components.json
+!vercel.json
+# Allow schema files
+!**/firestore_schemas/*.json
+!**/*schema*.json
+
 # Firebase Service Account Files (CRITICAL: Contains private keys)
+# These must remain ignored even with *.json pattern
 firebase-service-account.json
 *firebase-adminsdk*.json
 studio-*.json
@@ -51,6 +68,18 @@ dump.rdb
 # System files
 .DS_Store
 *.pem
+*.key
+*.cert
+*.crt
+*.p12
+*.pfx
+*.jks
+*.keystore
+# Additional credential file patterns
+*-credentials.json
+*-credential.json
+service-account*.json
+*-service-account*.json
 
 # Python
 __pycache__/
@@ -66,6 +95,7 @@ chainlit.md
 
 # Deployment
 .vercel
+.vercelrc
 
 # Data and databases
 agenthub/agents/youtube/db
@@ -81,54 +111,7 @@ agenthub/agents/youtube/db
 
 # Build caches
 .cache/
+**/node_modules/.cache/
 
 # Mobile development
-android-sdk/ frontend/node_modules/.cache/default-development/0.pack
-frontend/node_modules/.cache/default-development/0.pack
--e 
-# Environment files
-*.env
-*.env.*
-frontend/node_modules/.cache/default-development/2.pack
-frontend/node_modules/.cache/default-development/1.pack
-frontend/node_modules/.cache/default-development/2.pack_
-frontend/node_modules/.cache/default-development/4.pack
-frontend/node_modules/.cache/default-development/5.pack
-frontend/node_modules/.cache/default-development/7.pack
-frontend/node_modules/.cache/default-development/9.pack
-frontend/node_modules/.cache/default-development/11.pack
-frontend/node_modules/.cache/default-development/3.pack
-frontend/node_modules/.cache/default-development/6.pack
-frontend/node_modules/.cache/default-development/9.pack_
-frontend/node_modules/.cache/default-development/12.pack
-frontend/node_modules/.cache/default-development/15.pack_
-frontend/node_modules/.cache/default-development/15.pack
-frontend/node_modules/.cache/default-development/5.pack_
-frontend/node_modules/.cache/default-development/14.pack
-frontend/node_modules/.cache/default-development/14.pack_
-frontend/node_modules/.cache/default-development/16.pack
-frontend/node_modules/.cache/default-development/6.pack_
-frontend/node_modules/.cache/default-development/17.pack_
-frontend/node_modules/.cache/default-development/17.pack
-frontend/node_modules/.cache/default-development/18.pack_
-frontend/node_modules/.cache/default-development/18.pack
--e 
-# Environment files
-*.env
-*.env.*
-frontend/node_modules/.cache/default-development/20.pack
-frontend/node_modules/.cache/default-development/4.pack_
-frontend/node_modules/.cache/default-development/3.pack_
-frontend/node_modules/.cache/default-development/10.pack_
-frontend/node_modules/.cache/default-development/8.pack
-frontend/node_modules/.cache/default-development/10.pack
--e 
-# Environment files
-*.env
-*.env.*
-frontend/node_modules/.cache/default-development/1.pack_
-frontend/node_modules/.cache/default-development/8.pack_
--e 
-# Environment files
-*.env
-*.env.*
+android-sdk/

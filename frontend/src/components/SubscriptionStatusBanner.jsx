@@ -30,7 +30,6 @@ const SubscriptionStatusBanner = () => {
       // Check if user is authenticated before making API call
       const token = localStorage.getItem('token');
       if (!token) {
-        console.log('ℹ️  SubscriptionStatusBanner: No token found, skipping subscription details fetch');
         setLoading(false);
         return;
       }
@@ -38,9 +37,9 @@ const SubscriptionStatusBanner = () => {
       const response = await api.get('/billing/subscription');
       setSubscriptionDetails(response.data);
     } catch (error) {
-      // Only log error if it's not a 401/403 (expected when not authenticated)
+      // Only handle error if it's not a 401/403 (expected when not authenticated)
       if (error.response?.status !== 401 && error.response?.status !== 403) {
-        console.error('Failed to load subscription details:', error);
+        // Optionally surface a toast here if needed
       }
     } finally {
       setLoading(false);
@@ -54,11 +53,26 @@ const SubscriptionStatusBanner = () => {
   };
 
   const getDaysRemaining = () => {
-    if (!subscriptionDetails?.subscription?.trial_end_date) return null;
-    const endDate = new Date(subscriptionDetails.subscription.trial_end_date);
-    const now = new Date();
-    const diff = Math.ceil((endDate - now) / (1000 * 60 * 60 * 24));
-    return diff > 0 ? diff : 0;
+    const sub = subscriptionDetails?.subscription;
+    if (!sub) return null;
+
+    // Prefer backend-computed days_remaining for consistency across UI
+    if (sub.days_remaining != null && typeof sub.days_remaining === 'number') {
+      return sub.days_remaining;
+    }
+
+    const endStr = sub.trial_end_date;
+    if (!endStr) return null;
+
+    try {
+      const end = new Date(typeof endStr === 'string' ? endStr.replace('Z', '') : endStr);
+      if (Number.isNaN(end.getTime())) return null;
+      const now = new Date();
+      const diff = Math.ceil((end - now) / (1000 * 60 * 60 * 24));
+      return Math.max(0, diff);
+    } catch {
+      return null;
+    }
   };
 
   if (loading || dismissed || !subscription) {

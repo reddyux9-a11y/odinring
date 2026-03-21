@@ -187,14 +187,12 @@ const Checkout = () => {
           navigate('/dashboard');
         }
       } catch (error) {
-        console.error('Error activating subscription:', error);
         // Still navigate to dashboard on error
         await refetchContext();
         navigate('/dashboard');
       }
       
     } catch (error) {
-      console.error('Payment error:', error);
       toast.error('Payment failed. Please try again.');
       navigate(`/payment/failed?plan=${planId}&error=${encodeURIComponent(error.message || 'Payment processing failed')}`);
     } finally {

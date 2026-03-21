@@ -40,7 +40,6 @@ const SubscriptionManagement = () => {
       const response = await api.get('/billing/subscription');
       setSubscription(response.data?.subscription || null);
     } catch (error) {
-      console.error('Failed to load subscription:', error);
       // Use identity context subscription if API fails
       if (identityContext?.subscription) {
         setSubscription(identityContext.subscription);
@@ -94,7 +93,6 @@ const SubscriptionManagement = () => {
         await loadSubscription();
       }
     } catch (error) {
-      console.error('Failed to cancel subscription:', error);
       toast.error('Failed to cancel subscription. Please try again.');
     } finally {
       setLoading(false);

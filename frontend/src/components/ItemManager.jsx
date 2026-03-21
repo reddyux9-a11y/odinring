@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -49,15 +49,14 @@ const CustomDialogContent = React.forwardRef(({ className, children, ...props },
 CustomDialogContent.displayName = "CustomDialogContent";
 
 const ItemManager = ({ items, setItems }) => {
-  console.log('🛍️ ItemManager: Component rendered with items:', items);
-  console.log('🛍️ ItemManager: Items count:', items?.length || 0);
-  
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [loading, setLoading] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [imagePreview, setImagePreview] = useState(null);
+  const nameInputRef = useRef(null);
+  const priceInputRef = useRef(null);
   
   const [formData, setFormData] = useState({
     name: "",
@@ -119,27 +118,25 @@ const ItemManager = ({ items, setItems }) => {
       const uploadFormData = new FormData();
       uploadFormData.append('file', file);
 
-      // Use existing /upload-logo API
-      const response = await api.post('/upload-logo', uploadFormData, {
+      // Use media upload endpoint so avatar/custom_logo are not affected
+      const response = await api.post('/upload-media', uploadFormData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
 
       if (response.data.success) {
-        // Update form data with server response (base64 URL)
-        const logoUrl = response.data.logo_url;
+        const imageUrl = response.data.image_url;
         setFormData(prev => ({ 
           ...prev, 
-          image_url: logoUrl
+          image_url: imageUrl
         }));
-        setImagePreview(logoUrl);
+        setImagePreview(imageUrl);
         
         mobileToast.success("Image uploaded successfully!");
         addHapticFeedback('success');
       }
     } catch (error) {
-      console.error('Image upload failed:', error);
       mobileToast.error("Failed to upload image");
       addHapticFeedback('error');
       // Revert preview on error
@@ -155,6 +152,16 @@ const ItemManager = ({ items, setItems }) => {
 
   const handleAdd = async () => {
     if (!formData.name || !formData.price) {
+      // Determine which field is missing first (name has higher priority)
+      const targetRef = !formData.name ? nameInputRef : priceInputRef;
+      if (targetRef.current) {
+        try {
+          targetRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+        } catch {
+          // scrollIntoView can fail quietly in some environments; ignore
+        }
+        targetRef.current.focus();
+      }
       mobileToast.error("Please fill in required fields");
       return;
     }
@@ -179,7 +186,6 @@ const ItemManager = ({ items, setItems }) => {
         // Check if item already exists (prevent duplicates)
         const exists = prev.some(item => item.id === newItem.id);
         if (exists) {
-          console.log('⚠️ Item already in state, updating instead of adding');
           return prev.map(item => item.id === newItem.id ? newItem : item);
         }
         return [...prev, newItem];
@@ -188,9 +194,7 @@ const ItemManager = ({ items, setItems }) => {
       resetForm();
       addHapticFeedback('success');
       mobileToast.success("Item added successfully");
-      console.log('✅ Item added to state:', newItem.id, newItem.name);
     } catch (error) {
-      console.error('Add item failed:', error);
       addHapticFeedback('error');
       mobileToast.error(error.response?.data?.detail || "Failed to add item");
     } finally {
@@ -240,7 +244,6 @@ const ItemManager = ({ items, setItems }) => {
       addHapticFeedback('success');
       mobileToast.success("Item updated successfully");
     } catch (error) {
-      console.error('Update item failed:', error);
       addHapticFeedback('error');
       mobileToast.error(error.response?.data?.detail || "Failed to update item");
     } finally {
@@ -264,7 +267,6 @@ const ItemManager = ({ items, setItems }) => {
       addHapticFeedback('success');
       mobileToast.success("Item deleted successfully");
     } catch (error) {
-      console.error('Delete failed:', error);
       addHapticFeedback('error');
       mobileToast.error("Failed to delete item");
     } finally {
@@ -285,7 +287,6 @@ const ItemManager = ({ items, setItems }) => {
       addHapticFeedback('success');
       mobileToast.success(currentActive ? "Item hidden" : "Item visible");
     } catch (error) {
-      console.error('Toggle visibility failed:', error);
       addHapticFeedback('error');
       mobileToast.error("Failed to toggle visibility");
     }
@@ -302,7 +303,6 @@ const ItemManager = ({ items, setItems }) => {
     // Validate that all items have IDs
     const itemsWithoutIds = newItems.filter(item => !item.id);
     if (itemsWithoutIds.length > 0) {
-      console.error('❌ Some items are missing IDs:', itemsWithoutIds);
       mobileToast.error("Cannot reorder: Some items are missing IDs");
       return;
     }
@@ -313,21 +313,11 @@ const ItemManager = ({ items, setItems }) => {
     }));
     
     try {
-      console.log('🔄 Reordering items:', reorderedItems);
       const response = await api.put(`/items/reorder`, reorderedItems);
-      console.log('✅ Reorder successful:', response.data);
       setItems(newItems);
       addHapticFeedback('light');
       mobileToast.success("Items reordered successfully! 🔄");
     } catch (error) {
-      console.error('❌ Reorder failed:', error);
-      console.error('Error details:', {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status,
-        requestData: reorderedItems
-      });
-      
       // Extract error message safely - handle both string and array formats
       let errorMessage = "Failed to reorder items";
       if (error.response?.data?.detail) {
@@ -402,6 +392,7 @@ const ItemManager = ({ items, setItems }) => {
                   <Label htmlFor="item-name">Item Name *</Label>
                   <Input
                     id="item-name"
+                    ref={nameInputRef}
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     placeholder="Product name"
@@ -426,6 +417,7 @@ const ItemManager = ({ items, setItems }) => {
                     <Label htmlFor="item-price">Price *</Label>
                     <Input
                       id="item-price"
+                      ref={priceInputRef}
                       type="number"
                       step="0.01"
                       value={formData.price}

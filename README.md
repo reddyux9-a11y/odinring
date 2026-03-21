@@ -48,12 +48,37 @@ cd ../backend && pip install -r requirements.txt
 ### Legacy
 - [**Legacy Docs**](docs/legacy/) - Historical documentation
 
+## 🔐 Security
+
+**⚠️ CRITICAL: DO NOT COMMIT SECRETS**
+
+This repository uses pre-commit hooks to prevent committing credentials. See [SECURITY.md](SECURITY.md) for complete security guidelines.
+
+### Quick Security Rules:
+- ✅ Use environment variables for secrets (production)
+- ✅ Use `.env` files locally (already in `.gitignore`)
+- ❌ Never commit `firebase-service-account.json` or `.env` files
+- 🔄 Rotate keys immediately if they were ever in git history
+
+**See [SECURITY.md](SECURITY.md) for complete security guidelines.**
+
+---
+
 ## 🛠️ Development
 
 ### Prerequisites
 - Node.js 16+
 - Python 3.9+
 - Firebase account
+
+### Pre-Commit Hook Setup
+
+**One-time setup to enable secret detection:**
+```bash
+chmod +x .git/hooks/pre-commit
+```
+
+The pre-commit hook will now automatically scan staged files for secrets before each commit.
 
 ### Local Setup
 

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -12,13 +12,17 @@ import { ThemeToggle } from "../components/ThemeToggle";
 import GoogleSignInButton from "../components/GoogleSignInButton";
 import { useAuth } from "../contexts/AuthContext";
 import { toast } from "sonner";
-import { Loader2, Mail, Lock, User } from "lucide-react";
+import { Loader2, Mail, Lock, User, Eye, EyeOff } from "lucide-react";
 
 const AuthPage = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { login, register } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState("login");
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || "login");
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [showRegisterPassword, setShowRegisterPassword] = useState(false);
+  const [showRegisterConfirmPassword, setShowRegisterConfirmPassword] = useState(false);
 
   // Form state for login
   const [loginData, setLoginData] = useState({
@@ -38,21 +42,29 @@ const AuthPage = () => {
     initializeMobileEnvironment();
   }, []);
 
+  // Handle tab parameter from URL
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam === 'register' || tabParam === 'login') {
+      setActiveTab(tabParam);
+    }
+  }, [searchParams]);
+
   // Clear form data when switching tabs to prevent cross-contamination
   const handleTabChange = (newTab) => {
-    console.log('🔄 Switching tab from', activeTab, 'to', newTab);
-    
     // Cancel any pending operations
     if (loading) {
-      console.log('⚠️ Tab switch cancelled pending operation');
       setLoading(false);
     }
     
     // Clear form data for clean slate
     if (newTab === "login") {
       setLoginData({ email: "", password: "" });
+      setShowLoginPassword(false);
     } else {
       setRegisterData({ name: "", email: "", password: "", confirmPassword: "" });
+      setShowRegisterPassword(false);
+      setShowRegisterConfirmPassword(false);
     }
     
     setActiveTab(newTab);
@@ -62,7 +74,7 @@ const AuthPage = () => {
     e.preventDefault();
     
     // Validate inputs are not empty or just whitespace
-    const email = loginData.email.trim();
+    const email = loginData.email.trim().toLowerCase();
     const password = loginData.password.trim();
     
     if (!email || !password) {
@@ -78,19 +90,14 @@ const AuthPage = () => {
     setLoading(true);
 
     try {
-      console.log('📝 AuthPage: Login form submitted', { email });
-      
       await login({
         email,
         password
       });
 
-      console.log('✅ AuthPage: Login successful');
       toast.success("Welcome back! 🎉");
       navigate('/dashboard');
     } catch (error) {
-      console.error('❌ AuthPage: Login failed', error);
-      
       // Extract error message safely - handle both string and array formats
       let rawError = 'Login failed';
       if (error.response?.data?.detail) {
@@ -126,7 +133,7 @@ const AuthPage = () => {
 
     // Validate inputs are not empty or just whitespace
     const name = registerData.name.trim();
-    const email = registerData.email.trim();
+    const email = registerData.email.trim().toLowerCase();
     const password = registerData.password.trim();
     const confirmPassword = registerData.confirmPassword.trim();
     
@@ -173,12 +180,6 @@ const AuthPage = () => {
     setLoading(true);
 
     try {
-      console.log('📝 AuthPage: Register form submitted', { 
-        name,
-        email,
-        username
-      });
-      
       await register({
         name,
         username,
@@ -186,13 +187,10 @@ const AuthPage = () => {
         password
       });
 
-      console.log('✅ AuthPage: Registration successful');
       toast.success("Account created successfully! 🎉");
       // Redirect to subscription selection (optional, can skip)
       navigate('/subscription');
     } catch (error) {
-      console.error('❌ AuthPage: Registration failed', error);
-      
       // Filter out technical errors that shouldn't be shown to users
       const rawError = error.response?.data?.detail || error.message || 'Registration failed';
       const errorMessage = rawError === 'No refresh token available' 
@@ -326,14 +324,23 @@ const AuthPage = () => {
                         <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                         <Input
                           id="login-password"
-                          type="password"
+                          type={showLoginPassword ? "text" : "password"}
                           placeholder="••••••••"
                           value={loginData.password}
                           onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
-                          className="pl-9"
+                          className="pl-9 pr-9"
                           required
                           disabled={loading}
                         />
+                        <button
+                          type="button"
+                          onClick={() => setShowLoginPassword((v) => !v)}
+                          className="absolute right-3 top-3 text-muted-foreground hover:text-foreground"
+                          aria-label={showLoginPassword ? "Hide password" : "Show password"}
+                          disabled={loading}
+                        >
+                          {showLoginPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
                       </div>
                     </div>
 
@@ -416,15 +423,24 @@ const AuthPage = () => {
                         <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                         <Input
                           id="register-password"
-                          type="password"
+                          type={showRegisterPassword ? "text" : "password"}
                           placeholder="••••••••"
                           value={registerData.password}
                           onChange={(e) => setRegisterData({ ...registerData, password: e.target.value })}
-                          className="pl-9"
+                          className="pl-9 pr-9"
                           required
                           minLength={8}
                           disabled={loading}
                         />
+                        <button
+                          type="button"
+                          onClick={() => setShowRegisterPassword((v) => !v)}
+                          className="absolute right-3 top-3 text-muted-foreground hover:text-foreground"
+                          aria-label={showRegisterPassword ? "Hide password" : "Show password"}
+                          disabled={loading}
+                        >
+                          {showRegisterPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
                       </div>
                       <p className="text-xs text-muted-foreground">
                         Must be 8+ characters with uppercase, lowercase, and digit
@@ -437,14 +453,23 @@ const AuthPage = () => {
                         <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                         <Input
                           id="register-confirm"
-                          type="password"
+                          type={showRegisterConfirmPassword ? "text" : "password"}
                           placeholder="••••••••"
                           value={registerData.confirmPassword}
                           onChange={(e) => setRegisterData({ ...registerData, confirmPassword: e.target.value })}
-                          className="pl-9"
+                          className="pl-9 pr-9"
                           required
                           disabled={loading}
                         />
+                        <button
+                          type="button"
+                          onClick={() => setShowRegisterConfirmPassword((v) => !v)}
+                          className="absolute right-3 top-3 text-muted-foreground hover:text-foreground"
+                          aria-label={showRegisterConfirmPassword ? "Hide password" : "Show password"}
+                          disabled={loading}
+                        >
+                          {showRegisterConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
                       </div>
                     </div>
 

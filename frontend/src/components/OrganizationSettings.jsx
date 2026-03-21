@@ -47,7 +47,6 @@ const OrganizationSettings = () => {
         const deptsResponse = await api.get(`/organizations/${identityContext.organization_id}/departments`);
         setDepartments(deptsResponse.data);
       } catch (error) {
-        console.error('Failed to load organization data:', error);
       }
     };
 
@@ -73,7 +72,6 @@ const OrganizationSettings = () => {
       await api.put(`/organizations/${identityContext.organization_id}`, organizationData);
       toast.success('Organization settings updated successfully!');
     } catch (error) {
-      console.error('Failed to update organization:', error);
       toast.error(error.response?.data?.detail || 'Failed to update organization settings');
     } finally {
       setLoading(false);
@@ -93,7 +91,6 @@ const OrganizationSettings = () => {
       toast.success(`Invitation sent to ${newMemberEmail}`);
       setNewMemberEmail('');
     } catch (error) {
-      console.error('Failed to invite member:', error);
       toast.error(error.response?.data?.detail || 'Failed to send invitation');
     }
   };
@@ -112,7 +109,6 @@ const OrganizationSettings = () => {
       setNewDepartmentName('');
       toast.success('Department created successfully!');
     } catch (error) {
-      console.error('Failed to create department:', error);
       toast.error(error.response?.data?.detail || 'Failed to create department');
     }
   };

@@ -12,9 +12,7 @@ class ErrorBoundary extends React.Component {
 
   componentDidCatch(error, errorInfo) {
     // Log error for debugging
-    console.error('❌ ErrorBoundary caught an error:', error);
-    console.error('❌ Error info:', errorInfo);
-    console.error('❌ Error stack:', error.stack);
+    // Optionally send error details to an external monitoring service here
     
     // Optionally send to logging service
     // You can add error reporting service here (e.g., Sentry, LogRocket, etc.)

@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import { Button } from "../components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
 import { Badge } from "../components/ui/badge";
-import { ExternalLink, Phone, Mail, MessageCircle, Link as LinkIcon, MessageSquare, Save, UserPlus, ShoppingBag, Image as ImageIcon, Tag, DollarSign, Video, Camera, Users, Copy, Check, Globe, Download } from "lucide-react";
+import { ExternalLink, Phone, Mail, MessageCircle, Link as LinkIcon, MessageSquare, Save, UserPlus, ShoppingBag, Image as ImageIcon, Tag, DollarSign, Video, Camera, Users, Copy, Check, Globe, Download, X } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 
 // WhatsApp Icon Component
@@ -61,6 +61,44 @@ const getCurrencySymbol = (currencyCode) => {
   return currencyMap[currencyCode?.toUpperCase()] || '$';
 };
 
+// YouTube helpers shared across profile media rendering
+const getYouTubeId = (url) => {
+  if (!url) return null;
+  try {
+    const u = new URL(url);
+    const host = u.hostname.replace(/^www\./, "");
+    if (host === "youtu.be") {
+      return u.pathname.replace("/", "") || null;
+    }
+    if (host === "youtube.com" || host === "m.youtube.com") {
+      if (u.pathname === "/watch") return u.searchParams.get("v");
+      const m1 = u.pathname.match(/^\/embed\/([^/]+)/);
+      if (m1?.[1]) return m1[1];
+      const m2 = u.pathname.match(/^\/shorts\/([^/]+)/);
+      if (m2?.[1]) return m2[1];
+    }
+    return null;
+  } catch {
+    return null;
+  }
+};
+
+const normalizeVideoSrc = (value) => {
+  if (!value) return "";
+  const trimmed = value.trim();
+  const iframeMatch = trimmed.match(/<iframe[^>]+src=['"]([^'"]+)['"][^>]*>/i);
+  const src = iframeMatch?.[1] || trimmed;
+  const ytId = getYouTubeId(src);
+  if (ytId) return `https://www.youtube.com/embed/${ytId}`;
+  return src;
+};
+
+const getAutoThumbnailUrl = (src) => {
+  const ytId = getYouTubeId(src);
+  if (!ytId) return null;
+  return `https://i.ytimg.com/vi/${ytId}/hqdefault.jpg`;
+};
+
 const Profile = () => {
   const { username, ringId } = useParams();
   const [profile, setProfile] = useState(null);
@@ -72,16 +110,15 @@ const Profile = () => {
   const [isMobile, setIsMobile] = useState(false);
   const [activeTab, setActiveTab] = useState("items");
   const [copiedField, setCopiedField] = useState(null);
+  const [selectedMedia, setSelectedMedia] = useState(null);
+  const [isMediaModalOpen, setIsMediaModalOpen] = useState(false);
 
-  // Debug: Log items state changes
-  useEffect(() => {
-    console.log('Items state updated:', items);
-    console.log('Active items count:', items.filter(item => item.active).length);
-    console.log('All items:', items);
-  }, [items]);
-
-  // Apply font class
-  const fontClass = profile?.fontFamily || profile?.font_family || "font-sans";
+  // Apply font class / stack
+  const rawFont = profile?.fontFamily || profile?.font_family || "font-sans";
+  const tailwindFontClasses = ["font-sans", "font-serif", "font-mono"];
+  const isTailwindFontClass = tailwindFontClasses.includes(rawFont);
+  const fontClass = isTailwindFontClass ? rawFont : "font-sans";
+  const fontStyle = !isTailwindFontClass ? { fontFamily: rawFont } : {};
   
   // Get colors with correct fallbacks - API returns background_color and accent_color
   // Default to dark blue/navy background to match the design
@@ -89,11 +126,6 @@ const Profile = () => {
   const accentColor = profile?.accent_color || profile?.accentColor || "#10b981";
   const buttonBackgroundColor = profile?.button_background_color || profile?.buttonBackgroundColor;
   const buttonTextColor = profile?.button_text_color || profile?.buttonTextColor;
-  
-  // Debug logging
-  console.log('Profile object:', profile);
-  console.log('Computed backgroundColor:', backgroundColor);
-  console.log('Computed accentColor:', accentColor);
   
   // Determine if background is dark
   const isDarkBackground = (color) => {
@@ -201,31 +233,12 @@ const Profile = () => {
         }
 
         const profileData = response.data;
-        console.log('✅ Profile data loaded:', profileData);
-        console.log('🎨 Background color from API:', profileData.background_color);
-        console.log('🎨 Accent color from API:', profileData.accent_color);
-        console.log('🔗 Links from API:', profileData.links?.length || 0);
-        console.log('🛍️ Items from API:', profileData.items);
-        console.log('🛍️ Items count:', profileData.items?.length || 0);
-        console.log('🛍️ Active items:', profileData.items?.filter(item => item && item.active) || []);
-        
         setProfile(profileData);
         setLinks(profileData.links || []);
         setMedia(profileData.media || []);
         
         // Ensure items are properly set - items should come from Firestore via API
         let fetchedItems = profileData.items || [];
-        
-        // Log items processing
-        if (fetchedItems && fetchedItems.length > 0) {
-          console.log('✅ Items found in API response:', fetchedItems.length);
-          const activeItems = fetchedItems.filter(item => item && item.active);
-          console.log('✅ Active items count:', activeItems.length);
-        } else {
-          console.log('⚠️ No items found in API response');
-        }
-        
-        console.log('📦 Setting items state:', fetchedItems);
         setItems(fetchedItems);
         
         setAnalytics({
@@ -233,7 +246,6 @@ const Profile = () => {
           totalClicks: profileData.total_clicks || 0
         });
       } catch (error) {
-        console.error('Failed to fetch profile:', error);
         toast.error("Profile not found");
         
         // Fallback to mock data for demo purposes
@@ -289,34 +301,52 @@ const Profile = () => {
 
   const trackProfileView = async () => {
     // In real app, this would call analytics API
-    console.log('Profile view tracked');
   };
 
   const handleLinkClick = async (link) => {
     try {
-      // Track click analytics
-      console.log(`Clicked link: ${link.title}`);
-      
+      // Track click on backend (so taps + engagements reflect Community link clicks)
+      if (link?.id) {
+        api.post(`/links/${link.id}/click`).catch(() => {});
+      }
       // Update local state for immediate feedback
-      setLinks(prevLinks => 
-        prevLinks.map(l => 
-          l.id === link.id 
-            ? { ...l, clicks: l.clicks + 1 }
+      setLinks(prevLinks =>
+        prevLinks.map(l =>
+          l.id === link.id
+            ? { ...l, clicks: (l.clicks || 0) + 1 }
             : l
         )
       );
 
       // Open link
       window.open(link.url, '_blank', 'noopener,noreferrer');
-      
+
       // Provide haptic feedback on mobile
       if ('vibrate' in navigator) {
         navigator.vibrate(50);
       }
-      
     } catch (error) {
       toast.error("Failed to open link");
     }
+  };
+
+  const handleMediaClick = async (mediaItem) => {
+    try {
+      // Track engagement for media clicks on public profile/preview
+      if (mediaItem?.id) {
+        await api.post(`/public/media/${mediaItem.id}/engage`);
+      }
+    } catch (error) {
+      // Ignore tracking failures in UI
+    }
+
+    const next = mediaItem?.type === "video" && mediaItem.url
+      ? { ...mediaItem, url: normalizeVideoSrc(mediaItem.url) }
+      : mediaItem;
+
+    // Open media in an inline modal on the same page
+    setSelectedMedia(next);
+    setIsMediaModalOpen(true);
   };
 
   const copyToClipboard = async (text, field) => {
@@ -390,7 +420,6 @@ const Profile = () => {
       
       toast.success("Contact saved!");
     } catch (error) {
-      console.error('Failed to save contact:', error);
       toast.error("Failed to save contact");
     }
   };
@@ -428,7 +457,7 @@ const Profile = () => {
   return (
     <div 
       className={`min-h-screen w-full max-w-lg mx-auto shadow-xl relative ${fontClass}`}
-      style={{ backgroundColor }}
+      style={{ backgroundColor, ...fontStyle }}
     >
       {/* Top Banner Section - Gradient Header */}
       <div className={`h-32 ${bannerPatternClass} relative`}>
@@ -450,10 +479,10 @@ const Profile = () => {
           </AvatarFallback>
         </Avatar>
         
-        <h1 className="text-xl font-bold mb-2 font-serif tracking-wide" style={{ color: textColor }}>
+        <h1 className="text-xl font-bold mb-2 tracking-wide" style={{ color: textColor }}>
           {profile.name}
         </h1>
-        <p className="text-sm leading-relaxed mb-4 font-serif" style={{ color: secondaryTextColor }}>
+        <p className="text-sm leading-relaxed mb-4" style={{ color: secondaryTextColor }}>
           {profile.bio}
         </p>
         
@@ -633,7 +662,8 @@ const Profile = () => {
                 {media.filter(m => m.active).map((mediaItem) => (
                   <div
                     key={mediaItem.id}
-                    className="rounded-lg overflow-hidden border"
+                    className="rounded-lg overflow-hidden border cursor-pointer"
+                    onClick={() => handleMediaClick(mediaItem)}
                     style={{ 
                       backgroundColor: isBackgroundDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.02)",
                       borderColor: isBackgroundDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"
@@ -656,9 +686,9 @@ const Profile = () => {
                       />
                     ) : (
                       <div className="w-full bg-muted flex items-center justify-center relative">
-                        {mediaItem.thumbnail_url ? (
+                        {mediaItem.thumbnail_url || getAutoThumbnailUrl(mediaItem.url) ? (
                           <img
-                            src={mediaItem.thumbnail_url}
+                            src={mediaItem.thumbnail_url || getAutoThumbnailUrl(mediaItem.url)}
                             alt={mediaItem.title || "Video"}
                             className="w-full h-auto"
                           />
@@ -677,7 +707,16 @@ const Profile = () => {
           </TabsContent>
 
           <TabsContent value="items" className="mt-0 space-y-3">
-            {items.filter(item => item.active).length === 0 ? (
+            {/* When items are locked due to expired subscription, hide them on public profile */}
+            {profile.items_locked ? (
+              <div className="text-center py-8">
+                <ShoppingBag className="w-12 h-12 mx-auto mb-4" style={{ color: secondaryTextColor }} />
+                <h3 className="font-semibold mb-2" style={{ color: textColor }}>Items unavailable</h3>
+                <p className="text-sm" style={{ color: secondaryTextColor }}>
+                  This profile&apos;s subscription has ended, so items are currently hidden.
+                </p>
+              </div>
+            ) : items.filter(item => item.active).length === 0 ? (
               <div className="text-center py-8">
                 <ShoppingBag className="w-12 h-12 mx-auto mb-4" style={{ color: secondaryTextColor }} />
                 <h3 className="font-semibold mb-2" style={{ color: textColor }}>No items available</h3>
@@ -749,6 +788,59 @@ const Profile = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Media viewer modal (images and videos) */}
+      {isMediaModalOpen && selectedMedia && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80">
+          <div className="relative w-full max-w-2xl mx-4 bg-black rounded-xl overflow-hidden">
+            <button
+              type="button"
+              aria-label="Close media"
+              className="absolute top-3 right-3 z-[210] rounded-full bg-black/70 p-1.5 hover:bg-black/90 text-white"
+              onClick={() => {
+                setIsMediaModalOpen(false);
+                setSelectedMedia(null);
+              }}
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {selectedMedia.type === "video" ? (
+              <div className="w-full aspect-video bg-black">
+                <iframe
+                  src={selectedMedia.url}
+                  title={selectedMedia.title || "Video"}
+                  className="w-full h-full"
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                />
+              </div>
+            ) : (
+              <img
+                src={selectedMedia.media_file_url || selectedMedia.thumbnail_url || selectedMedia.url}
+                alt={selectedMedia.title || "Media"}
+                className="w-full max-h-[80vh] object-contain bg-black"
+              />
+            )}
+
+            {(selectedMedia.title || selectedMedia.description) && (
+              <div className="p-3 border-t border-white/10">
+                {selectedMedia.title && (
+                  <div className="text-sm font-semibold text-white">
+                    {selectedMedia.title}
+                  </div>
+                )}
+                {selectedMedia.description && (
+                  <div className="mt-1 text-xs text-gray-300">
+                    {selectedMedia.description}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
 
       {/* Footer - Show only if show_footer is true */}

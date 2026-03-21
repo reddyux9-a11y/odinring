@@ -36,7 +36,6 @@ const BusinessSettings = () => {
         const response = await api.get(`/businesses/${identityContext.business_id}`);
         setBusinessData(response.data);
       } catch (error) {
-        console.error('Failed to load business data:', error);
       }
     };
 
@@ -62,7 +61,6 @@ const BusinessSettings = () => {
       await api.put(`/businesses/${identityContext.business_id}`, businessData);
       toast.success('Business settings updated successfully!');
     } catch (error) {
-      console.error('Failed to update business:', error);
       toast.error(error.response?.data?.detail || 'Failed to update business settings');
     } finally {
       setLoading(false);

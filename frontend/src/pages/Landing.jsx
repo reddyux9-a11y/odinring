@@ -154,9 +154,6 @@ const Landing = () => {
         });
       } catch (err) {
         // User cancelled or share failed, that's okay
-        if (err.name !== 'AbortError') {
-          console.log('Share cancelled or failed');
-        }
       }
     }
   };
@@ -203,9 +200,8 @@ const Landing = () => {
                       if (result?.outcome === 'ios_instruction_required') {
                         await openIOSShareSheet();
                       }
-                    } catch (error) {
-                      console.log('Install prompt not available:', error);
-                    }
+                  } catch (error) {
+                  }
                   }}
                   size="sm"
                   className="flex items-center gap-1 sm:gap-1.5 md:gap-2 text-xs sm:text-sm px-2 sm:px-3 md:px-4 h-8 sm:h-9"
@@ -262,7 +258,6 @@ const Landing = () => {
                       await openIOSShareSheet();
                     }
                   } catch (error) {
-                    console.log('Install prompt error:', error);
                   }
                 }}
                 variant="secondary" 
@@ -590,7 +585,6 @@ const Landing = () => {
                           return;
                         }
                       } catch (error) {
-                        console.log('Install prompt not available:', error);
                       }
                       setShowInstallPrompt(false); 
                       localStorage.setItem('pwaInstallDismissed', 'true'); 

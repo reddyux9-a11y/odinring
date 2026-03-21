@@ -49,7 +49,7 @@ const PremiumSidebar = ({
   links = [],
   totalClicks = 0 
 }) => {
-  const { subscription } = useIdentityContext();
+  const { subscription, loading: contextLoading } = useIdentityContext();
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -316,7 +316,8 @@ const PremiumSidebar = ({
                 <div className="flex items-center gap-2">
                   <p className="font-medium text-sm text-foreground truncate">{user?.name}</p>
                   <SubscriptionBadge 
-                    subscription={subscription} 
+                    subscription={subscription}
+                    loading={contextLoading} 
                     size="small" 
                     clickable={true}
                     title="Click to upgrade or change plan"
@@ -416,7 +417,7 @@ const PremiumSidebar = ({
         {isCollapsed && !isMobile && <div className="h-px bg-border my-2 mx-2" />}
 
         {/* Premium Features */}
-        <div>
+        {/* <div>
           {(!isCollapsed || isMobile) && (
             <div className="flex items-center space-x-2 mb-3">
               <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -481,7 +482,7 @@ const PremiumSidebar = ({
               );
             })}
           </div>
-        </div>
+        </div> */}
 
         {(!isCollapsed || isMobile) && <Separator className="my-4" />}
         {isCollapsed && !isMobile && <div className="h-px bg-border my-2 mx-2" />}

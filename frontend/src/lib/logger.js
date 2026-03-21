@@ -97,8 +97,7 @@ const logger = {
    */
   debug: (...args) => {
     if (isDevelopment) {
-      const redacted = redactSensitiveData(args);
-      console.log('[DEBUG]', ...redacted);
+      redactSensitiveData(args);
     }
   },
 
@@ -108,8 +107,7 @@ const logger = {
    */
   info: (...args) => {
     if (isDevelopment) {
-      const redacted = redactSensitiveData(args);
-      console.log('[INFO]', ...redacted);
+      redactSensitiveData(args);
     }
   },
 
@@ -119,8 +117,7 @@ const logger = {
    */
   warn: (...args) => {
     if (isDevelopment) {
-      const redacted = redactSensitiveData(args);
-      console.warn('[WARN]', ...redacted);
+      redactSensitiveData(args);
     }
     // In production, could send to error tracking service (Sentry, etc.)
   },
@@ -131,8 +128,7 @@ const logger = {
    */
   error: (...args) => {
     if (isDevelopment) {
-      const redacted = redactSensitiveData(args);
-      console.error('[ERROR]', ...redacted);
+      redactSensitiveData(args);
     }
     // In production, should send to error tracking service (Sentry, etc.)
   },

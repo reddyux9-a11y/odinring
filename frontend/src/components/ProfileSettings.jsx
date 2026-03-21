@@ -7,6 +7,7 @@ import { Textarea } from "./ui/textarea";
 import { Badge } from "./ui/badge";
 import { Separator } from "./ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import { Checkbox } from "./ui/checkbox";
 import { Camera, Save, Copy, Check } from "lucide-react";
 import { toast } from "sonner";
 import api from "../lib/api";
@@ -16,7 +17,13 @@ const ProfileSettings = ({ profile, setProfile, user }) => {
   const [formData, setFormData] = useState({ 
     ...profile,
     email: user.email || "",
-    phone_number: profile.phone_number || user.phone_number || ""
+    phone_number: profile.phone_number || user.phone_number || "",
+    whatsapp_number: profile.whatsapp_number || user.whatsapp_number || ""
+  });
+  const [isWhatsAppSameAsMobile, setIsWhatsAppSameAsMobile] = useState(() => {
+    const phone = (profile.phone_number || user.phone_number || "").trim();
+    const wa = (profile.whatsapp_number || user.whatsapp_number || "").trim();
+    return !wa || wa === phone;
   });
   const [copied, setCopied] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -27,18 +34,24 @@ const ProfileSettings = ({ profile, setProfile, user }) => {
     e.preventDefault();
     try {
       // Update profile via API
+      const normalizedEmail = (formData.email || "").trim().toLowerCase() || null;
+      const normalizedPhone = (formData.phone_number || "").trim() || null;
+      const normalizedWhatsapp = isWhatsAppSameAsMobile
+        ? null
+        : ((formData.whatsapp_number || "").trim() || null);
+
       const updateData = {
         name: formData.name,
         bio: formData.bio,
         avatar: formData.avatar,
-        email: formData.email || null,
-        phone_number: formData.phone_number || null
+        email: normalizedEmail,
+        phone_number: normalizedPhone,
+        whatsapp_number: normalizedWhatsapp
       };
       await api.put('/me', updateData);
       setProfile({ ...profile, ...formData });
       toast.success("Profile updated successfully!");
     } catch (error) {
-      console.error('Profile update failed:', error);
       const errorMessage = error?.response?.data?.detail || error?.response?.data?.message || "Failed to update profile";
       toast.error(errorMessage);
     }
@@ -132,7 +145,6 @@ const ProfileSettings = ({ profile, setProfile, user }) => {
         toast.success("Image uploaded successfully!");
       }
     } catch (error) {
-      console.error('Image upload failed:', error);
       const errorMessage = error?.response?.data?.detail || error?.response?.data?.message || "Failed to upload image";
       toast.error(errorMessage);
       // Revert preview on error
@@ -255,16 +267,54 @@ const ProfileSettings = ({ profile, setProfile, user }) => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="phone_number">Mobile Number</Label>
+              <div className="flex items-center justify-between gap-3">
+                <Label htmlFor="phone_number">Mobile Number</Label>
+                <label className="flex items-center gap-2 text-xs text-muted-foreground select-none">
+                  <Checkbox
+                    checked={isWhatsAppSameAsMobile}
+                    onCheckedChange={(checked) => {
+                      const next = checked === true;
+                      setIsWhatsAppSameAsMobile(next);
+                      if (next) {
+                        handleChange('whatsapp_number', '');
+                      }
+                    }}
+                  />
+                  Same as WhatsApp number
+                </label>
+              </div>
               <Input
                 id="phone_number"
                 type="tel"
                 value={formData.phone_number || user.phone_number || ""}
-                onChange={(e) => handleChange('phone_number', e.target.value)}
+                maxLength={20}
+                onChange={(e) => {
+                  // Allow only digits, spaces, dashes, parentheses, and leading +
+                  const raw = e.target.value;
+                  const cleaned = raw.replace(/[^0-9+\-\s()]/g, '');
+                  handleChange('phone_number', cleaned);
+                }}
                 placeholder="+1234567890"
               />
+              {!isWhatsAppSameAsMobile && (
+                <div className="mt-3 space-y-2">
+                  <Label htmlFor="whatsapp_number">WhatsApp Number</Label>
+                  <Input
+                    id="whatsapp_number"
+                    type="tel"
+                    value={formData.whatsapp_number || ""}
+                    maxLength={20}
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      const cleaned = raw.replace(/[^0-9+\-\s()]/g, '');
+                      handleChange('whatsapp_number', cleaned);
+                    }}
+                    placeholder="+1234567890"
+                  />
+                </div>
+              )}
               <p className="text-xs text-muted-foreground">
-                Used for WhatsApp and Call buttons on your profile
+                Calls use your mobile number. WhatsApp uses your WhatsApp number (or mobile if same).
               </p>
             </div>
 

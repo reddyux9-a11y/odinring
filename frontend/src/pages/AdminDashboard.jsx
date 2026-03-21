@@ -25,6 +25,7 @@ import {
   MousePointer,
   Download
 } from "lucide-react";
+import LogoutConfirmDialog from "../components/LogoutConfirmDialog";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { useAuth } from "../contexts/AuthContext";
@@ -46,6 +47,7 @@ const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState("overview");
   const [userSearchTerm, setUserSearchTerm] = useState("");
   const [selectedUsers, setSelectedUsers] = useState([]);
+  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
 
   const hasLoadedRef = useRef(false);
 
@@ -89,7 +91,7 @@ const AdminDashboard = () => {
       if (errors.length > 0) {
         const firstError = errors[0].reason;
         if (firstError?.response?.status === 401) {
-          handleLogout();
+          forceLogout();
         } else {
           toast.error("Failed to load some dashboard data");
         }
@@ -99,7 +101,7 @@ const AdminDashboard = () => {
       console.error('Failed to load dashboard data:', error);
       toast.error("Failed to load dashboard data");
       if (error.response?.status === 401) {
-        handleLogout();
+        forceLogout();
       }
     } finally {
       setLoading(false);
@@ -118,10 +120,18 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleLogout = () => {
+  const forceLogout = () => {
     adminLogout();
     toast.success("Logged out successfully");
     navigate('/admin/login');
+  };
+
+  const handleLogout = () => {
+    setLogoutDialogOpen(true);
+  };
+
+  const handleLogoutConfirmed = () => {
+    forceLogout();
   };
 
   const handleUserAction = async (action, userId, additionalData = {}) => {
@@ -226,6 +236,11 @@ const AdminDashboard = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <LogoutConfirmDialog
+        open={logoutDialogOpen}
+        onOpenChange={setLogoutDialogOpen}
+        onConfirm={handleLogoutConfirmed}
+      />
       {/* Header */}
       <header className="bg-card border-b border-border sticky top-0 z-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

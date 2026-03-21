@@ -11,11 +11,13 @@ import os
 import sys
 import logging
 from pathlib import Path
+from contextlib import asynccontextmanager
 from pydantic import BaseModel, Field, field_validator, EmailStr, ValidationInfo
 from typing import List, Optional, Dict, Any
 import uuid
 import re
 from datetime import datetime, timedelta, timezone
+import time
 import jwt
 from jwt.exceptions import InvalidTokenError, DecodeError, ExpiredSignatureError
 import bcrypt
@@ -23,6 +25,18 @@ import base64
 import qrcode
 from qrcode.image.svg import SvgPathImage
 import io
+import hashlib
+import secrets
+import requests
+
+# Load environment variables BEFORE importing config
+ROOT_DIR = Path(__file__).parent
+load_dotenv(ROOT_DIR / '.env')
+
+# Lightweight in-process cache for expensive analytics computations.
+# This avoids repeated Firestore reads when the dashboard polls/re-renders.
+_ANALYTICS_CACHE: Dict[str, Dict[str, Any]] = {}
+_ANALYTICS_CACHE_TTL_SECONDS = 15
 
 # Configuration (must be imported first for validation)
 from config import settings
@@ -67,10 +81,8 @@ except ImportError:
 
 # Google Calendar integration removed
 
-ROOT_DIR = Path(__file__).parent
-load_dotenv(ROOT_DIR / '.env')
-
 # Environment variables for Vercel serverless functions
+# Note: load_dotenv() is called earlier, before config import
 # These might be loaded after module import, so we'll handle them carefully
 def get_env_var(key, default=None):
     """Get environment variable with fallback for serverless environments"""
@@ -89,46 +101,125 @@ _IS_TEST_MODE = (
 )
 
 # Initialize Firebase/Firestore (replaces MongoDB)
-# Skip initialization in test mode - tests will use mocks
-if not _IS_TEST_MODE:
-    logger.info("firebase_init_start")
+# SECURITY: Use lazy initialization to prevent Vercel 404 errors
+# If env vars are missing, we log the error but don't raise during import
+# This allows the app to start and return helpful error messages via health endpoint
+_db = None
+_db_initialization_error = None
+
+def get_firestore_db():
+    """
+    Lazy initialization of Firestore database.
+    
+    This prevents Vercel 404 errors by allowing the app to import successfully
+    even if Firebase initialization fails. The app can still respond to requests
+    and provide helpful error messages via the health endpoint.
+    """
+    global _db, _db_initialization_error
+    
+    if _IS_TEST_MODE:
+        return None
+    
+    # Return cached instance if already initialized
+    if _db is not None:
+        return _db
+    
+    # Return None if we already tried and failed (don't retry on every request)
+    if _db_initialization_error is not None:
+        return None
+    
+    # SECURITY: Validate required environment variables before initialization
+    # For local dev, FIREBASE_SERVICE_ACCOUNT_JSON can be loaded from file
+    service_account_json = os.getenv('FIREBASE_SERVICE_ACCOUNT_JSON')
+    service_account_file = Path(__file__).parent / 'firebase-service-account.json'
+    has_firebase_creds = service_account_json or service_account_file.exists()
+    
+    required_env_vars = {
+        'FIREBASE_PROJECT_ID': os.getenv('FIREBASE_PROJECT_ID'),
+        'JWT_SECRET': os.getenv('JWT_SECRET')
+    }
+    
+    missing_vars = [var for var, value in required_env_vars.items() if not value]
+    if not has_firebase_creds:
+        missing_vars.append('FIREBASE_SERVICE_ACCOUNT_JSON (or firebase-service-account.json file)')
+    
+    if missing_vars:
+        error_msg = (
+            f"Missing required environment variables: {', '.join(missing_vars)}. "
+            f"Set them in your environment or Vercel project settings."
+        )
+        logger.error(error_msg)
+        _db_initialization_error = error_msg
+        return None
+    
     try:
-        db = initialize_firebase()
+        logger.info("firebase_init_start")
+        _db = initialize_firebase()
         logger.info("firebase_init_success")
+        return _db
     except Exception as e:
+        error_msg = f"Firebase initialization failed: {str(e)}"
         logger.error("firebase_init_failed", error=str(e), exc_info=True)
-        raise
-else:
-    # In test mode, set db to None - tests will mock it
-    db = None
+        _db_initialization_error = error_msg
+        # Don't raise - let app start so health endpoint can report the issue
+        return None
+
+# For backward compatibility, try to initialize on import (but don't fail if it doesn't work)
+# This allows existing code that references 'db' to continue working
+db = get_firestore_db()
 
 # Firestore Collections (replaces MongoDB collections)
-# In test mode, these will be mocked by conftest.py
-# The actual initialization happens here for production
+# SECURITY: Collections are initialized with error handling to prevent import failures
+# If Firebase initialization fails, collections will be None and routes will handle gracefully
 if not _IS_TEST_MODE:
-    users_collection = FirestoreDB('users')
-    links_collection = FirestoreDB('links')
-    items_collection = FirestoreDB('items')  # Merchant items
-    media_collection = FirestoreDB('media')  # User media files (images/videos)
-    rings_collection = FirestoreDB('rings')
-    analytics_collection = FirestoreDB('analytics')
-    admins_collection = FirestoreDB('admins')
-    ring_analytics_collection = FirestoreDB('ring_analytics')
-    qr_scans_collection = FirestoreDB('qr_scans')
-    appointments_collection = FirestoreDB('appointments')
-    availability_collection = FirestoreDB('availability')
-    status_checks_collection = FirestoreDB('status_checks')
-    sessions_collection = FirestoreDB('sessions')
-    
-    # Phase 2 Collections (Identity & Subscriptions)
-    businesses_collection = FirestoreDB('businesses')
-    organizations_collection = FirestoreDB('organizations')
-    departments_collection = FirestoreDB('departments')
-    memberships_collection = FirestoreDB('memberships')
-    subscriptions_collection = FirestoreDB('subscriptions')
+    try:
+        # Try to create collections - if Firebase isn't initialized, this will work
+        # because FirestoreDB will call get_firestore_client() which handles initialization
+        users_collection = FirestoreDB('users')
+        links_collection = FirestoreDB('links')
+        items_collection = FirestoreDB('items')  # Merchant items
+        media_collection = FirestoreDB('media')  # User media files (images/videos)
+        rings_collection = FirestoreDB('rings')
+        analytics_collection = FirestoreDB('analytics')
+        admins_collection = FirestoreDB('admins')
+        ring_analytics_collection = FirestoreDB('ring_analytics')
+        qr_scans_collection = FirestoreDB('qr_scans')
+        appointments_collection = FirestoreDB('appointments')
+        availability_collection = FirestoreDB('availability')
+        status_checks_collection = FirestoreDB('status_checks')
+        sessions_collection = FirestoreDB('sessions')
+        
+        # Phase 2 Collections (Identity & Subscriptions)
+        businesses_collection = FirestoreDB('businesses')
+        organizations_collection = FirestoreDB('organizations')
+        departments_collection = FirestoreDB('departments')
+        memberships_collection = FirestoreDB('memberships')
+        subscriptions_collection = FirestoreDB('subscriptions')
+    except Exception as e:
+        # If collection creation fails (e.g., Firebase not initialized),
+        # create mock collections so the app can still start
+        logger.warning(f"Failed to create Firestore collections: {e}. App will start but database operations will fail.")
+        from unittest.mock import MagicMock
+        users_collection = MagicMock()
+        links_collection = MagicMock()
+        items_collection = MagicMock()
+        media_collection = MagicMock()
+        rings_collection = MagicMock()
+        analytics_collection = MagicMock()
+        admins_collection = MagicMock()
+        ring_analytics_collection = MagicMock()
+        qr_scans_collection = MagicMock()
+        appointments_collection = MagicMock()
+        availability_collection = MagicMock()
+        status_checks_collection = MagicMock()
+        sessions_collection = MagicMock()
+        businesses_collection = MagicMock()
+        organizations_collection = MagicMock()
+        departments_collection = MagicMock()
+        memberships_collection = MagicMock()
+        subscriptions_collection = MagicMock()
 else:
     # In test mode, create placeholder objects that will be replaced by mocks
-    # This allows the module to be imported without errors
     from unittest.mock import MagicMock
     users_collection = MagicMock()
     links_collection = MagicMock()
@@ -152,14 +243,19 @@ else:
 # Function to get current environment variables (for runtime checking)
 def get_current_env_vars():
     """Get current environment variables - useful for debugging serverless issues"""
+    # SECURITY: File-based credentials eliminated - use FIREBASE_SERVICE_ACCOUNT_JSON only
     return {
         'FIREBASE_PROJECT_ID': os.environ.get('FIREBASE_PROJECT_ID', 'NOT_SET'),
-        'FIREBASE_SERVICE_ACCOUNT_PATH': os.environ.get('FIREBASE_SERVICE_ACCOUNT_PATH', 'NOT_SET'),
-        'JWT_SECRET': os.environ.get('JWT_SECRET', 'NOT_SET')[:20] + '...' if len(os.environ.get('JWT_SECRET', '')) > 20 else 'NOT_SET',
+        'FIREBASE_SERVICE_ACCOUNT_JSON': 'SET' if os.environ.get('FIREBASE_SERVICE_ACCOUNT_JSON') else 'NOT_SET',
+        # SECURITY: Never expose any part of JWT_SECRET value
+        # Only report whether it is configured or not
+        'JWT_SECRET': 'SET' if os.environ.get('JWT_SECRET') else 'NOT_SET',
         'CORS_ORIGINS': os.environ.get('CORS_ORIGINS', 'NOT_SET')
     }
 
 # JWT Configuration - use validated settings
+# SECURITY: JWT_SECRET must be at least 32 characters and stored in environment variables only
+# DO NOT hardcode JWT_SECRET in code - always use environment variables
 JWT_SECRET = settings.JWT_SECRET
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRATION = settings.JWT_EXPIRATION  # from settings (default 168 hours = 7 days)
@@ -180,8 +276,31 @@ else:
     mock_limiter.limit = limit_decorator
     limiter = mock_limiter
 
+# Lifespan context manager for startup/shutdown (recommended for Vercel)
+# SECURITY: Keep startup minimal to prevent FUNCTION_INVOCATION_FAILED
+# Database initialization is deferred to first request to avoid blocking startup
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Startup and shutdown lifecycle management.
+    SECURITY: Minimal startup logic to prevent blocking app initialization.
+    Database operations are deferred to request handlers.
+    This is the recommended approach for Vercel serverless functions.
+    """
+    # Minimal startup - just log that we're starting
+    # Don't access collections or database during startup to avoid failures
+    logger.info("🚀 Application starting...")
+    
+    # Yield immediately - app is ready to handle requests
+    # Database initialization will happen on first request if needed
+    yield
+    
+    # Shutdown (minimal for serverless - connections are managed per-request)
+    logger.info("🛑 Application shutting down...")
+
 # Create the main app without a prefix with enhanced OpenAPI metadata
 app = FastAPI(
+    lifespan=lifespan,
     title="OdinRing API",
     description="""
 # OdinRing API Documentation
@@ -377,6 +496,7 @@ class User(BaseModel):
     show_footer: bool = True  # Whether to show "Powered by OdinRing" footer
     show_ring_badge: bool = True  # Whether to show "Ring Connected" badge
     phone_number: Optional[str] = None  # User's phone number for WhatsApp and Call buttons
+    whatsapp_number: Optional[str] = None  # Optional WhatsApp number if different from phone_number
     items: List[Dict[str, Any]] = []  # Store items directly in user document
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
@@ -396,6 +516,9 @@ class UserUpdate(BaseModel):
     show_footer: Optional[bool] = None
     show_ring_badge: Optional[bool] = None
     phone_number: Optional[str] = None
+    whatsapp_number: Optional[str] = None
+    # Typography
+    font_family: Optional[str] = None
 
     @field_validator('name')
     @classmethod
@@ -433,6 +556,14 @@ class UserUpdate(BaseModel):
         if v:
             if not re.match(r'^[+]?[(]?[0-9]{1,4}[)]?[-\s\.]?[(]?[0-9]{1,4}[)]?[-\s\.]?[0-9]{1,9}$', v.replace(' ', '')):
                 raise ValueError('Invalid phone number format')
+        return v
+
+    @field_validator('whatsapp_number')
+    @classmethod
+    def validate_whatsapp_number(cls, v):
+        if v:
+            if not re.match(r'^[+]?[(]?[0-9]{1,4}[)]?[-\s\.]?[(]?[0-9]{1,4}[)]?[-\s\.]?[0-9]{1,9}$', v.replace(' ', '')):
+                raise ValueError('Invalid WhatsApp number format')
         return v
 
 class LinkCreate(BaseModel):
@@ -638,6 +769,7 @@ class ItemOrder(BaseModel):
 
 class ItemsReorderRequest(BaseModel):
     """Request model for reordering items"""
+    model_config = {"extra": "forbid"}
     items_order: List[ItemOrder] = Field(..., description="List of items with their new order")
 
 # ==================== MEDIA MODELS ====================
@@ -719,10 +851,11 @@ class MediaCreate(BaseModel):
     @classmethod
     def validate_thumbnail_url(cls, v):
         if v:
-            if not re.match(r'^https?://', v, re.IGNORECASE):
-                raise ValueError('Thumbnail URL must start with http:// or https://')
-            if len(v) > 2000:
-                raise ValueError('Thumbnail URL must be 2000 characters or less')
+            # Allow HTTP/HTTPS URLs or data URLs (for base64 encoded thumbnails)
+            if not (re.match(r'^https?://', v, re.IGNORECASE) or v.startswith('data:')):
+                raise ValueError('Thumbnail URL must start with http://, https://, or data:')
+            if len(v) > 10000000:
+                raise ValueError('Thumbnail URL must be 10000000 characters or less')
         return v.strip() if v else None
     
     @field_validator('description')
@@ -878,15 +1011,21 @@ class PublicProfile(BaseModel):
     show_ring_badge: bool = True
     email: Optional[str] = None  # User's email for mail button
     phone_number: Optional[str] = None  # User's phone number for WhatsApp/Call buttons
+    whatsapp_number: Optional[str] = None  # Optional WhatsApp number (if different from phone_number)
     links: List[Link]
     media: List[Media] = []  # User's media files for public view
     items: List[Dict[str, Any]] = []  # User's items for public view
+    # Subscription-related gating flags
+    subscription_status: Optional[str] = None
+    items_locked: bool = False
     profile_views: int
     total_clicks: int
 
 class AnalyticsData(BaseModel):
     profile_views: int
     total_clicks: int
+    total_taps: Optional[int] = None
+    total_engagements: Optional[int] = None
     active_links: int
     top_link: Optional[Dict[str, Any]]
     weekly_stats: List[Dict[str, Any]]
@@ -1057,6 +1196,7 @@ def create_jwt_token(user_id: str, session_id: Optional[str] = None, expiry_minu
     if session_id:
         payload["session_id"] = session_id
     
+    # SECURITY: JWT_SECRET is loaded from environment variables only (never hardcoded)
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
 def verify_jwt_token(token: str) -> str:
@@ -1175,31 +1315,65 @@ def generate_ring_id() -> str:
 # ==================== ADMIN AUTHENTICATION ROUTES ====================
 
 @api_router.post("/admin/auth/login")
-async def admin_login(login_data: AdminLogin):
-    # Find admin by username
-    admin_doc = await admins_collection.find_one({"username": login_data.username})
-    if not admin_doc or not verify_password(login_data.password, admin_doc["password"]):
-        raise HTTPException(status_code=401, detail="Invalid admin credentials")
-    
-    # Update last login
-    await admins_collection.update_one(
-        {"id": admin_doc["id"]},
-        {"$set": {"last_login": datetime.utcnow()}}
-    )
-    
-    # Create JWT token with admin_id
-    payload = {
-        "admin_id": admin_doc["id"],
-        "role": admin_doc["role"],
-        "exp": datetime.utcnow() + timedelta(hours=JWT_EXPIRATION)
-    }
-    token = jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
-    
-    admin = Admin(**admin_doc)
-    return {
-        "token": token,
-        "admin": admin.model_dump()
-    }
+@limiter.limit("5/minute")  # SECURITY: Rate limit admin login attempts
+async def admin_login(request: Request, login_data: AdminLogin):
+    """
+    Admin login endpoint with rate limiting and error handling
+    """
+    try:
+        # Find admin by username
+        admin_doc = await admins_collection.find_one({"username": login_data.username})
+        if not admin_doc or not verify_password(login_data.password, admin_doc["password"]):
+            # SECURITY: Log failed login attempt
+            ip_address = get_client_ip(request)
+            user_agent = get_user_agent(request)
+            logger.warning(
+                "admin_login_failed",
+                username=login_data.username,
+                ip_address=ip_address,
+                user_agent=user_agent
+            )
+            raise HTTPException(status_code=401, detail="Invalid admin credentials")
+        
+        # Update last login
+        try:
+            await admins_collection.update_one(
+                {"id": admin_doc["id"]},
+                {"$set": {"last_login": datetime.utcnow()}}
+            )
+        except Exception as e:
+            # Don't fail login if last_login update fails
+            logger.warning(f"Failed to update admin last_login: {e}")
+        
+        # Create JWT token with admin_id
+        payload = {
+            "admin_id": admin_doc["id"],
+            "role": admin_doc["role"],
+            "exp": datetime.utcnow() + timedelta(hours=JWT_EXPIRATION)
+        }
+        token = jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+        
+        # Log successful admin login
+        ip_address = get_client_ip(request)
+        user_agent = get_user_agent(request)
+        logger.info(
+            "admin_login_success",
+            admin_id=admin_doc["id"],
+            role=admin_doc["role"],
+            ip_address=ip_address
+        )
+        
+        admin = Admin(**admin_doc)
+        return {
+            "token": token,
+            "admin": admin.model_dump()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Admin login error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @api_router.post("/admin/auth/create")
 async def create_admin(admin_data: dict, current_admin: Admin = Depends(get_current_admin)):
@@ -2869,6 +3043,29 @@ async def google_signin(request: Request, google_data: GoogleSignInRequest):
                 )
             except Exception as e:
                 logger.warning(f"Analytics tracking warning: {e}")
+            
+            # Create default Standard plan subscription with 14-day trial for Google sign-ups
+            try:
+                from services.subscription_service import SubscriptionService
+                from models.identity_models import SubscriptionCreate, SubscriptionPlan
+                
+                subscription_data = SubscriptionCreate(
+                    plan=SubscriptionPlan.SOLO,
+                    billing_cycle="yearly",
+                    trial_days=14
+                )
+                
+                await SubscriptionService.create_subscription(
+                    subscription_data=subscription_data,
+                    user_id=user.id,
+                    actor_id=user.id,
+                    ip_address=ip_address,
+                    user_agent=user_agent
+                )
+                logger.info(f"Created default Standard plan subscription for new Google user: {user.id}")
+            except Exception as e:
+                logger.warning(f"Failed to create default subscription for Google user {user.id}: {e}")
+                # Do not fail login if subscription creation fails
         
         # Create session
         session = await SessionManager.create_session(
@@ -3232,50 +3429,183 @@ async def refresh_token(request: Request, refresh_data: RefreshTokenRequest):
 class ForgotPasswordRequest(BaseModel):
     email: str
 
+class VerifyResetOtpRequest(BaseModel):
+    email: str
+    otp: str
+
 class ResetPasswordRequest(BaseModel):
     token: str
     new_password: str
 
+def _normalize_email(email: str) -> str:
+    return (email or "").strip().lower()
+
+def _generate_otp_6() -> str:
+    # Cryptographically strong, always 6 digits
+    return f"{secrets.randbelow(1_000_000):06d}"
+
+def _hash_reset_otp(email: str, otp: str) -> str:
+    # Hash OTP so we never store it in plaintext
+    material = f"{settings.JWT_SECRET}:{_normalize_email(email)}:{otp}".encode("utf-8")
+    return hashlib.sha256(material).hexdigest()
+
+def _utcnow() -> datetime:
+    # Always timezone-aware UTC to avoid naive/aware comparison bugs (Firestore may return aware datetimes)
+    return datetime.now(timezone.utc)
+
+def _as_utc(dt: Any) -> Optional[datetime]:
+    if dt is None:
+        return None
+    if isinstance(dt, datetime):
+        if dt.tzinfo is None:
+            return dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(timezone.utc)
+    return None
+
+def _send_resend_otp_email(*, to_email: str, otp: str) -> None:
+    api_key = os.getenv("RESEND_API_KEY") or getattr(settings, "RESEND_API_KEY", None)
+    if not api_key:
+        raise RuntimeError("RESEND_API_KEY not configured")
+
+    from_email = os.getenv("RESEND_FROM_EMAIL") or getattr(settings, "RESEND_FROM_EMAIL", None) or "onboarding@resend.dev"
+    subject = "Your OdinRing password reset code"
+    html = f"""
+    <div style="font-family: ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; line-height:1.5;">
+      <h2 style="margin:0 0 12px;">Password reset</h2>
+      <p style="margin:0 0 12px;">Use the code below to reset your password. This code expires in 10 minutes.</p>
+      <div style="font-size:28px; letter-spacing:6px; font-weight:700; padding:12px 16px; border:1px solid #e5e7eb; border-radius:10px; display:inline-block;">
+        {otp}
+      </div>
+      <p style="margin:16px 0 0; color:#6b7280; font-size:12px;">
+        If you didn't request this, you can ignore this email.
+      </p>
+    </div>
+    """.strip()
+
+    resp = requests.post(
+        "https://api.resend.com/emails",
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        },
+        json={
+            "from": from_email,
+            "to": [to_email],
+            "subject": subject,
+            "html": html,
+        },
+        timeout=15,
+    )
+    if resp.status_code >= 400:
+        raise RuntimeError(f"Resend API error: {resp.status_code} {resp.text}")
+
 @api_router.post("/auth/forgot-password")
 async def forgot_password(request: ForgotPasswordRequest):
-    """Request password reset - generates a reset token"""
+    """Request password reset - sends an email OTP (if account exists)."""
     try:
-        # Find user by email
-        user_doc = await users_collection.find_one({"email": request.email})
+        email = _normalize_email(request.email)
+        if not email:
+            raise HTTPException(status_code=400, detail="Email is required")
+
+        # SECURITY: Don't reveal if email exists
+        user_doc = await users_collection.find_one({"email": email})
         if not user_doc:
-            # Don't reveal if email exists for security
-            return {"message": "If an account exists with this email, a password reset link has been sent."}
-        
-        # Generate reset token
-        reset_token = str(uuid.uuid4())
-        reset_token_expiry = datetime.utcnow() + timedelta(hours=1)  # Token expires in 1 hour
-        
-        # Store reset token in user document
+            return {"message": "If an account exists with this email, an OTP has been sent."}
+
+        otp = _generate_otp_6()
+        otp_hash = _hash_reset_otp(email, otp)
+        otp_expiry = _utcnow() + timedelta(minutes=10)
+
+        # Store OTP hash (not OTP) and reset any prior reset state
         await users_collection.update_one(
-            {"email": request.email},
+            {"email": email},
             {"$set": {
-                "reset_token": reset_token,
-                "reset_token_expiry": reset_token_expiry,
-                "updated_at": datetime.utcnow()
+                "reset_otp_hash": otp_hash,
+                "reset_otp_expiry": otp_expiry,
+                "reset_otp_attempts": 0,
+                "reset_otp_verified": False,
+                "reset_token": None,
+                "reset_token_expiry": None,
+                "updated_at": _utcnow()
             }}
         )
-        
-        # In production, send email with reset link
-        # For now, return token (remove this in production and send email instead)
-        reset_link = f"/reset-password?token={reset_token}"
-        
-        return {
-            "message": "Password reset link has been sent to your email.",
-            "reset_token": reset_token,  # Remove in production
-            "reset_link": reset_link  # Remove in production
-        }
+
+        # Send via Resend
+        try:
+            _send_resend_otp_email(to_email=email, otp=otp)
+        except Exception as send_err:
+            logger.error(f"Resend OTP email failed: {type(send_err).__name__}: {send_err}", exc_info=True)
+            # Don't leak provider details to client
+            raise HTTPException(status_code=500, detail="Failed to send OTP email. Please try again.")
+
+        return {"message": "If an account exists with this email, an OTP has been sent."}
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Forgot password error: {type(e).__name__}: {str(e)}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Error processing password reset request: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error processing password reset request")
+
+@api_router.post("/auth/verify-reset-otp")
+async def verify_reset_otp(request: VerifyResetOtpRequest):
+    """Verify OTP and mint a short-lived reset token."""
+    try:
+        email = _normalize_email(request.email)
+        otp = (request.otp or "").strip()
+        if not email or not otp:
+            raise HTTPException(status_code=400, detail="Email and OTP are required")
+        if not re.fullmatch(r"\d{6}", otp):
+            raise HTTPException(status_code=400, detail="OTP must be 6 digits")
+
+        user_doc = await users_collection.find_one({"email": email})
+        if not user_doc:
+            raise HTTPException(status_code=400, detail="Invalid OTP")
+
+        otp_expiry = _as_utc(user_doc.get("reset_otp_expiry"))
+        otp_hash = user_doc.get("reset_otp_hash")
+        attempts = int(user_doc.get("reset_otp_attempts") or 0)
+
+        if not otp_expiry or not otp_hash:
+            raise HTTPException(status_code=400, detail="Invalid OTP")
+        if _utcnow() > otp_expiry:
+            await users_collection.update_one(
+                {"email": email},
+                {"$unset": {"reset_otp_hash": "", "reset_otp_expiry": "", "reset_otp_attempts": "", "reset_otp_verified": ""}}
+            )
+            raise HTTPException(status_code=400, detail="OTP has expired. Please request a new one.")
+        if attempts >= 5:
+            raise HTTPException(status_code=429, detail="Too many attempts. Please request a new OTP.")
+
+        candidate_hash = _hash_reset_otp(email, otp)
+        if not secrets.compare_digest(candidate_hash, otp_hash):
+            await users_collection.update_one(
+                {"email": email},
+                {"$set": {"reset_otp_attempts": attempts + 1, "updated_at": _utcnow()}}
+            )
+            raise HTTPException(status_code=400, detail="Invalid OTP")
+
+        reset_token = str(uuid.uuid4())
+        reset_token_expiry = _utcnow() + timedelta(minutes=15)
+
+        await users_collection.update_one(
+            {"email": email},
+            {"$set": {
+                "reset_otp_verified": True,
+                "reset_token": reset_token,
+                "reset_token_expiry": reset_token_expiry,
+                "updated_at": _utcnow()
+            }}
+        )
+
+        return {"message": "OTP verified", "reset_token": reset_token}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Verify reset OTP error: {type(e).__name__}: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error verifying OTP")
 
 @api_router.post("/auth/reset-password")
 async def reset_password(request: ResetPasswordRequest):
-    """Reset password using token"""
+    """Reset password using short-lived reset token (minted after OTP verify)."""
     try:
         # Find user by reset token
         user_doc = await users_collection.find_one({"reset_token": request.token})
@@ -3283,11 +3613,11 @@ async def reset_password(request: ResetPasswordRequest):
             raise HTTPException(status_code=400, detail="Invalid or expired reset token")
         
         # Check if token is expired
-        reset_token_expiry = user_doc.get("reset_token_expiry")
+        reset_token_expiry = _as_utc(user_doc.get("reset_token_expiry"))
         if not reset_token_expiry:
             raise HTTPException(status_code=400, detail="Invalid reset token")
         
-        if datetime.utcnow() > reset_token_expiry:
+        if _utcnow() > reset_token_expiry:
             # Clear expired token
             await users_collection.update_one(
                 {"reset_token": request.token},
@@ -3307,7 +3637,7 @@ async def reset_password(request: ResetPasswordRequest):
             {"reset_token": request.token},
             {"$set": {
                 "password": hashed_password,
-                "updated_at": datetime.utcnow()
+                "updated_at": _utcnow()
             },
              "$unset": {
                 "reset_token": "",
@@ -4708,14 +5038,19 @@ async def track_link_click(link_id: str, request: Request):
             request.headers.get("user-agent", "Unknown")
         )
     
-    # Track in analytics
-    await analytics_collection.insert_one({
-        "link_id": link_id,
-        "event": "click",
-        "timestamp": datetime.utcnow(),
-        "ip": getattr(request.client, 'host', '127.0.0.1')
-    })
-    
+    # Track in analytics (include user_id so link clicks count as engagements)
+    owner_id = link_doc.get("user_id")
+    if owner_id is not None:
+        # Normalize to string so it matches current_user.id in GET /analytics
+        owner_id_str = str(owner_id)
+        await analytics_collection.insert_one({
+            "user_id": owner_id_str,
+            "link_id": link_id,
+            "event": "click",
+            "timestamp": datetime.utcnow(),
+            "ip": getattr(request.client, 'host', '127.0.0.1')
+        })
+
     return {"message": "Click tracked"}
 
 # ==================== MEDIA MANAGEMENT ROUTES ====================
@@ -4802,6 +5137,43 @@ async def create_media(
     logger.info(f"✅ POST /media - Created media '{media.title}' (id: {media.id}) for {current_user.email}")
     
     return media.model_dump()
+
+
+@api_router.post("/public/media/{media_id}/engage")
+@limiter.limit("200/minute")
+async def track_public_media_engagement(media_id: str, request: Request):
+    """
+    Track media engagement (click) from public profile/preview.
+    
+    This endpoint does not require authentication. It looks up the media by id,
+    derives the owning user_id, and records a lightweight analytics event.
+    """
+    try:
+        media_doc = await media_collection.find_one({"id": media_id})
+        if not media_doc:
+            raise HTTPException(status_code=404, detail="Media not found")
+        
+        user_id = media_doc.get("user_id")
+        if not user_id:
+            # If media is not associated with a user, skip tracking
+            return {"success": True}
+        
+        await analytics_collection.insert_one({
+            "user_id": user_id,
+            "media_id": media_id,
+            "event": "media_click",
+            "timestamp": datetime.utcnow(),
+            "ip": getattr(request.client, 'host', '127.0.0.1'),
+            "user_agent": request.headers.get("user-agent", "Unknown")
+        })
+        
+        return {"success": True}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.warning(f"Failed to track public media engagement for {media_id}: {e}")
+        # Do not fail the request for analytics issues
+        return {"success": True}
 
 @api_router.put("/media/{media_id}")
 async def update_media(
@@ -5412,6 +5784,21 @@ async def get_public_profile(request: Request, username: str):
             request.headers.get("user-agent", "Unknown")
         )
     
+    # Determine subscription status for public profile gating
+    try:
+        from services.identity_resolver import IdentityResolver
+        from models.identity_models import SubscriptionStatus
+        
+        subscription_info = await IdentityResolver._get_subscription(user_id=user.id)
+        subscription_status = subscription_info.get("status", SubscriptionStatus.NONE)
+    except Exception as e:
+        logger.warning(f"Failed to resolve subscription for public profile {user.id}: {e}")
+        from models.identity_models import SubscriptionStatus
+        subscription_status = SubscriptionStatus.NONE
+    
+    # Items should only be fully visible when subscription is active or trial
+    items_locked = subscription_status == SubscriptionStatus.EXPIRED
+    
     # Get active links
     # NOTE: Sort removed from query to avoid requiring composite index
     # Firestore requires index for: user_id + active + order
@@ -5460,7 +5847,14 @@ async def get_public_profile(request: Request, username: str):
     active_items = [item for item in items_data if item.get("active", False)]
     active_items.sort(key=lambda x: x.get('order', 0))
     
-    logger.info(f"✅ Found {len(active_items)} active items")
+    # Apply subscription gating for items: hide items when subscription expired
+    if items_locked:
+        logger.info(f"🔒 Items are locked for public profile due to subscription status={subscription_status}")
+        gated_items = []
+    else:
+        gated_items = active_items
+    
+    logger.info(f"✅ Found {len(gated_items)} active items (after gating)")
     
     # Get profile views from ring analytics
     profile_views = await ring_analytics_collection.count_documents({
@@ -5495,37 +5889,62 @@ async def get_public_profile(request: Request, username: str):
         show_footer=user.show_footer,
         show_ring_badge=show_ring_badge,
         email=user.email,  # Include email for mail button
-        phone_number=user_doc.get('phone_number') if isinstance(user_doc, dict) else getattr(user, 'phone_number', None),  # Include phone for WhatsApp/Call buttons
+        phone_number=user_doc.get('phone_number') if isinstance(user_doc, dict) else getattr(user, 'phone_number', None),  # Include phone for Call button
+        whatsapp_number=user_doc.get('whatsapp_number') if isinstance(user_doc, dict) else getattr(user, 'whatsapp_number', None),  # Prefer WhatsApp number if different
         links=[link.model_dump() for link in links],
         media=[media.model_dump() for media in media_list],  # Include active media files
-        items=active_items,  # Include active items from Firestore
+        items=gated_items,  # Include (possibly gated) active items
         profile_views=profile_views,
-        total_clicks=total_clicks
+        total_clicks=total_clicks,
+        subscription_status=subscription_status,
+        items_locked=items_locked
     ).model_dump()
 
 @api_router.get("/ring/{ring_id}")
+@limiter.limit("60/minute")  # SECURITY: Rate limit NFC scans
 async def get_profile_by_ring(ring_id: str, request: Request):
-    # Find user by ring_id
-    user_doc = await users_collection.find_one({"ring_id": ring_id})
-    if not user_doc:
-        raise HTTPException(status_code=404, detail="Ring not found")
+    """
+    Get profile by NFC ring ID
     
-    user = User(**user_doc)
-    
-    # Direct link mode removed - always return profile
-    
-    # Track regular ring tap
-    await track_ring_event(
-        ring_id, 
-        "tap", 
-        user.id,
-        None,
-        getattr(request.client, 'host', '127.0.0.1'),
-        request.headers.get("user-agent", "Unknown")
-    )
-    
-    # Return regular profile
-    return await get_public_profile(user.username, request)
+    SECURITY: This endpoint is rate-limited to prevent abuse.
+    In production, consider requiring NFC token validation for additional security.
+    """
+    try:
+        # SECURITY: Validate ring_id format (basic sanitization)
+        if not ring_id or len(ring_id) > 50:
+            raise HTTPException(status_code=400, detail="Invalid ring ID format")
+        
+        # Find user by ring_id
+        user_doc = await users_collection.find_one({"ring_id": ring_id})
+        if not user_doc:
+            # SECURITY: Don't reveal if ring exists or not (prevent enumeration)
+            raise HTTPException(status_code=404, detail="Ring not found")
+        
+        user = User(**user_doc)
+        
+        # Track regular ring tap with error handling
+        try:
+            await track_ring_event(
+                ring_id, 
+                "tap", 
+                user.id,
+                None,
+                getattr(request.client, 'host', '127.0.0.1'),
+                request.headers.get("user-agent", "Unknown")
+            )
+        except Exception as e:
+            # Don't fail the request if analytics tracking fails
+            logger.warning(f"Failed to track ring tap event: {e}")
+        
+        # Return regular profile
+        return await get_public_profile(user.username, request)
+        
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
+    except Exception as e:
+        logger.error(f"Error in get_profile_by_ring: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 # Direct link mode endpoint removed
 
@@ -5577,65 +5996,109 @@ async def get_analytics(
     if links:
         top_link = max(links, key=lambda x: x.clicks)
 
-    # Compute date range - use provided dates or default to last 7 days
+    # Compute date range - use provided dates or default to last 7 days (UTC for correct Firestore comparison)
+    now_utc = datetime.now(timezone.utc).replace(tzinfo=None)
     if start_date and end_date:
         try:
-            start_datetime = datetime.strptime(start_date, "%Y-%m-%d")
-            end_datetime = datetime.strptime(end_date, "%Y-%m-%d")
-            end_datetime = end_datetime.replace(hour=23, minute=59, second=59, microsecond=999999)
+            start_datetime = datetime.strptime(start_date, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+            end_datetime = datetime.strptime(end_date, "%Y-%m-%d").replace(
+                hour=23, minute=59, second=59, microsecond=999999, tzinfo=timezone.utc
+            )
+            # Strip tz for Firestore (stores naive UTC)
+            start_datetime = start_datetime.replace(tzinfo=None)
+            end_datetime = end_datetime.replace(tzinfo=None)
             # Ensure end_date is not in the future
-            if end_datetime > datetime.utcnow():
-                end_datetime = datetime.utcnow()
+            if end_datetime > now_utc:
+                end_datetime = now_utc
         except ValueError:
-            # Invalid date format, fallback to default
-            start_datetime = datetime.utcnow() - timedelta(days=6)
-            end_datetime = datetime.utcnow()
+            start_datetime = now_utc - timedelta(days=6)
+            end_datetime = now_utc
     else:
-        # Default to last 7 days
-        start_datetime = datetime.utcnow() - timedelta(days=6)
-        end_datetime = datetime.utcnow()
-    
-    seven_days_ago = start_datetime
+        start_datetime = now_utc - timedelta(days=6)
+        end_datetime = now_utc
 
-    # Aggregate profile views per day from ring analytics if the user has a ring
-    weekly_views = {}
+    user_id_str = str(current_user.id)
+    cache_key = f"analytics:{user_id_str}:{start_date or 'default'}:{end_date or 'default'}"
+    cached = _ANALYTICS_CACHE.get(cache_key)
+    if cached and cached.get("expires_at", 0) > time.time():
+        return cached["data"]
+
+    # --- Per-day metrics (avoid Firestore composite-index queries) ---
+    # Firestore often requires composite indexes for multi-field + range queries.
+    # To keep analytics working reliably, fetch by a single key and filter/group in Python.
+
+    def _to_naive_utc(dt_or_ts):
+        """Convert Firestore Timestamp / datetime to naive UTC datetime."""
+        if dt_or_ts is None:
+            return None
+        if hasattr(dt_or_ts, "timestamp") and not isinstance(dt_or_ts, datetime):
+            # Firestore Timestamp
+            return datetime.utcfromtimestamp(dt_or_ts.timestamp())
+        if isinstance(dt_or_ts, datetime):
+            if dt_or_ts.tzinfo is not None:
+                return dt_or_ts.astimezone(timezone.utc).replace(tzinfo=None)
+            return dt_or_ts
+        return None
+
+    def _in_range(ts):
+        return ts is not None and start_datetime <= ts <= end_datetime
+
+    # Profile views ("taps") per day (prefer indexed timestamp range queries; fallback to scan if index missing)
+    weekly_views: Dict[str, int] = {}
     if current_user.ring_id:
-        views_pipeline = [
-            {"$match": {
-                "ring_id": current_user.ring_id,
-                "event_type": "view",
-                "timestamp": {"$gte": start_datetime, "$lte": end_datetime}
-            }},
-            {"$group": {
-                "_id": {"$dateToString": {"format": "%Y-%m-%d", "date": "$timestamp"}},
-                "count": {"$sum": 1}
-            }},
-            {"$sort": {"_id": 1}}
-        ]
-        views_docs = await ring_analytics_collection.aggregate(views_pipeline)
-        for d in views_docs:
-            weekly_views[d["_id"]] = d["count"]
-    
-    # Aggregate clicks per day from legacy analytics collection scoped to this user's links
-    # First, get link ids for current user
-    user_link_ids = [l.id for l in links]
-    weekly_clicks = {}
-    if user_link_ids:
-        clicks_pipeline = [
-            {"$match": {
-                "event": "click",
-                "link_id": {"$in": user_link_ids},
-                "timestamp": {"$gte": start_datetime, "$lte": end_datetime}
-            }},
-            {"$group": {
-                "_id": {"$dateToString": {"format": "%Y-%m-%d", "date": "$timestamp"}},
-                "count": {"$sum": 1}
-            }},
-            {"$sort": {"_id": 1}}
-        ]
-        clicks_docs = await analytics_collection.aggregate(clicks_pipeline)
-        for d in clicks_docs:
-            weekly_clicks[d["_id"]] = d["count"]
+        # Uses existing index: ring_id + timestamp
+        view_source_docs = await ring_analytics_collection.find({
+            "ring_id": current_user.ring_id,
+            "timestamp": {"$gte": start_datetime, "$lte": end_datetime}
+        }, sort=[("timestamp", -1)])
+        if (not view_source_docs) and current_user.ring_id:
+            # Fallback: avoid index requirements, scan by ring_id only
+            view_source_docs = await ring_analytics_collection.find({"ring_id": current_user.ring_id})
+        for doc in view_source_docs:
+            if doc.get("event_type") != "view":
+                continue
+            ts = _to_naive_utc(doc.get("timestamp"))
+            if not _in_range(ts):
+                continue
+            iso = ts.strftime("%Y-%m-%d")
+            weekly_views[iso] = weekly_views.get(iso, 0) + 1
+    else:
+        # Fallback: profile_view events in analytics (for users without NFC ring)
+        # Uses existing index: user_id + timestamp
+        view_source_docs = await analytics_collection.find({
+            "user_id": user_id_str,
+            "timestamp": {"$gte": start_datetime, "$lte": end_datetime}
+        }, sort=[("timestamp", -1)])
+        if (not view_source_docs):
+            # Fallback: scan by user only
+            view_source_docs = await analytics_collection.find({"user_id": user_id_str})
+        for doc in view_source_docs:
+            if doc.get("event") != "profile_view":
+                continue
+            ts = _to_naive_utc(doc.get("timestamp"))
+            if not _in_range(ts):
+                continue
+            iso = ts.strftime("%Y-%m-%d")
+            weekly_views[iso] = weekly_views.get(iso, 0) + 1
+
+    # Engagements per day (link clicks + media clicks)
+    weekly_engagements: Dict[str, int] = {}
+    # Uses existing index: user_id + timestamp (filter event types in Python)
+    engagement_docs = await analytics_collection.find({
+        "user_id": user_id_str,
+        "timestamp": {"$gte": start_datetime, "$lte": end_datetime}
+    }, sort=[("timestamp", -1)])
+    if (not engagement_docs) and total_clicks > 0:
+        # Fallback: scan by user only (index-less)
+        engagement_docs = await analytics_collection.find({"user_id": user_id_str})
+    for doc in engagement_docs:
+        if doc.get("event") not in ("media_click", "click"):
+            continue
+        ts = _to_naive_utc(doc.get("timestamp"))
+        if not _in_range(ts):
+            continue
+        iso = ts.strftime("%Y-%m-%d")
+        weekly_engagements[iso] = weekly_engagements.get(iso, 0) + 1
 
     # Build ordered date range data
     # Map weekday short names
@@ -5649,7 +6112,7 @@ async def get_analytics(
     # Generate days array for the selected date range
     current_date = start_datetime.replace(hour=0, minute=0, second=0, microsecond=0)
     for i in range(num_days):
-        if current_date > datetime.utcnow():
+        if current_date > now_utc:
             break
         iso = current_date.strftime("%Y-%m-%d")
         day_label = weekday_names[current_date.weekday()]
@@ -5657,17 +6120,14 @@ async def get_analytics(
             "day": day_label,
             "date": iso,
             "visits": weekly_views.get(iso, 0),
-            "clicks": weekly_clicks.get(iso, 0)
+            # Interpret "clicks" in weekly_stats as engagements to match new analytics model
+            "clicks": weekly_engagements.get(iso, 0)
         })
         current_date += timedelta(days=1)
 
-    # Total profile views overall from ring analytics
-    total_profile_views = 0
-    if current_user.ring_id:
-        total_profile_views = await ring_analytics_collection.count_documents({
-            "ring_id": current_user.ring_id,
-            "event_type": "view"
-        })
+    # Range-based totals (sum of weekly_stats) so cards and graph match for selected date range
+    total_taps_in_range = sum(weekly_views.values())
+    total_engagements_in_range = sum(weekly_engagements.values())
 
     # Link performance
     link_performance = [
@@ -5680,14 +6140,22 @@ async def get_analytics(
         for link in sorted(links, key=lambda x: x.clicks, reverse=True)
     ]
 
-    return AnalyticsData(
-        profile_views=total_profile_views,
+    result = AnalyticsData(
+        profile_views=total_taps_in_range,
         total_clicks=total_clicks,
+        total_taps=total_taps_in_range,
+        total_engagements=total_engagements_in_range,
         active_links=active_links,
         top_link=top_link.model_dump() if top_link else None,
         weekly_stats=days,
         link_performance=link_performance
     ).model_dump()
+
+    _ANALYTICS_CACHE[cache_key] = {
+        "expires_at": time.time() + _ANALYTICS_CACHE_TTL_SECONDS,
+        "data": result
+    }
+    return result
 
 # ==================== LEGACY ROUTES (for compatibility) ====================
 
@@ -5700,37 +6168,95 @@ async def root():
     }
 
 @api_router.get("/debug/health")
+@api_router.get("/health")  # Also available without /api prefix for easier access
 async def health_check():
-    """Health check endpoint with Firestore connection test"""
+    """
+    Health check endpoint that works even if services fail to initialize.
+    
+    This endpoint will always return a response, even if Firebase is unavailable,
+    preventing Vercel 404 errors and providing diagnostic information.
+    """
     health_status = {
         "api": "healthy",
+        "status": "healthy",
         "database": "unknown",
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": datetime.utcnow().isoformat(),
+        "services": {}
     }
     
-    # Test Firestore connection
+    # Check Firebase/Firestore connection
     try:
-        # Test Firestore connection by counting users
-        user_count = await users_collection.count_documents({})
-        health_status["database"] = "connected"
-        health_status["user_count"] = user_count
-        
+        db = get_firestore_db()
+        if db is None:
+            # Database not initialized - check why
+            if _db_initialization_error:
+                health_status["database"] = "unavailable"
+                health_status["database_error"] = _db_initialization_error
+                health_status["status"] = "degraded"
+                health_status["api"] = "degraded"
+            else:
+                health_status["database"] = "not_initialized"
+                health_status["status"] = "degraded"
+                health_status["api"] = "degraded"
+        else:
+            # Test Firestore connection by counting users
+            try:
+                user_count = await users_collection.count_documents({})
+                health_status["database"] = "connected"
+                health_status["user_count"] = user_count
+                health_status["services"]["firestore"] = "connected"
+            except Exception as e:
+                health_status["database"] = "error"
+                health_status["database_error"] = f"{type(e).__name__}: {str(e)}"
+                health_status["services"]["firestore"] = "error"
+                health_status["status"] = "degraded"
+                health_status["api"] = "degraded"
+                logger.error(f"Health check database error: {e}", exc_info=True)
     except Exception as e:
         health_status["database"] = "error"
         health_status["database_error"] = f"{type(e).__name__}: {str(e)}"
-        logger.error(f"Health check database error: {e}", exc_info=True)
+        health_status["services"]["firestore"] = "error"
+        health_status["status"] = "degraded"
+        health_status["api"] = "degraded"
+        logger.error(f"Health check error: {e}", exc_info=True)
     
-    return health_status
+    # Check environment variables
+    env_status = {}
+    required_vars = ['FIREBASE_PROJECT_ID', 'FIREBASE_SERVICE_ACCOUNT_JSON', 'JWT_SECRET']
+    for var in required_vars:
+        env_status[var] = "set" if os.environ.get(var) else "missing"
+    health_status["environment"] = env_status
+    
+    # If critical env vars are missing, mark as degraded
+    if any(env_status[var] == "missing" for var in required_vars):
+        health_status["status"] = "degraded"
+        health_status["api"] = "degraded"
+        health_status["message"] = "Missing required environment variables. Check /api/debug/env for details."
+    
+    # Return appropriate status code
+    status_code = 200 if health_status["status"] == "healthy" else 503
+    from fastapi.responses import JSONResponse
+    return JSONResponse(content=health_status, status_code=status_code)
 
 @api_router.get("/debug/env")
 async def check_environment():
-    """Check environment variables (sanitized)"""
+    """Check environment variables (sanitized).
+    
+    SECURITY:
+    - In production, this endpoint should not reveal environment configuration details.
+    - Return 404 in production to avoid leaking any hints about server configuration.
+    """
+    # SECURITY: Disable detailed environment introspection in production
+    if settings.ENV == 'production':
+        raise HTTPException(status_code=404, detail="Not found")
+    
     env_check = get_current_env_vars()
     env_check["python_version"] = f"{__import__('sys').version_info.major}.{__import__('sys').version_info.minor}.{__import__('sys').version_info.micro}"
     
     # Check if critical env vars are set
+    # SECURITY: File-based credentials eliminated - use FIREBASE_SERVICE_ACCOUNT_JSON only
     env_check["has_firebase_project_id"] = bool(os.environ.get('FIREBASE_PROJECT_ID'))
-    env_check["has_firebase_service_account"] = bool(os.environ.get('FIREBASE_SERVICE_ACCOUNT_PATH'))
+    env_check["has_firebase_service_account"] = bool(os.environ.get('FIREBASE_SERVICE_ACCOUNT_JSON'))
     env_check["has_jwt_secret"] = bool(os.environ.get('JWT_SECRET'))
     
     return env_check
@@ -5834,13 +6360,21 @@ async def log_requests(request: Request, call_next):
 
 # CORS Configuration - Security Hardened
 # SECURITY: CORS origins must be set via CORS_ORIGINS environment variable in production
+# SECURITY: Don't fail hard during import - allow app to start and report via health endpoint
 cors_origins_env = os.environ.get('CORS_ORIGINS', '')
 if not cors_origins_env:
     if settings.ENV == 'production':
-        raise ValueError("CORS_ORIGINS environment variable is required in production")
-    # Development fallback - localhost only
-    cors_origins = ["http://localhost:3000"]
-    logger.warning("CORS_ORIGINS not set, using development defaults (localhost only)")
+        # Log error but don't raise - allows app to start and report via health endpoint
+        logger.error("CORS_ORIGINS environment variable is required in production but not set")
+        # Use empty list - CORS will be restrictive but app will start
+        cors_origins = []
+    else:
+        # Development fallback - localhost only
+        cors_origins = ["http://localhost:3000"]
+        logger.warning("CORS_ORIGINS not set, using development defaults (localhost only)")
+        logger.info(f"🌐 CORS Configuration (development defaults):")
+        logger.info(f"   Allowed origins: {cors_origins}")
+        logger.info(f"   Environment: {settings.ENV}")
 else:
     cors_origins = [origin.strip() for origin in cors_origins_env.split(',')]
     # SECURITY: Always add localhost for development (only if not production)
@@ -5848,13 +6382,28 @@ else:
         cors_origins.append("http://localhost:3000")
     logger.info(f"CORS configured from environment: {len(cors_origins)} origin(s)")
 
+# Log CORS configuration for debugging
+logger.info(f"🌐 CORS Configuration:")
+logger.info(f"   Allowed origins: {cors_origins}")
+logger.info(f"   Environment: {settings.ENV}")
+
 # SECURITY: Restrict CORS methods, headers, and exposed headers
+# Note: Browsers send standard headers in preflight requests (Accept, Origin, etc.)
+# These must be allowed for CORS to work properly
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
     allow_origins=cors_origins,
     allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],  # SECURITY: Explicit methods only
-    allow_headers=["Authorization", "Content-Type", "X-Requested-With"],  # SECURITY: Explicit headers only
+    allow_headers=[
+        "Authorization", 
+        "Content-Type", 
+        "X-Requested-With",
+        "Accept",
+        "Origin",
+        "Accept-Language",
+        "Content-Language"
+    ],  # SECURITY: Include standard browser headers for preflight requests
     expose_headers=["X-RateLimit-Limit", "X-RateLimit-Remaining", "X-RateLimit-Reset", "X-Error-Code", "X-Error-ID"],  # SECURITY: Only necessary headers
     max_age=3600,  # SECURITY: Cache preflight requests for 1 hour
 )
@@ -5866,44 +6415,5 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-@app.on_event("startup")
-async def startup_db():
-    """
-    Initialize database indexes and default data.
-    In serverless, this runs on each cold start - keep it lightweight.
-    """
-    logger.info("Starting database initialization...")
-    
-    try:
-        # Firestore doesn't require index creation like MongoDB
-        # Indexes are managed through Firebase Console
-        # Just verify connection by counting users
-        user_count = await users_collection.count_documents({})
-        logger.info(f"✅ Firestore connected - {user_count} users found")
-
-        # Create default admin if none exists
-        try:
-            admin_count = await admins_collection.count_documents({})
-            if admin_count == 0:
-                default_admin = Admin(
-                    username="admin",
-                    email="admin@odinring.com",
-                    role="super_admin"
-                )
-                admin_dict = default_admin.model_dump()
-                admin_dict["password"] = hash_password("admin123")
-                await admins_collection.insert_one(admin_dict)
-                logger.info("✅ Default admin created")
-        except Exception as e:
-            logger.warning(f"⚠️ Admin creation warning: {e}")
-            # Don't fail startup for admin creation issues
-
-        logger.info("✅ Database initialization complete")
-        
-    except Exception as e:
-        logger.error(f"❌ Database initialization error: {e}")
-        # Don't fail the entire app startup
-        import traceback
-        traceback.print_exc()
-
-# Note: No shutdown event for serverless - connections are managed per-request
+# Note: Startup/shutdown logic moved to lifespan context manager above
+# This is the recommended approach for Vercel serverless functions

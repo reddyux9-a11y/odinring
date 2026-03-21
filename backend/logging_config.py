@@ -1,37 +1,74 @@
 """
 Logging Configuration
 Provides structured logging and Sentry integration
+SECURITY: All imports are wrapped to prevent blocking app startup
 """
-import structlog
 import logging
-import sentry_sdk
-from sentry_sdk.integrations.fastapi import FastApiIntegration
-from sentry_sdk.integrations.logging import LoggingIntegration
-from config import settings
+import os
+
+# SECURITY: Make structlog import optional to prevent blocking
+try:
+    import structlog
+    HAS_STRUCTLOG = True
+except ImportError:
+    HAS_STRUCTLOG = False
+    # Fallback to standard logging
+    logging.basicConfig(level=logging.INFO)
+
+# SECURITY: Make sentry import optional to prevent blocking
+try:
+    import sentry_sdk
+    from sentry_sdk.integrations.fastapi import FastApiIntegration
+    from sentry_sdk.integrations.logging import LoggingIntegration
+    HAS_SENTRY = True
+except ImportError:
+    HAS_SENTRY = False
+
+# SECURITY: Import config with error handling
+try:
+    from config import settings
+except Exception as e:
+    # Fallback if config import fails
+    class FallbackSettings:
+        LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO')
+        ENV = os.environ.get('ENV', 'production')
+        SENTRY_DSN = os.environ.get('SENTRY_DSN', '')
+    settings = FallbackSettings()
 
 
 def setup_logging():
-    """Configure structured logging and Sentry error tracking"""
-    
-    # Configure structlog for structured JSON logging
-    structlog.configure(
-        processors=[
-            structlog.contextvars.merge_contextvars,
-            structlog.processors.add_log_level,
-            structlog.processors.StackInfoRenderer(),
-            structlog.processors.TimeStamper(fmt="iso"),
-            structlog.processors.JSONRenderer()
-        ],
-        wrapper_class=structlog.make_filtering_bound_logger(
-            getattr(logging, settings.LOG_LEVEL)
-        ),
-        context_class=dict,
-        logger_factory=structlog.PrintLoggerFactory(),
-        cache_logger_on_first_use=False
-    )
+    """Configure structured logging and Sentry error tracking
+    SECURITY: All operations are wrapped to prevent blocking app startup
+    """
+    try:
+        # Configure structlog for structured JSON logging
+        if HAS_STRUCTLOG:
+            structlog.configure(
+                processors=[
+                    structlog.contextvars.merge_contextvars,
+                    structlog.processors.add_log_level,
+                    structlog.processors.StackInfoRenderer(),
+                    structlog.processors.TimeStamper(fmt="iso"),
+                    structlog.processors.JSONRenderer()
+                ],
+                wrapper_class=structlog.make_filtering_bound_logger(
+                    getattr(logging, settings.LOG_LEVEL, logging.INFO)
+                ),
+                context_class=dict,
+                logger_factory=structlog.PrintLoggerFactory(),
+                cache_logger_on_first_use=False
+            )
+        else:
+            # Fallback to standard logging
+            log_level = getattr(logging, settings.LOG_LEVEL, logging.INFO)
+            logging.basicConfig(level=log_level)
+    except Exception as e:
+        # Don't fail if logging setup fails
+        logging.basicConfig(level=logging.INFO)
+        logging.warning(f"Structured logging setup failed, using standard logging: {e}")
     
     # Configure Sentry if DSN is provided
-    if settings.SENTRY_DSN:
+    if HAS_SENTRY and settings.SENTRY_DSN:
         sentry_logging = LoggingIntegration(
             level=logging.INFO,        # Capture info and above as breadcrumbs
             event_level=logging.ERROR  # Send errors and above as events
@@ -76,8 +113,15 @@ def get_logger(name: str):
         name: Logger name (typically __name__)
     
     Returns:
-        Structured logger instance
+        Structured logger instance (or standard logger if structlog unavailable)
     """
-    return structlog.get_logger(name)
+    try:
+        if HAS_STRUCTLOG:
+            return structlog.get_logger(name)
+        else:
+            return logging.getLogger(name)
+    except Exception:
+        # Ultimate fallback
+        return logging.getLogger(name)
 
 

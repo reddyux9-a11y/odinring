@@ -65,19 +65,10 @@ const ResetPassword = () => {
     const verifyCode = async () => {
       try {
         setVerifying(true);
-        if (process.env.NODE_ENV === 'development') {
-          console.log('🔍 ResetPassword: Verifying reset code...');
-        }
         const userEmail = await verifyResetCode(code);
         setEmail(userEmail);
-        if (process.env.NODE_ENV === 'development') {
-          console.log('✅ ResetPassword: Code verified for:', userEmail);
-        }
         setVerifying(false);
       } catch (error) {
-        if (process.env.NODE_ENV === 'development') {
-          console.error('❌ ResetPassword: Code verification failed', error);
-        }
         setVerifying(false);
         
         let errorMessage = "Invalid or expired reset link.";
@@ -170,16 +161,8 @@ const ResetPassword = () => {
     setLoading(true);
 
     try {
-      if (process.env.NODE_ENV === 'development') {
-        console.log('🔐 ResetPassword: Confirming password reset with Firebase Auth');
-      }
-      
       // Use Firebase Auth to confirm password reset
       await confirmResetPassword(actionCode, trimmedPassword);
-      
-      if (process.env.NODE_ENV === 'development') {
-        console.log('✅ ResetPassword: Password reset successful');
-      }
       
       setPasswordReset(true);
       toast.success("Password has been reset successfully! 🎉");
@@ -189,10 +172,6 @@ const ResetPassword = () => {
         navigate('/auth');
       }, 2000);
     } catch (error) {
-      if (process.env.NODE_ENV === 'development') {
-        console.error('❌ ResetPassword: Password reset failed', error);
-      }
-      
       let errorMessage = 'Failed to reset password';
       
       if (error.code === 'auth/expired-action-code') {

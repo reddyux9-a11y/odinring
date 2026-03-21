@@ -23,7 +23,6 @@ export const useIdentityContext = () => {
       // Check if user is authenticated before making API call
       const token = localStorage.getItem('token');
       if (!token) {
-        console.log('ℹ️  useIdentityContext: No token found, skipping context fetch');
         setLoading(false);
         setError(null);
         return null;
@@ -32,19 +31,16 @@ export const useIdentityContext = () => {
       setLoading(true);
       setError(null);
       
-      console.log('🔍 useIdentityContext: Fetching identity context...');
       const response = await api.get('/me/context');
-      
-      console.log('✅ useIdentityContext: Context received:', response.data);
       setContext(response.data);
       
       return response.data;
     } catch (err) {
       // Only log error if it's not a 401/403 (expected when not authenticated)
       if (err.response?.status !== 401 && err.response?.status !== 403) {
-        console.error('❌ useIdentityContext: Failed to fetch context:', err);
+        // Non-auth related error
       } else {
-        console.log('ℹ️  useIdentityContext: Not authenticated, skipping context fetch');
+        // Not authenticated, skipping context fetch
       }
       setError(err);
       

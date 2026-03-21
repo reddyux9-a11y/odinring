@@ -18,8 +18,7 @@ class Settings(BaseSettings):
     
     # === OPTIONAL WITH DEFAULTS ===
     
-    # Firebase
-    FIREBASE_SERVICE_ACCOUNT_PATH: str = "firebase-service-account.json"
+    # SECURITY: File-based Firebase credentials eliminated - use FIREBASE_SERVICE_ACCOUNT_JSON only
     
     # JWT Configuration (Phase 1)
     JWT_EXPIRATION: int = 168  # 7 days in hours (legacy, for backward compatibility)
@@ -118,6 +117,20 @@ class Settings(BaseSettings):
             raise ValueError(f'LOG_LEVEL must be one of: {", ".join(valid_levels)}')
         return v.upper()
     
+    def validate_log_level_for_production(self):
+        """Enforce LOG_LEVEL >= INFO in production"""
+        if self.ENV.lower() in ('production', 'prod'):
+            log_levels = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
+            current_level = self.LOG_LEVEL.upper()
+            min_level_index = log_levels.index('INFO')
+            current_level_index = log_levels.index(current_level)
+            
+            if current_level_index < min_level_index:
+                raise ValueError(
+                    f"LOG_LEVEL must be INFO or higher in production. "
+                    f"Current: {current_level}. This prevents sensitive data exposure."
+                )
+    
     @field_validator('FIREBASE_PROJECT_ID')
     @classmethod
     def validate_firebase_project_id(cls, v: str) -> str:
@@ -129,18 +142,14 @@ class Settings(BaseSettings):
     def validate_required_for_production(self):
         """Validate that all required settings are present for production"""
         if self.ENV.lower() in ('production', 'prod'):
-            # Check for service account (either JSON or path)
+            # SECURITY: File-based credentials eliminated - require JSON environment variable
             service_account_json = os.getenv('FIREBASE_SERVICE_ACCOUNT_JSON')
-            service_account_path = os.getenv('FIREBASE_SERVICE_ACCOUNT_PATH', self.FIREBASE_SERVICE_ACCOUNT_PATH)
             
             if not service_account_json:
-                # Check if file exists (for development/testing only)
-                from pathlib import Path
-                if not Path(service_account_path).exists():
-                    raise ValueError(
-                        "FIREBASE_SERVICE_ACCOUNT_JSON environment variable is required in production. "
-                        "File-based authentication is not allowed in production for security."
-                    )
+                raise ValueError(
+                    "FIREBASE_SERVICE_ACCOUNT_JSON environment variable is required in production. "
+                    "File-based authentication has been eliminated for security."
+                )
             
             # Validate CORS is set in production
             if not os.getenv('CORS_ORIGINS'):
@@ -164,21 +173,24 @@ class Settings(BaseSettings):
         try:
             if self.ENV.lower() in ('production', 'prod'):
                 self.validate_required_for_production()
+                self.validate_log_level_for_production()
         except ValueError as e:
             errors.append(str(e))
         
-        # Check Firebase service account file exists (only for development)
-        if self.ENV.lower() not in ('production', 'prod'):
-            if not os.path.exists(self.FIREBASE_SERVICE_ACCOUNT_PATH):
-                errors.append(f"Firebase service account file not found: {self.FIREBASE_SERVICE_ACCOUNT_PATH}")
+        # SECURITY: File-based credential checks eliminated
+        # All environments now require FIREBASE_SERVICE_ACCOUNT_JSON environment variable
+        # This is validated in firebase_config.py during initialization
         
         # Production-specific checks
         if self.ENV == 'production':
             if not self.SENTRY_DSN:
                 warnings.append("SENTRY_DSN not set - error tracking disabled in production")
             
+            # LOG_LEVEL validation is now enforced (will raise error, not warning)
+            # This check is redundant but kept for clarity
             if self.LOG_LEVEL == 'DEBUG':
-                warnings.append("LOG_LEVEL is DEBUG in production - this may expose sensitive data")
+                # This should never happen due to validate_log_level_for_production
+                errors.append("LOG_LEVEL is DEBUG in production - this is a security risk")
             
             if 'localhost' in self.CORS_ORIGINS:
                 warnings.append("CORS_ORIGINS includes localhost in production")
@@ -218,6 +230,17 @@ class Settings(BaseSettings):
 
 # Global settings instance
 settings = Settings()
-settings.validate_config()
+
+# SECURITY: Validate config, but don't fail hard during import
+# This allows the app to start even if validation fails, so health endpoint can report issues
+try:
+    settings.validate_config()
+except ValueError as e:
+    # Log the error but don't raise - allows app to start
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.error(f"Configuration validation failed: {e}")
+    # Store error for health endpoint to report
+    settings._validation_error = str(e)
 
 

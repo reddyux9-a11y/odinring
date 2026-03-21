@@ -44,7 +44,8 @@ async def test_vercel_deployment():
             print("✅ CORS configured with default Vercel origins")
 
         # Test environment variables
-        required_env_vars = ['FIREBASE_PROJECT_ID', 'FIREBASE_SERVICE_ACCOUNT_PATH', 'JWT_SECRET']
+        # SECURITY: File-based credentials eliminated - use FIREBASE_SERVICE_ACCOUNT_JSON only
+        required_env_vars = ['FIREBASE_PROJECT_ID', 'FIREBASE_SERVICE_ACCOUNT_JSON', 'JWT_SECRET']
         missing_vars = [var for var in required_env_vars if not os.environ.get(var)]
 
         if not missing_vars:
@@ -107,13 +108,14 @@ def check_vercel_config():
     else:
         print("ℹ️  .env file not found (will be set in Vercel dashboard)")
 
-    # Check Firebase service account file
-    firebase_key = Path(__file__).parent / 'firebase-service-account.json'
-    if firebase_key.exists():
-        print("✅ firebase-service-account.json found")
+    # SECURITY: File-based credentials eliminated - check environment variable instead
+    firebase_json_env = os.environ.get('FIREBASE_SERVICE_ACCOUNT_JSON')
+    if firebase_json_env:
+        print("✅ FIREBASE_SERVICE_ACCOUNT_JSON environment variable is set")
     else:
-        print("⚠️  firebase-service-account.json not found")
-        print("   This file is required for Firebase Admin SDK")
+        print("⚠️  FIREBASE_SERVICE_ACCOUNT_JSON environment variable not found")
+        print("   SECURITY: Use environment variables for credentials (not local files)")
+        print("   This must be set in Vercel dashboard for production deployment")
 
 if __name__ == "__main__":
     # Check configuration files
@@ -128,10 +130,11 @@ if __name__ == "__main__":
         print("\n📋 Next steps:")
         print("1. Set environment variables in Vercel dashboard:")
         print("   - FIREBASE_PROJECT_ID")
-        print("   - FIREBASE_SERVICE_ACCOUNT_PATH")
+        print("   - FIREBASE_SERVICE_ACCOUNT_JSON (complete JSON as single-line string)")
         print("   - JWT_SECRET")
         print("   - CORS_ORIGINS")
-        print("2. Upload firebase-service-account.json as Vercel secret")
+        print("2. SECURITY: Use environment variables only (never commit credential files)")
+        print("   See SECURITY.md and VERCEL_ENV_SETUP.md for setup instructions")
         print("3. Deploy to Vercel: vercel --prod")
         print("4. Test the deployed functions")
     else:

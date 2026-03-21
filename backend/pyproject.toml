@@ -1,3 +1,28 @@
+[project]
+name = "odinring-backend"
+version = "1.0.0"
+description = "OdinRing Backend API"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi==0.110.1",
+    "firebase-admin==7.1.0",
+    "bcrypt==4.3.0",
+    "PyJWT==2.10.1",
+    "pydantic==2.11.7",
+    "pydantic-settings==2.1.0",
+    "email-validator==2.3.0",
+    "python-dotenv==1.1.1",
+    "python-multipart==0.0.12",
+    "qrcode==8.0",
+    "Pillow==10.4.0",
+    "requests==2.32.3",
+    "python-dateutil==2.9.0.post0",
+    "slowapi==0.1.9",
+    "sentry-sdk[fastapi]==1.40.0",
+    "structlog==24.1.0",
+    "stripe",
+]
+
 [tool.mypy]
 python_version = "3.11"
 warn_return_any = true

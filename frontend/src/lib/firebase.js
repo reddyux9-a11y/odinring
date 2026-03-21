@@ -88,16 +88,8 @@ window.addEventListener('unhandledrejection', (event) => {
 
 // Google Auth Provider
 const googleProvider = new GoogleAuthProvider();
-
-// Add scopes for Google APIs
-googleProvider.addScope('https://www.googleapis.com/auth/calendar.readonly');
-googleProvider.addScope('https://www.googleapis.com/auth/contacts.readonly');
-googleProvider.addScope('https://www.googleapis.com/auth/gmail.readonly');  // Optional
-
-googleProvider.setCustomParameters({
-  prompt: 'consent',  // Force consent to get refresh token
-  access_type: 'offline'  // Get refresh token
-});
+// NOTE: We intentionally do NOT add extra scopes here.
+// Default scopes only request basic profile and email.
 
 /**
  * Sign in with Google using redirect flow (popup is disabled due to COOP)
@@ -185,18 +177,20 @@ export const handleGoogleRedirectResult = async () => {
     const authStatePromise = new Promise((resolve) => {
       const unsubscribe = onAuthStateChanged(auth, (user) => {
         currentAuthUser = user;
-        logger.debug('firebase.js: Auth state via onAuthStateChanged:', user ? `User logged in (${user.email})` : 'No user');
+        logger.debug(
+          'firebase.js: Auth state via onAuthStateChanged:',
+          user ? `User logged in (${user.email})` : 'No user'
+        );
         unsubscribe(); // Unsubscribe after first callback
         resolve(user);
       });
     });
     
-    // Wait for initial auth state
+    // Wait for initial auth state (for logging/diagnostics only)
     await authStatePromise;
     
     const result = await getRedirectResult(auth);
     logger.debug('firebase.js: getRedirectResult() returned:', result ? 'User found' : 'No result');
-    
     
     if (result) {
       logger.debug('firebase.js: User authenticated!', {
@@ -221,33 +215,13 @@ export const handleGoogleRedirectResult = async () => {
       };
     }
     
-    // Check if there's a current user even without redirect result using onAuthStateChanged
+    // No redirect result – normal page load.
+    // Do NOT attempt to auto-sign-in from existing Firebase auth state here.
+    // The app-level auth logic (AuthContext + routing guards) will decide what to do.
     if (currentAuthUser) {
-      logger.warn('firebase.js: No redirect result, but user is already logged in!');
-      logger.debug('firebase.js: Current user:', currentAuthUser.email);
-      
-      
-      // FIX: If user is authenticated but redirect result is null,
-      // this means Firebase auth completed but the redirect result was consumed/lost.
-      // Return the user data so the app can complete the login flow.
-      logger.debug('firebase.js: Recovering user from auth state (redirect result was lost)');
-      logger.debug('firebase.js: Getting ID token from current user...');
-      
-      try {
-        const idToken = await currentAuthUser.getIdToken();
-        logger.debug('firebase.js: ID token obtained (length:', idToken.length, ')');
-        
-        return {
-          user: currentAuthUser,
-          idToken,  // For backend authentication
-          accessToken: null,  // No access token available without redirect result
-          credential: null // No credential available without redirect result
-        };
-      } catch (tokenError) {
-        logger.error('firebase.js: Failed to get ID token:', tokenError);
-        return null;
-      }
-    } else {
+      logger.debug(
+        'firebase.js: User is logged in with Firebase but no redirect result was found – leaving auth state unchanged (no auto sign-in).'
+      );
     }
     
     return null;

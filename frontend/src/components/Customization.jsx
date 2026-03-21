@@ -117,7 +117,6 @@ const Customization = ({ user, profile, setProfile, setUser, links, setLinks, on
       await Promise.all(updatePromises);
       mobileToast.success("Link order updated! 🔄");
     } catch (error) {
-      console.error('Failed to update link order:', error);
       mobileToast.error("Failed to save link order");
       // Revert on error
       if (onUpdate) onUpdate();
@@ -178,7 +177,6 @@ const Customization = ({ user, profile, setProfile, setUser, links, setLinks, on
         mobileToast.success("Profile photo updated! ✨");
       }
     } catch (error) {
-      console.error('Profile photo upload failed:', error);
       addHapticFeedback('error');
       mobileToast.error("Failed to upload photo");
       // Revert preview on error
@@ -194,8 +192,6 @@ const Customization = ({ user, profile, setProfile, setUser, links, setLinks, on
   };
 
   const applyColorPreset = async (preset) => {
-    console.log('applyColorPreset called with:', preset.name);
-    
     setLoading(true);
     addHapticFeedback('light');
 
@@ -204,8 +200,6 @@ const Customization = ({ user, profile, setProfile, setUser, links, setLinks, on
         background_color: preset.bg,
         accent_color: preset.accent
       };
-
-      console.log('Updating profile state with:', updates);
       
       // Update profile state immediately for live preview
       setProfile(prev => ({
@@ -217,28 +211,20 @@ const Customization = ({ user, profile, setProfile, setUser, links, setLinks, on
       }));
 
       const token = localStorage.getItem('token');
-      console.log('Making API call to update profile...');
-      
       await api.put(`/me`, updates);
-
-      console.log('API call successful');
 
       // Don't update user state to avoid Dashboard re-renders that reset activeSection
       // if (setUser) {
       //   setUser(prev => ({ ...prev, ...updates }));
       // }
-
-      console.log('Profile updated successfully, no navigation should occur');
       
       addHapticFeedback('success');
       mobileToast.success(`${preset.name} theme applied! 🎨`);
     } catch (error) {
-      console.error('Failed to apply preset:', error);
       addHapticFeedback('error');
       mobileToast.error("Failed to apply theme");
     } finally {
       setLoading(false);
-      console.log('applyColorPreset completed');
     }
   };
 
@@ -259,7 +245,6 @@ const Customization = ({ user, profile, setProfile, setUser, links, setLinks, on
       
       addHapticFeedback('success');
     } catch (error) {
-      console.error('Failed to update profile:', error);
       addHapticFeedback('error');
       mobileToast.error("Failed to save changes");
     } finally {
@@ -497,8 +482,9 @@ const Customization = ({ user, profile, setProfile, setUser, links, setLinks, on
                     <Select
                       value={profile.fontFamily || profile.font_family || "font-sans"}
                       onValueChange={(value) => {
-                        // Front-end only persist for now
+                        // Persist both locally and to backend profile
                         setProfile(prev => ({ ...prev, fontFamily: value, font_family: value }));
+                        updateProfile({ font_family: value });
                       }}
                     >
                       <SelectTrigger className="mt-1">
@@ -516,51 +502,53 @@ const Customization = ({ user, profile, setProfile, setUser, links, setLinks, on
                 </CardContent>
               </Card>
 
-              {/* Link Appearance */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Link Appearance</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label>Button Radius</Label>
-                    <Select
-                      value={profile.button_radius || "md"}
-                      onValueChange={(value) => {
-                        setProfile(prev => ({ ...prev, button_radius: value }));
-                      }}
-                    >
-                      <SelectTrigger className="mt-1">
-                        <SelectValue placeholder="Select radius" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {radiusOptions.map(opt => (
-                          <SelectItem key={opt.value} value={opt.value}>{opt.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+              {/* Link Appearance - intentionally hidden for now */}
+              {false && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Link Appearance</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <Label>Button Radius</Label>
+                      <Select
+                        value={profile.button_radius || "md"}
+                        onValueChange={(value) => {
+                          setProfile(prev => ({ ...prev, button_radius: value }));
+                        }}
+                      >
+                        <SelectTrigger className="mt-1">
+                          <SelectValue placeholder="Select radius" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {radiusOptions.map(opt => (
+                            <SelectItem key={opt.value} value={opt.value}>{opt.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                  <div>
-                    <Label>Button Shadow</Label>
-                    <Select
-                      value={profile.button_shadow || "soft"}
-                      onValueChange={(value) => {
-                        setProfile(prev => ({ ...prev, button_shadow: value }));
-                      }}
-                    >
-                      <SelectTrigger className="mt-1">
-                        <SelectValue placeholder="Select shadow" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {shadowOptions.map(opt => (
-                          <SelectItem key={opt.value} value={opt.value}>{opt.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </CardContent>
-              </Card>
+                    <div>
+                      <Label>Button Shadow</Label>
+                      <Select
+                        value={profile.button_shadow || "soft"}
+                        onValueChange={(value) => {
+                          setProfile(prev => ({ ...prev, button_shadow: value }));
+                        }}
+                      >
+                        <SelectTrigger className="mt-1">
+                          <SelectValue placeholder="Select shadow" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {shadowOptions.map(opt => (
+                            <SelectItem key={opt.value} value={opt.value}>{opt.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
               {/* Profile Elements */}
               <Card>
@@ -640,7 +628,6 @@ const Customization = ({ user, profile, setProfile, setUser, links, setLinks, on
                             const picked = cardStyles.find(cs => cs.value === value)?.name || value;
                             mobileToast.success(`${picked} style applied to all links! 🎨`);
                           } catch (error) {
-                            console.error('Failed to update link styles:', error);
                             addHapticFeedback('error');
                             mobileToast.error("Failed to update link styles");
                           } finally {
@@ -815,36 +802,38 @@ const Customization = ({ user, profile, setProfile, setUser, links, setLinks, on
                 </CardContent>
               </Card>
 
-              {/* Banner Pattern */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <Palette className="w-5 h-5" />
-                    <span>Banner Pattern</span>
-                  </CardTitle>
-                  <CardDescription>
-                    Choose a background pattern for your profile page
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-3">
-                    {getAllBannerPatterns().map((pattern) => (
-                      <Button
-                        key={pattern.id}
-                        variant={profile.banner_pattern === pattern.id ? "default" : "outline"}
-                        className="h-16 flex flex-col items-center justify-center space-y-1"
-                        onClick={() => {
-                          setProfile(prev => ({ ...prev, banner_pattern: pattern.id }));
-                          updateProfile({ banner_pattern: pattern.id });
-                        }}
-                      >
-                        <div className={`w-8 h-4 rounded ${pattern.preview} opacity-60`}></div>
-                        <span className="text-xs">{pattern.name}</span>
-                      </Button>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
+              {/* Banner Pattern - intentionally hidden for now */}
+              {false && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center space-x-2">
+                      <Palette className="w-5 h-5" />
+                      <span>Banner Pattern</span>
+                    </CardTitle>
+                    <CardDescription>
+                      Choose a background pattern for your profile page
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-2 gap-3">
+                      {getAllBannerPatterns().map((pattern) => (
+                        <Button
+                          key={pattern.id}
+                          variant={profile.banner_pattern === pattern.id ? "default" : "outline"}
+                          className="h-16 flex flex-col items-center justify-center space-y-1"
+                          onClick={() => {
+                            setProfile(prev => ({ ...prev, banner_pattern: pattern.id }));
+                            updateProfile({ banner_pattern: pattern.id });
+                          }}
+                        >
+                          <div className={`w-8 h-4 rounded ${pattern.preview} opacity-60`}></div>
+                          <span className="text-xs">{pattern.name}</span>
+                        </Button>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </TabsContent>
           </Tabs>
         </div>

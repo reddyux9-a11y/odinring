@@ -6,13 +6,48 @@ on:
     - cron: '0 2 * * *'
   workflow_dispatch:  # Allow manual trigger
 
+# Restrict workflow to main branch and prevent execution from forks
+# This ensures secrets are only available to trusted workflows
+permissions:
+  contents: read
+  id-token: write  # Required for Workload Identity Federation (OIDC)
+
 jobs:
   backup:
     name: Backup Firestore Database
     runs-on: ubuntu-latest
     
+    # Prevent workflow from running on forks (secrets not available)
+    # This security measure ensures secrets are only accessible to the main repository
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Validate required secrets
+        run: |
+          # Validate that all required secrets for WIF authentication are present
+          # This fails fast with a clear error message if secrets are missing
+          if [ -z "${{ secrets.WIF_PROVIDER }}" ]; then
+            echo "❌ ERROR: WIF_PROVIDER secret is missing or empty"
+            echo "Please configure WIF_PROVIDER in GitHub Secrets (Settings → Secrets → Actions)"
+            exit 1
+          fi
+          
+          if [ -z "${{ secrets.WIF_SERVICE_ACCOUNT }}" ]; then
+            echo "❌ ERROR: WIF_SERVICE_ACCOUNT secret is missing or empty"
+            echo "Please configure WIF_SERVICE_ACCOUNT in GitHub Secrets (Settings → Secrets → Actions)"
+            exit 1
+          fi
+          
+          if [ -z "${{ secrets.FIREBASE_PROJECT_ID }}" ]; then
+            echo "❌ ERROR: FIREBASE_PROJECT_ID secret is missing or empty"
+            echo "Please configure FIREBASE_PROJECT_ID in GitHub Secrets (Settings → Secrets → Actions)"
+            exit 1
+          fi
+          
+          echo "✅ All required secrets are present"
       
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -25,10 +60,38 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
       
+      # Authenticate to Google Cloud using Workload Identity Federation (OIDC)
+      # 
+      # AUTHENTICATION METHOD: Workload Identity Federation (WIF) - OIDC
+      # 
+      # Why WIF instead of credentials_json?
+      # - ✅ More secure: Uses short-lived tokens (no long-lived credentials)
+      # - ✅ Google recommended: Official best practice for GitHub Actions → GCP
+      # - ✅ No credential storage: No service account keys in GitHub Secrets
+      # - ✅ Automatic rotation: Tokens are ephemeral (no manual rotation needed)
+      # - ✅ Better audit trail: Improved logging and traceability in GCP
+      # - ✅ Repository-scoped: Access limited to this specific repository
+      #
+      # IMPORTANT: This workflow uses ONLY workload_identity_provider.
+      # DO NOT add credentials_json - the action requires exactly ONE auth method.
+      #
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v1
         with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
+          # Workload Identity Federation provider resource name
+          # Format: projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/POOL_ID/providers/PROVIDER_ID
+          # Example: projects/123456789/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          
+          # Service account email that will be impersonated via WIF
+          # This service account must have:
+          # - roles/datastore.importExportAdmin (for Firestore export)
+          # - roles/storage.admin (for GCS bucket access)
+          # - roles/iam.workloadIdentityUser (bound to the WIF provider)
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+          
+          # GCP Project ID (not project number)
+          project_id: ${{ secrets.FIREBASE_PROJECT_ID }}
       
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v1
@@ -47,6 +110,11 @@ jobs:
         run: |
           echo "❌ Firestore backup failed!"
           echo "Check logs for details"
+          echo ""
+          echo "Common issues:"
+          echo "- Authentication: Verify WIF_PROVIDER, WIF_SERVICE_ACCOUNT, and FIREBASE_PROJECT_ID secrets"
+          echo "- Permissions: Ensure service account has roles/datastore.importExportAdmin and roles/storage.admin"
+          echo "- WIF Binding: Verify IAM binding allows this repository to impersonate the service account"
       
       - name: Notify on success
         if: success()
