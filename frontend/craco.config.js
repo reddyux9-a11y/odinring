@@ -12,6 +12,11 @@ module.exports = {
       '@': path.resolve(__dirname, 'src'),
     },
     configure: (webpackConfig) => {
+      // Hoisted ajv@8 (for webpack 5 / terser) can break fork-ts-checker's older schema-utils path.
+      webpackConfig.plugins = (webpackConfig.plugins || []).filter(
+        (p) => !p || !p.constructor || p.constructor.name !== 'ForkTsCheckerWebpackPlugin'
+      );
+
       // Disable hot reload completely if environment variable is set
       if (config.disableHotReload) {
         // Remove hot reload related plugins
