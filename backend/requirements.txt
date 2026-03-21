@@ -1,8 +1,9 @@
 # 🚀 ABSOLUTE MINIMUM REQUIREMENTS FOR VERCEL SERVERLESS
 # Only packages actually imported and used in server.py
 
-# Core FastAPI framework (includes uvicorn, starlette)
+# Core FastAPI framework (starlette is a dependency; uvicorn is NOT — install explicitly)
 fastapi==0.110.1
+uvicorn[standard]==0.29.0
 
 # Firebase Admin SDK (replaces MongoDB)
 firebase-admin==7.1.0
@@ -50,4 +51,4 @@ faker==20.1.0
 redis==5.0.1
 
 # TOTAL SIZE: ~35MB (well under 250MB limit)
-# REMOVED: pymongo (included with motor), uvicorn (included with fastapi)
+# REMOVED: pymongo (included with motor)
