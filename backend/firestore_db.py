@@ -3,7 +3,14 @@ Firestore Database Operations
 Provides async-style wrappers for Firestore operations with caching support
 """
 
-from firebase_config import get_firestore_client, Collections, firestore_to_dict, dict_to_firestore, retry_on_failure
+from firebase_config import (
+    get_firestore_client,
+    get_firestore_client_error,
+    Collections,
+    firestore_to_dict,
+    dict_to_firestore,
+    retry_on_failure,
+)
 from cache_service import get_cache, CACHE_TTL
 from google.cloud.firestore_v1 import FieldFilter
 from datetime import datetime
@@ -12,6 +19,11 @@ import hashlib
 import json
 
 logger = logging.getLogger(__name__)
+
+
+class DatabaseUnavailableError(Exception):
+    """Raised when Firestore client is None (missing/invalid Firebase env on the server)."""
+
 
 class FirestoreDB:
     """
@@ -24,9 +36,22 @@ class FirestoreDB:
         self.collection_name = collection_name
         self.enable_cache = enable_cache
         self.cache = get_cache() if enable_cache else None
+
+    def _ensure_db(self):
+        """Ensure Firestore client exists; retry once per call (env may be fixed at runtime)."""
+        if self.db is None:
+            self.db = get_firestore_client()
+        if self.db is None:
+            err = get_firestore_client_error()
+            hint = err or (
+                "Firestore is not configured. Set FIREBASE_PROJECT_ID and "
+                "FIREBASE_SERVICE_ACCOUNT_JSON on the server (e.g. Render environment variables)."
+            )
+            raise DatabaseUnavailableError(hint)
     
     def collection(self, name):
         """Get collection reference"""
+        self._ensure_db()
         return self.db.collection(name)
     
     def _get_cache_key(self, collection: str, filter_dict: dict) -> str:
@@ -70,6 +95,7 @@ class FirestoreDB:
                     return cached
         
         try:
+            self._ensure_db()
             # Handle $or queries - Firestore doesn't support $or directly
             if '$or' in filt:
                 or_conditions = filt['$or']
@@ -144,6 +170,7 @@ class FirestoreDB:
             filt = collection_name
         
         try:
+            self._ensure_db()
             # Handle $or queries - Firestore doesn't support $or directly
             if filt and '$or' in filt:
                 or_conditions = filt['$or']
@@ -228,6 +255,8 @@ class FirestoreDB:
             docs = query.stream()
             return [firestore_to_dict(doc) for doc in docs]
             
+        except DatabaseUnavailableError:
+            raise
         except Exception as e:
             logger.error(f"Error in find: {e}")
             return []
@@ -247,6 +276,7 @@ class FirestoreDB:
             doc = collection_name
         
         try:
+            self._ensure_db()
             data = dict_to_firestore(doc)
             
             # If document has an 'id' field, use it as document ID
@@ -382,6 +412,8 @@ class FirestoreDB:
             docs = await self.find(coll_name, filt)
             return len(docs)
             
+        except DatabaseUnavailableError:
+            raise
         except Exception as e:
             logger.error(f"Error in count_documents: {e}")
             return 0
@@ -435,6 +467,7 @@ class FirestoreDB:
             Dict with results: {'inserted': [...], 'updated': [...], 'deleted': [...]}
         """
         try:
+            self._ensure_db()
             batch = self.db.batch()
             results = {
                 'inserted': [],

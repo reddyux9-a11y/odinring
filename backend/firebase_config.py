@@ -20,6 +20,13 @@ logger = logging.getLogger(__name__)
 # Global Firebase app and db references
 _app = None
 _db = None
+# Last error when get_firestore_client() could not return a client (for API 503 messages)
+_firestore_client_error: str | None = None
+
+
+def get_firestore_client_error() -> str | None:
+    """Human-readable reason Firestore client is unavailable, or None if not recorded."""
+    return _firestore_client_error
 
 # SECURITY: NEVER commit service account JSON to git
 # TODO: Rotate credentials immediately if firebase-service-account.json was ever committed
@@ -239,7 +246,7 @@ def get_firestore_client():
     If initialization fails (e.g., missing env vars), it returns None instead of raising,
     allowing the app to start and provide helpful error messages.
     """
-    global _db
+    global _db, _firestore_client_error
     
     if _db is not None:
         return _db
@@ -247,8 +254,10 @@ def get_firestore_client():
     # Try to initialize, but don't raise if it fails
     try:
         _db = initialize_firebase()
+        _firestore_client_error = None
         return _db
     except Exception as e:
+        _firestore_client_error = str(e)
         logger.error(f"Failed to get Firestore client: {e}")
         # Don't raise - return None so app can start
         # Routes should check for None and handle gracefully

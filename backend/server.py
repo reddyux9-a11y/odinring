@@ -1,6 +1,6 @@
 from fastapi import FastAPI, APIRouter, HTTPException, Depends, Request, File, UploadFile, Body
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from fastapi.responses import Response, RedirectResponse
+from fastapi.responses import Response, RedirectResponse, JSONResponse
 from fastapi.openapi.utils import get_openapi
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
@@ -59,7 +59,7 @@ logger = get_logger(__name__)
 
 # Firebase/Firestore imports (replaces MongoDB)
 from firebase_config import initialize_firebase
-from firestore_db import FirestoreDB
+from firestore_db import FirestoreDB, DatabaseUnavailableError
 
 # Security and compliance utilities
 from audit_log_utils import (
@@ -377,9 +377,17 @@ All responses are in JSON format.
     }
 )
 app.state.limiter = limiter
-# Only register exception handler if not in test mode (RateLimitExceeded needs to be real class)
+
+
+async def _database_unavailable_handler(request: Request, exc: DatabaseUnavailableError):
+    """Return 503 when Firestore was not initialized (missing/invalid Firebase env on host)."""
+    return JSONResponse(status_code=503, content={"detail": str(exc)})
+
+
+# RateLimitExceeded handler only when not in test mode (needs real RateLimitExceeded class)
 if not _IS_TEST_MODE:
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_exception_handler(DatabaseUnavailableError, _database_unavailable_handler)
 
 
 def custom_openapi():
@@ -2655,6 +2663,8 @@ async def register(request: Request, user_data: UserCreate):
     except HTTPException:
         # Re-raise HTTP exceptions as-is
         raise
+    except DatabaseUnavailableError:
+        raise
     except Exception as e:
         # Log the actual error for debugging
         logger.error(f"Database error during user lookup: {type(e).__name__}: {str(e)}", exc_info=True)
@@ -2772,6 +2782,8 @@ async def register(request: Request, user_data: UserCreate):
         
     except HTTPException:
         # Re-raise HTTP exceptions as-is
+        raise
+    except DatabaseUnavailableError:
         raise
     except Exception as e:
         # Log the actual error for debugging
