@@ -40,6 +40,9 @@ slowapi==0.1.9
 sentry-sdk[fastapi]==1.40.0
 structlog==24.1.0
 
+# Billing
+stripe
+
 # Testing (development)
 pytest==7.4.3
 pytest-asyncio==0.21.1
