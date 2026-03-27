@@ -39,7 +39,7 @@ const IconPicker = ({ selectedIcon, onIconSelect, className = "" }) => {
       { icon: MessageCircle, name: "Chat" },
       { icon: Phone, name: "Phone" },
       { icon: Mail, name: "Email" },
-      { icon: Users, name: "Community" }
+      { icon: Users, name: "Links" }
     ],
     business: [
       { icon: Briefcase, name: "Portfolio" },

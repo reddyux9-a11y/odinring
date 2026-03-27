@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { Separator } from '../components/ui/separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { 
   ArrowLeft, 
   CreditCard, 
@@ -15,7 +16,11 @@ import {
   Sparkles,
   AlertCircle,
   Loader2,
-  ExternalLink
+  ExternalLink,
+  LifeBuoy,
+  FileText,
+  PlayCircle,
+  MessageCircle
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useIdentityContext } from '../hooks/useIdentityContext';
@@ -178,209 +183,297 @@ const SubscriptionManagement = () => {
           </div>
         </motion.div>
 
-        {/* Current Subscription Card */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="mb-6"
-        >
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-2xl flex items-center gap-2">
-                    {getStatusIcon()}
-                    Current Subscription
-                  </CardTitle>
-                  <CardDescription className="mt-2">
-                    {planNames[subscriptionPlan] || subscriptionPlan || 'No active subscription'}
-                  </CardDescription>
-                </div>
-                <Badge className={getStatusColor()}>
-                  {subscriptionStatus?.toUpperCase() || 'NONE'}
-                </Badge>
-              </div>
-            </CardHeader>
+        <Tabs defaultValue="subscription" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 mb-6">
+            <TabsTrigger value="subscription">Subscription</TabsTrigger>
+            <TabsTrigger value="support">Customer Support</TabsTrigger>
+          </TabsList>
 
-            <CardContent className="space-y-6">
-              {/* Subscription Details */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">Plan</p>
-                  <p className="font-semibold flex items-center gap-2">
-                    {subscriptionPlan === 'solo' && <Crown className="w-4 h-4 text-yellow-500" />}
-                    {planNames[subscriptionPlan] || subscriptionPlan || 'None'}
-                  </p>
-                </div>
-
-                {planPrices[subscriptionPlan] && (
-                  <div className="space-y-1">
-                    <p className="text-sm text-muted-foreground">Price</p>
-                    <p className="font-semibold">
-                      {formatPrice(planPrices[subscriptionPlan])}/year
-                    </p>
-                  </div>
-                )}
-
-                {subscriptionStatus === 'trial' && subscription?.trial_end_date && (
-                  <>
-                    <div className="space-y-1">
-                      <p className="text-sm text-muted-foreground">Trial Ends</p>
-                      <p className="font-semibold">{formatDate(subscription.trial_end_date)}</p>
+          <TabsContent value="subscription" className="space-y-6">
+            {/* Current Subscription Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="mb-6"
+            >
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-2xl flex items-center gap-2">
+                        {getStatusIcon()}
+                        Current Subscription
+                      </CardTitle>
+                      <CardDescription className="mt-2">
+                        {planNames[subscriptionPlan] || subscriptionPlan || 'No active subscription'}
+                      </CardDescription>
                     </div>
-                    {daysRemaining !== null && (
+                    <Badge className={getStatusColor()}>
+                      {subscriptionStatus?.toUpperCase() || 'NONE'}
+                    </Badge>
+                  </div>
+                </CardHeader>
+
+                <CardContent className="space-y-6">
+                  {/* Subscription Details */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <p className="text-sm text-muted-foreground">Plan</p>
+                      <p className="font-semibold flex items-center gap-2">
+                        {subscriptionPlan === 'solo' && <Crown className="w-4 h-4 text-yellow-500" />}
+                        {planNames[subscriptionPlan] || subscriptionPlan || 'None'}
+                      </p>
+                    </div>
+
+                    {planPrices[subscriptionPlan] && (
                       <div className="space-y-1">
-                        <p className="text-sm text-muted-foreground">Days Remaining</p>
-                        <p className="font-semibold text-blue-600 dark:text-blue-400">
-                          {daysRemaining} day{daysRemaining !== 1 ? 's' : ''}
+                        <p className="text-sm text-muted-foreground">Price</p>
+                        <p className="font-semibold">
+                          {formatPrice(planPrices[subscriptionPlan])}/year
                         </p>
                       </div>
                     )}
-                  </>
-                )}
 
-                {subscriptionStatus === 'active' && subscription?.current_period_end && (
-                  <>
-                    <div className="space-y-1">
-                      <p className="text-sm text-muted-foreground">Renews On</p>
-                      <p className="font-semibold">{formatDate(subscription.current_period_end)}</p>
-                    </div>
-                    {daysRemaining !== null && (
-                      <div className="space-y-1">
-                        <p className="text-sm text-muted-foreground">Days Until Renewal</p>
-                        <p className="font-semibold text-green-600 dark:text-green-400">
-                          {daysRemaining} day{daysRemaining !== 1 ? 's' : ''}
-                        </p>
-                      </div>
-                    )}
-                  </>
-                )}
-
-                {subscription?.billing_cycle && (
-                  <div className="space-y-1">
-                    <p className="text-sm text-muted-foreground">Billing Cycle</p>
-                    <p className="font-semibold capitalize">{subscription.billing_cycle}</p>
-                  </div>
-                )}
-              </div>
-
-              <Separator />
-
-              {/* Actions */}
-              <div className="flex flex-col sm:flex-row gap-3">
-                {subscriptionStatus === 'expired' || subscriptionStatus === 'none' ? (
-                  <Button 
-                    onClick={handleUpgrade}
-                    className="flex-1 bg-gradient-to-r from-primary to-purple-600"
-                  >
-                    <Sparkles className="w-4 h-4 mr-2" />
-                    Choose a Plan
-                  </Button>
-                ) : subscriptionStatus === 'trial' ? (
-                  <Button 
-                    onClick={handleUpgrade}
-                    className="flex-1 bg-gradient-to-r from-primary to-purple-600"
-                  >
-                    <Crown className="w-4 h-4 mr-2" />
-                    Upgrade Now
-                  </Button>
-                ) : (
-                  <>
-                    <Button 
-                      onClick={handleUpgrade}
-                      variant="outline"
-                      className="flex-1"
-                    >
-                      Change Plan
-                    </Button>
-                    {subscriptionStatus === 'active' && (
-                      <Button 
-                        onClick={handleCancel}
-                        variant="destructive"
-                        disabled={loading}
-                        className="flex-1"
-                      >
-                        {loading ? (
-                          <>
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            Cancelling...
-                          </>
-                        ) : (
-                          'Cancel Subscription'
+                    {subscriptionStatus === 'trial' && subscription?.trial_end_date && (
+                      <>
+                        <div className="space-y-1">
+                          <p className="text-sm text-muted-foreground">Trial Ends</p>
+                          <p className="font-semibold">{formatDate(subscription.trial_end_date)}</p>
+                        </div>
+                        {daysRemaining !== null && (
+                          <div className="space-y-1">
+                            <p className="text-sm text-muted-foreground">Days Remaining</p>
+                            <p className="font-semibold text-blue-600 dark:text-blue-400">
+                              {daysRemaining} day{daysRemaining !== 1 ? 's' : ''}
+                            </p>
+                          </div>
                         )}
-                      </Button>
+                      </>
                     )}
-                  </>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
 
-        {/* Payment Information */}
-        {subscription?.transaction_id && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="mb-6"
-          >
+                    {subscriptionStatus === 'active' && subscription?.current_period_end && (
+                      <>
+                        <div className="space-y-1">
+                          <p className="text-sm text-muted-foreground">Renews On</p>
+                          <p className="font-semibold">{formatDate(subscription.current_period_end)}</p>
+                        </div>
+                        {daysRemaining !== null && (
+                          <div className="space-y-1">
+                            <p className="text-sm text-muted-foreground">Days Until Renewal</p>
+                            <p className="font-semibold text-green-600 dark:text-green-400">
+                              {daysRemaining} day{daysRemaining !== 1 ? 's' : ''}
+                            </p>
+                          </div>
+                        )}
+                      </>
+                    )}
+
+                    {subscription?.billing_cycle && (
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground">Billing Cycle</p>
+                        <p className="font-semibold capitalize">{subscription.billing_cycle}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  <Separator />
+
+                  {/* Actions */}
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    {subscriptionStatus === 'expired' || subscriptionStatus === 'none' ? (
+                      <Button
+                        onClick={handleUpgrade}
+                        className="flex-1 bg-gradient-to-r from-primary to-purple-600"
+                      >
+                        <Sparkles className="w-4 h-4 mr-2" />
+                        Choose a Plan
+                      </Button>
+                    ) : subscriptionStatus === 'trial' ? (
+                      <Button
+                        onClick={handleUpgrade}
+                        className="flex-1 bg-gradient-to-r from-primary to-purple-600"
+                      >
+                        <Crown className="w-4 h-4 mr-2" />
+                        Upgrade Now
+                      </Button>
+                    ) : (
+                      <>
+                        <Button
+                          onClick={handleUpgrade}
+                          variant="outline"
+                          className="flex-1"
+                        >
+                          Change Plan
+                        </Button>
+                        {subscriptionStatus === 'active' && (
+                          <Button
+                            onClick={handleCancel}
+                            variant="destructive"
+                            disabled={loading}
+                            className="flex-1"
+                          >
+                            {loading ? (
+                              <>
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                Cancelling...
+                              </>
+                            ) : (
+                              'Cancel Subscription'
+                            )}
+                          </Button>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Payment Information */}
+            {subscription?.transaction_id && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="mb-6"
+              >
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <CreditCard className="w-5 h-5" />
+                      Payment Information
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {subscription.transaction_id && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">Transaction ID</span>
+                          <span className="font-mono text-xs">{subscription.transaction_id}</span>
+                        </div>
+                      )}
+                      {subscription.checkout_details?.payment_method && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">Payment Method</span>
+                          <span className="font-semibold capitalize">
+                            {subscription.checkout_details.payment_method}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
+
+            {/* Info Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              <Card className="bg-muted/50">
+                <CardContent className="pt-6">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-muted-foreground mt-0.5 flex-shrink-0" />
+                    <div className="space-y-2 text-sm text-muted-foreground">
+                      <p>
+                        <strong className="text-foreground">Trial Period:</strong> All new subscriptions start with a 14-day free trial.
+                      </p>
+                      <p>
+                        <strong className="text-foreground">Cancellation:</strong> You can cancel your subscription at any time.
+                        You'll continue to have access until the end of your current billing period.
+                      </p>
+                      <p>
+                        <strong className="text-foreground">Renewal:</strong> Subscriptions automatically renew unless cancelled.
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </TabsContent>
+
+          <TabsContent value="support" className="space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <CreditCard className="w-5 h-5" />
-                  Payment Information
+                  <LifeBuoy className="w-5 h-5" />
+                  Customer Support
                 </CardTitle>
+                <CardDescription>
+                  Get onboarding help, activation guidance, and branding best practices.
+                </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {subscription.transaction_id && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Transaction ID</span>
-                      <span className="font-mono text-xs">{subscription.transaction_id}</span>
-                    </div>
-                  )}
-                  {subscription.checkout_details?.payment_method && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Payment Method</span>
-                      <span className="font-semibold capitalize">
-                        {subscription.checkout_details.payment_method}
-                      </span>
-                    </div>
-                  )}
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Card className="border-dashed">
+                    <CardContent className="pt-6">
+                      <div className="flex items-start gap-3">
+                        <FileText className="w-5 h-5 mt-0.5 text-primary" />
+                        <div className="space-y-2">
+                          <p className="font-semibold">Application Usage Guide</p>
+                          <p className="text-sm text-muted-foreground">
+                            Printable support document covering setup, activation, subscriptions,
+                            and personal branding/business use cases.
+                          </p>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => window.open('/support/application-usage-guide.html', '_blank')}
+                          >
+                            Open Guide
+                            <ExternalLink className="w-4 h-4 ml-2" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border-dashed">
+                    <CardContent className="pt-6">
+                      <div className="flex items-start gap-3">
+                        <PlayCircle className="w-5 h-5 mt-0.5 text-primary" />
+                        <div className="space-y-2">
+                          <p className="font-semibold">Demo Video Script</p>
+                          <p className="text-sm text-muted-foreground">
+                            Ready-to-record storyboard for: How to use, activate subscription,
+                            subscribe, and grow branding/business.
+                          </p>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => window.open('/support/demo-video-script.md', '_blank')}
+                          >
+                            Open Script
+                            <ExternalLink className="w-4 h-4 ml-2" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
                 </div>
+
+                <Card className="bg-muted/50">
+                  <CardContent className="pt-6">
+                    <div className="flex items-start gap-3">
+                      <MessageCircle className="w-5 h-5 text-muted-foreground mt-0.5" />
+                      <div className="space-y-1 text-sm text-muted-foreground">
+                        <p>
+                          Need direct assistance? Contact support at <strong className="text-foreground">support@odinring.com</strong>
+                        </p>
+                        <p>
+                          Include your account email, issue summary, and screenshot for faster resolution.
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               </CardContent>
             </Card>
-          </motion.div>
-        )}
-
-        {/* Info Card */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-        >
-          <Card className="bg-muted/50">
-            <CardContent className="pt-6">
-              <div className="flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-muted-foreground mt-0.5 flex-shrink-0" />
-                <div className="space-y-2 text-sm text-muted-foreground">
-                  <p>
-                    <strong className="text-foreground">Trial Period:</strong> All new subscriptions start with a 14-day free trial.
-                  </p>
-                  <p>
-                    <strong className="text-foreground">Cancellation:</strong> You can cancel your subscription at any time. 
-                    You'll continue to have access until the end of your current billing period.
-                  </p>
-                  <p>
-                    <strong className="text-foreground">Renewal:</strong> Subscriptions automatically renew unless cancelled.
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

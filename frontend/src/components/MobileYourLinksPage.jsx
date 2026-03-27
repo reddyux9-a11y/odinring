@@ -40,6 +40,8 @@ const MobileYourLinksPage = ({
   onDeleteLink,
   onToggleActive
 }) => {
+  const getLinkId = (link) => link?.id || link?._id || link?.link_id || null;
+
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editingLink, setEditingLink] = useState(null);
@@ -111,7 +113,11 @@ const MobileYourLinksPage = ({
     try {
       addHapticFeedback('success');
       if (editingLink) {
-        await onEditLink(editingLink.id, formData);
+        const editingLinkId = getLinkId(editingLink);
+        if (!editingLinkId) {
+          throw new Error("Missing link id");
+        }
+        await onEditLink(editingLinkId, formData);
         toast.success("Link updated successfully!", { duration: 1500 });
       } else {
         await onAddLink(formData);
@@ -127,6 +133,10 @@ const MobileYourLinksPage = ({
   };
 
   const handleDeleteLink = async (linkId) => {
+    if (!linkId) {
+      toast.error("Unable to delete: invalid link id", { duration: 1500 });
+      return;
+    }
     try {
       addHapticFeedback('success');
       await onDeleteLink(linkId);
@@ -146,7 +156,9 @@ const MobileYourLinksPage = ({
       // Toggle all links
       const togglePromises = links.map(link => {
         if (link.active !== !allActive) {
-          return onToggleActive(link.id);
+          const linkId = getLinkId(link);
+          if (!linkId) return Promise.resolve();
+          return onToggleActive(linkId);
         }
         return Promise.resolve();
       });
@@ -176,12 +188,14 @@ const MobileYourLinksPage = ({
   };
 
   const renderLinkItem = (link) => {
+    const linkId = getLinkId(link);
+
     // Debug: Log individual link data
     console.log('Rendering link:', link);
     
     return (
     <motion.div
-      key={link.id}
+      key={linkId || link.url || link.title}
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.2 }}
@@ -217,11 +231,11 @@ const MobileYourLinksPage = ({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => handleToggleActive(link.id)}
-                disabled={loadingToggleId === link.id}
+                onClick={() => handleToggleActive(linkId)}
+                disabled={loadingToggleId === linkId || !linkId}
                 className="h-6 w-6 p-0 hover:bg-gray-100 disabled:opacity-50"
               >
-                {loadingToggleId === link.id ? (
+                {loadingToggleId === linkId ? (
                   <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
                 ) : link.active ? (
                   <ToggleRight className="w-4 h-4 text-green-600" />
@@ -235,19 +249,20 @@ const MobileYourLinksPage = ({
                 variant="ghost"
                 size="sm"
                 onClick={() => handleEditLink(link)}
-                className="h-6 w-6 p-0 hover:bg-blue-100"
+                className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
               >
-                <Edit className="w-3 h-3 text-blue-600" />
+                <Edit className="w-3 h-3" />
               </Button>
               
               {/* Delete Button */}
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => handleDeleteLink(link.id)}
-                className="h-6 w-6 p-0 hover:bg-red-100"
+                onClick={() => handleDeleteLink(linkId)}
+                disabled={!linkId}
+                className="h-6 w-6 p-0 text-destructive hover:text-destructive"
               >
-                <Trash2 className="w-3 h-3 text-red-600" />
+                <Trash2 className="w-3 h-3" />
               </Button>
             </div>
           </div>

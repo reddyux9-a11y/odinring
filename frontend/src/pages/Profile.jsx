@@ -602,7 +602,7 @@ const Profile = () => {
               }}
             >
               <Users className="w-3 h-3 mr-1" strokeWidth={2} />
-              Community
+              Links
             </TabsTrigger>
           </TabsList>
 
@@ -610,9 +610,9 @@ const Profile = () => {
             {links.filter(link => link.active).length === 0 ? (
               <div className="text-center py-8">
                 <Users className="w-12 h-12 mx-auto mb-4" style={{ color: secondaryTextColor }} strokeWidth={2} />
-                <h3 className="font-semibold mb-2" style={{ color: textColor }}>No community links available</h3>
+                <h3 className="font-semibold mb-2" style={{ color: textColor }}>No links available</h3>
                 <p className="text-sm" style={{ color: secondaryTextColor }}>
-                  This profile doesn't have any active community links yet.
+                  This profile doesn't have any active links yet.
                 </p>
               </div>
             ) : (

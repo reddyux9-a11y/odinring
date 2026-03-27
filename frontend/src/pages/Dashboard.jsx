@@ -41,6 +41,12 @@ import logger from "../lib/logger";
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
+const normalizeLink = (link) => {
+  if (!link) return link;
+  const stableId = link.id || link._id || link.link_id || "";
+  return { ...link, id: stableId };
+};
+
 const Dashboard = () => {
   const navigate = useNavigate();
   const { user, logout, refreshUser } = useAuth();
@@ -211,7 +217,7 @@ const Dashboard = () => {
         const data = response.data || {};
         
         // Process links
-        const links = data.links || [];
+        const links = (data.links || []).map(normalizeLink);
         if (links.length > 0) {
           logger.debug('Links found:', links.length);
           links.forEach((link, idx) => {
@@ -277,7 +283,7 @@ const Dashboard = () => {
         if (!isMountedRef.current) return;
         
         // Process fallback results
-        const links = linksResponse.data || [];
+        const links = (linksResponse.data || []).map(normalizeLink);
         if (links.length > 0) {
           logger.debug('Links found (fallback):', links.length);
         }
@@ -483,7 +489,7 @@ const Dashboard = () => {
               try {
                 const token = localStorage.getItem('token');
                 const response = await api.post('/links', linkData);
-                setLinks([...links, response.data]);
+                setLinks(prev => [...prev, normalizeLink(response.data)]);
               } catch (error) {
                 logger.error('Add link failed:', error);
                 throw error;
@@ -493,7 +499,9 @@ const Dashboard = () => {
               try {
                 const token = localStorage.getItem('token');
                 const response = await api.put(`/links/${linkId}`, linkData);
-                setLinks(links.map(l => l.id === linkId ? response.data : l));
+                setLinks(prev =>
+                  prev.map(l => (l.id === linkId ? normalizeLink(response.data) : l))
+                );
               } catch (error) {
                 logger.error('Edit link failed:', error);
                 throw error;
@@ -503,7 +511,7 @@ const Dashboard = () => {
               try {
                 const token = localStorage.getItem('token');
                 await api.delete(`/links/${linkId}`);
-                setLinks(links.filter(l => l.id !== linkId));
+                setLinks(prev => prev.filter(l => l.id !== linkId));
               } catch (error) {
                 logger.error('Delete link failed:', error);
                 throw error;
@@ -516,7 +524,9 @@ const Dashboard = () => {
                 
                 const token = localStorage.getItem('token');
                 const response = await api.put(`/links/${linkId}`, { active: !link.active });
-                setLinks(links.map(l => l.id === linkId ? response.data : l));
+                setLinks(prev =>
+                  prev.map(l => (l.id === linkId ? normalizeLink(response.data) : l))
+                );
               } catch (error) {
                 logger.error('Toggle visibility failed:', error);
                 throw error;

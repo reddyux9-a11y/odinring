@@ -35,24 +35,23 @@ import api from "../lib/api";
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
-// Sanitize phone number input to keep it reasonably short and valid
-const normalizePhoneNumber = (value, countryMeta) => {
-  if (!value) return "";
-  // Allow digits, +, spaces, dashes, dots, parentheses
-  let cleaned = value.replace(/[^0-9+()\-\s.]/g, "");
-  // Prevent multiple '+' signs
-  const plusIndex = cleaned.indexOf("+");
-  if (plusIndex > 0) {
-    cleaned = cleaned.replace(/\+/g, "");
-  } else if (plusIndex === 0) {
-    cleaned = "+" + cleaned.slice(1).replace(/\+/g, "");
+// Normalize common user URL input mistakes before sending to backend
+const normalizeUrlInput = (value) => {
+  if (!value || typeof value !== "string") return "";
+  let url = value.trim();
+
+  // Fix common typo: https:/example.com -> https://example.com
+  url = url.replace(/^https?:\/(?!\/)/i, (match) => `${match}/`);
+
+  // If protocol is missing, default to https://
+  if (!/^(https?:\/\/|mailto:|tel:|sms:)/i.test(url)) {
+    url = `https://${url}`;
   }
-  // Hard cap length to avoid absurdly long entries
-  const maxLen = countryMeta?.maxDigits ?? 15;
-  // We only care about limiting the digits; country code is applied separately
-  const digitsOnly = cleaned.replace(/\D/g, "");
-  return digitsOnly.slice(0, maxLen);
+
+  return url;
 };
+
+const getLinkId = (link) => link?.id || link?._id || link?.link_id || null;
 
 // Custom DialogContent without close button
 const CustomDialogContent = React.forwardRef(({ className, children, ...props }, ref) => (
@@ -77,24 +76,13 @@ const SimpleLinkManager = ({ links, setLinks, onBack }) => {
   const [editingLink, setEditingLink] = useState(null);
   const [loading, setLoading] = useState(false);
   
-  const PHONE_COUNTRIES = [
-    { code: "IN", label: "India (+91)", dialCode: "+91", maxDigits: 10 },
-    { code: "US", label: "USA (+1)", dialCode: "+1", maxDigits: 10 },
-    { code: "GB", label: "UK (+44)", dialCode: "+44", maxDigits: 10 },
-    { code: "EU", label: "Europe (+49)", dialCode: "+49", maxDigits: 11 },
-  ];
-
   const [formData, setFormData] = useState({
     title: "",
     url: "",
     description: "",
-    phone_number: "",
     icon: "Link",
     category: "social"
   });
-
-  const [phoneCountry, setPhoneCountry] = useState("IN");
-  const [phoneLocal, setPhoneLocal] = useState("");
 
   // Icon dropdown state
   const [iconDropdownOpen, setIconDropdownOpen] = useState(false);
@@ -195,11 +183,11 @@ const SimpleLinkManager = ({ links, setLinks, onBack }) => {
 
     try {
       const token = localStorage.getItem('token');
+      const normalizedUrl = normalizeUrlInput(formData.url);
       const linkData = {
         title: formData.title.trim(),
-        url: formData.url.trim(),
+        url: normalizedUrl,
         description: formData.description.trim(),
-        phone_number: formData.phone_number?.trim() || null,
         icon: formData.icon, // Use selected icon
         category: formData.category, // Use selected category
         style: "default" // Default style
@@ -207,12 +195,17 @@ const SimpleLinkManager = ({ links, setLinks, onBack }) => {
 
       let response;
       if (editingLink) {
+        const editingLinkId = getLinkId(editingLink);
+        if (!editingLinkId) {
+          mobileToast.error("Unable to update link: invalid link id");
+          return;
+        }
         // Update existing link
-        response = await api.put(`/links/${editingLink.id}`, linkData);
+        response = await api.put(`/links/${editingLinkId}`, linkData);
         
         // Update links in state
         setLinks(prev => prev.map(link => 
-          link.id === editingLink.id ? response.data : link
+          getLinkId(link) === editingLinkId ? response.data : link
         ));
         
         mobileToast.success("Link updated successfully! ✅");
@@ -226,7 +219,7 @@ const SimpleLinkManager = ({ links, setLinks, onBack }) => {
       }
 
       // Reset form and close dialog
-      setFormData({ title: "", url: "", description: "", phone_number: "", icon: "Globe", category: "social" });
+      setFormData({ title: "", url: "", description: "", icon: "Globe", category: "social" });
       setIsAddDialogOpen(false);
       setIsEditDialogOpen(false);
       setEditingLink(null);
@@ -235,34 +228,26 @@ const SimpleLinkManager = ({ links, setLinks, onBack }) => {
 
     } catch (error) {
       addHapticFeedback('error');
-      mobileToast.error("Operation failed. Please try again.");
+      const errorDetail = error?.response?.data?.detail;
+      if (typeof errorDetail === "string" && errorDetail.trim()) {
+        mobileToast.error(errorDetail);
+      } else if (Array.isArray(errorDetail) && errorDetail.length > 0) {
+        const firstMessage = errorDetail[0]?.msg || errorDetail[0]?.message;
+        mobileToast.error(firstMessage || "Validation failed");
+      } else {
+        mobileToast.error("Operation failed. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
   };
 
   const handleEdit = (link) => {
-    setEditingLink(link);
-    // Infer country from stored phone_number if possible
-    let inferredCountry = "IN";
-    let localPart = "";
-    if (link.phone_number && typeof link.phone_number === "string") {
-      const match = PHONE_COUNTRIES.find(c => link.phone_number.startsWith(c.dialCode));
-      if (match) {
-        inferredCountry = match.code;
-        localPart = link.phone_number.slice(match.dialCode.length).replace(/\D/g, "").slice(0, match.maxDigits);
-      } else {
-        // Fallback: keep digits only, assume current default country
-        localPart = link.phone_number.replace(/\D/g, "");
-      }
-    }
-    setPhoneCountry(inferredCountry);
-    setPhoneLocal(localPart);
+    setEditingLink({ ...link, id: getLinkId(link) });
     setFormData({
       title: link.title,
       url: link.url,
       description: link.description || "",
-      phone_number: link.phone_number || "",
       icon: link.icon || "Link",
       category: link.category || "social"
     });
@@ -444,8 +429,9 @@ const SimpleLinkManager = ({ links, setLinks, onBack }) => {
                 return (
                   <div className="w-full space-y-3 overflow-x-hidden">
                     {links.map((link, index) => {
+                      const linkId = getLinkId(link);
                       return (
-                  <div key={link.id} className="border border-border rounded-2xl transition-all duration-300 bg-card/80 backdrop-blur-sm hover:bg-card/90 hover:shadow-lg hover:border-border sm:border sm:rounded-lg sm:bg-card sm:hover:bg-muted sm:hover:shadow-md" style={{ width: '100%' }}>
+                  <div key={linkId || `${link.title}-${index}`} className="border border-border rounded-2xl transition-all duration-300 bg-card/80 backdrop-blur-sm hover:bg-card/90 hover:shadow-lg hover:border-border sm:border sm:rounded-lg sm:bg-card sm:hover:bg-muted sm:hover:shadow-md" style={{ width: '100%' }}>
                     {/* Mobile-optimized compact layout */}
                     <div className="w-full p-2 sm:p-4">
                       <div className="flex items-center sm:items-start gap-1 sm:gap-3">
@@ -518,7 +504,7 @@ const SimpleLinkManager = ({ links, setLinks, onBack }) => {
                                       <div className="flex items-center gap-1 ml-auto">
                                         <Switch
                                           checked={link.active}
-                                          onCheckedChange={() => toggleLinkVisibility(link.id, link.active)}
+                                          onCheckedChange={() => linkId && toggleLinkVisibility(linkId, link.active)}
                                           className="data-[state=checked]:bg-black"
                                         />
                                         <Button
@@ -542,8 +528,9 @@ const SimpleLinkManager = ({ links, setLinks, onBack }) => {
                                         <Button
                                           variant="ghost"
                                           size="sm"
-                                          onClick={() => handleDelete(link.id)}
-                                          className="text-red-600 hover:text-red-700 h-8 w-8 p-0"
+                                          onClick={() => linkId && handleDelete(linkId)}
+                                          disabled={!linkId}
+                                          className="text-destructive hover:text-destructive h-8 w-8 p-0"
                                           title="Delete link"
                                         >
                                           <Trash2 className="w-4 h-4" />
@@ -579,7 +566,8 @@ const SimpleLinkManager = ({ links, setLinks, onBack }) => {
                                           <Button
                                             variant="ghost"
                                             size="sm"
-                                            onClick={() => toggleLinkVisibility(link.id, link.active)}
+                                            onClick={() => linkId && toggleLinkVisibility(linkId, link.active)}
+                                            disabled={!linkId}
                                             className={`h-5 w-5 p-0 ${link.active ? 'text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50' : 'text-muted-foreground hover:text-foreground hover:bg-muted'}`}
                                             title={link.active ? "Deactivate link" : "Activate link"}
                                           >
@@ -606,8 +594,9 @@ const SimpleLinkManager = ({ links, setLinks, onBack }) => {
                                           <Button
                                             variant="ghost"
                                             size="sm"
-                                            onClick={() => handleDelete(link.id)}
-                                            className="text-red-600 hover:text-red-700 hover:bg-red-50 h-5 w-5 p-0"
+                                            onClick={() => linkId && handleDelete(linkId)}
+                                            disabled={!linkId}
+                                            className="text-destructive hover:text-destructive h-5 w-5 p-0"
                                             title="Delete link"
                                           >
                                             <Trash2 className="w-2.5 h-2.5" />
@@ -703,57 +692,6 @@ const SimpleLinkManager = ({ links, setLinks, onBack }) => {
                   placeholder="Brief description..."
                   className="h-12 border-2 border-border focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 dark:focus:ring-indigo-800 rounded-xl transition-all duration-200 bg-background/80 backdrop-blur-sm"
                 />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="add-phone" className="text-sm font-semibold text-foreground flex items-center gap-2">
-                  <span className="w-2 h-2 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full"></span>
-                  Mobile Number (Optional)
-                </Label>
-                <div className="flex gap-2">
-                  <select
-                    value={phoneCountry}
-                    onChange={(e) => {
-                      const code = e.target.value;
-                      setPhoneCountry(code);
-                      const meta = PHONE_COUNTRIES.find(c => c.code === code);
-                      const normalized = normalizePhoneNumber(phoneLocal, meta);
-                      setPhoneLocal(normalized);
-                      setFormData(prev => ({
-                        ...prev,
-                        phone_number: normalized ? `${meta.dialCode}${normalized}` : ""
-                      }));
-                    }}
-                    className="h-12 rounded-xl border-2 border-border bg-background px-2 text-sm"
-                  >
-                    {PHONE_COUNTRIES.map(country => (
-                      <option key={country.code} value={country.code}>
-                        {country.label}
-                      </option>
-                    ))}
-                  </select>
-                  <Input
-                    id="add-phone"
-                    type="tel"
-                    value={phoneLocal}
-                    inputMode="tel"
-                    maxLength={PHONE_COUNTRIES.find(c => c.code === phoneCountry)?.maxDigits ?? 15}
-                    onChange={(e) => {
-                      const meta = PHONE_COUNTRIES.find(c => c.code === phoneCountry);
-                      const normalized = normalizePhoneNumber(e.target.value, meta);
-                      setPhoneLocal(normalized);
-                      setFormData(prev => ({
-                        ...prev,
-                        phone_number: normalized ? `${meta.dialCode}${normalized}` : ""
-                      }));
-                    }}
-                    placeholder="1234567890"
-                    className="h-12 border-2 border-border focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 dark:focus:ring-indigo-800 rounded-xl transition-all duration-200 bg-background/80 backdrop-blur-sm flex-1"
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  For WhatsApp and Call buttons. We’ll format it as full international number.
-                </p>
               </div>
 
               <div className="space-y-2">
@@ -872,7 +810,7 @@ const SimpleLinkManager = ({ links, setLinks, onBack }) => {
                   variant="outline"
                   onClick={() => {
                     setIsAddDialogOpen(false);
-                    setFormData({ title: "", url: "", description: "", phone_number: "", icon: "Globe", category: "social" });
+                    setFormData({ title: "", url: "", description: "", icon: "Globe", category: "social" });
                     setIconDropdownOpen(false);
                   }}
                   className="flex-1 h-12 text-sm font-semibold border-2 border-gray-300 hover:border-gray-400 hover:bg-gray-50 rounded-xl transition-all duration-200"
@@ -933,23 +871,6 @@ const SimpleLinkManager = ({ links, setLinks, onBack }) => {
                   placeholder="Brief description..."
                   className="mt-1 h-10 sm:h-11"
                 />
-              </div>
-
-              <div>
-                <Label htmlFor="edit-phone" className="text-sm font-medium">Mobile Number (Optional)</Label>
-                <Input
-                  id="edit-phone"
-                  type="tel"
-                  value={formData.phone_number}
-                  inputMode="tel"
-                  maxLength={20}
-                  onChange={(e) =>
-                    setFormData(prev => ({ ...prev, phone_number: normalizePhoneNumber(e.target.value) }))
-                  }
-                  placeholder="+1234567890"
-                  className="mt-1 h-10 sm:h-11"
-                />
-                <p className="text-xs text-muted-foreground mt-1">For WhatsApp and Call buttons</p>
               </div>
 
               <div>
@@ -1036,7 +957,7 @@ const SimpleLinkManager = ({ links, setLinks, onBack }) => {
                   variant="outline"
                   onClick={() => {
                     setIsEditDialogOpen(false);
-                    setFormData({ title: "", url: "", description: "", phone_number: "", icon: "Globe", category: "social" });
+                    setFormData({ title: "", url: "", description: "", icon: "Globe", category: "social" });
                     setEditingLink(null);
                     setIconDropdownOpen(false);
                   }}

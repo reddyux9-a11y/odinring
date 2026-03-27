@@ -3641,6 +3641,20 @@ async def reset_password(request: ResetPasswordRequest):
         if len(request.new_password) < 8:
             raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
         
+        # Keep Firebase Auth password in sync for users that exist there.
+        # This prevents old Firebase credentials from still working.
+        try:
+            from firebase_admin import auth as firebase_auth
+            firebase_uid = user_doc.get("firebase_uid")
+            if firebase_uid:
+                firebase_auth.update_user(firebase_uid, password=request.new_password)
+            else:
+                # Best-effort fallback for legacy records without stored firebase_uid
+                firebase_user = firebase_auth.get_user_by_email(user_doc["email"])
+                firebase_auth.update_user(firebase_user.uid, password=request.new_password)
+        except Exception as e:
+            logger.warning(f"Firebase password sync skipped/failed during reset: {e}")
+
         # Hash new password
         hashed_password = hash_password(request.new_password)
         
@@ -3874,6 +3888,21 @@ async def change_password(payload: PasswordChange, current_user: User = Depends(
         raise HTTPException(status_code=400, detail="Current password is incorrect")
     if len(payload.new_password) < 8:
         raise HTTPException(status_code=400, detail="New password must be at least 8 characters")
+
+    # Keep Firebase Auth password in sync for users that exist there.
+    # Without this, old password can still authenticate through Firebase-first login.
+    try:
+        from firebase_admin import auth as firebase_auth
+        firebase_uid = user_doc.get("firebase_uid")
+        if firebase_uid:
+            firebase_auth.update_user(firebase_uid, password=payload.new_password)
+        else:
+            # Best-effort fallback for legacy records without stored firebase_uid
+            firebase_user = firebase_auth.get_user_by_email(user_doc["email"])
+            firebase_auth.update_user(firebase_user.uid, password=payload.new_password)
+    except Exception as e:
+        logger.warning(f"Firebase password sync skipped/failed during change-password: {e}")
+
     hashed = hash_password(payload.new_password)
     await users_collection.update_one({"id": current_user.id}, {"$set": {"password": hashed, "updated_at": datetime.utcnow()}})
     return {"success": True}

@@ -92,6 +92,8 @@ const MediaManager = ({ media, setMedia, onBack }) => {
     return `https://i.ytimg.com/vi/${ytId}/hqdefault.jpg`;
   };
 
+  const isHttpUrl = (value) => /^https?:\/\//i.test((value || "").trim());
+
   const MAX_MEDIA_FILES = 6;
 
   useEffect(() => {
@@ -280,14 +282,16 @@ const MediaManager = ({ media, setMedia, onBack }) => {
       if (!submitData.media_file_url || submitData.media_file_url.trim() === '') {
         delete submitData.media_file_url;
       }
-      // Include thumbnail_url if available (for optimized images)
-      if (!submitData.thumbnail_url || submitData.thumbnail_url.trim() === '') {
-        // Don't delete, just ensure it's set to url if not provided
-        if (submitData.type === 'image' && submitData.url) {
-          submitData.thumbnail_url = submitData.url;
-        } else {
+      // Only send thumbnail_url when it is a valid absolute HTTP(S) URL.
+      // This prevents update failures for older records that may store relative paths.
+      if (submitData.thumbnail_url && submitData.thumbnail_url.trim() !== "") {
+        if (!isHttpUrl(submitData.thumbnail_url)) {
           delete submitData.thumbnail_url;
         }
+      } else if (submitData.type === "image" && submitData.url && isHttpUrl(submitData.url)) {
+        submitData.thumbnail_url = submitData.url;
+      } else {
+        delete submitData.thumbnail_url;
       }
       
       if (editingMedia) {
