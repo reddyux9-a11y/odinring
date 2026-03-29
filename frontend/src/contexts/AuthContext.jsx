@@ -361,54 +361,37 @@ const status = error.response?.status;
   const login = async (credentials) => {
 try {
       logger.debug('🔐 AuthContext: Logging in with email...');
-      
-      let firebaseToken = null;
-      let firebaseAuthSuccess = false;
-      
-      // First, authenticate with Firebase Auth (for password reset compatibility)
+
+      // Try backend password auth first (fast path, avoids noisy Firebase failures)
       try {
-        const { signInWithEmail, auth } = await import('../lib/firebase');
-        logger.debug('🔥 AuthContext: Authenticating with Firebase Auth...');
-        const firebaseResult = await signInWithEmail(credentials.email, credentials.password);
-        firebaseToken = firebaseResult.idToken;
-        firebaseAuthSuccess = true;
-        logger.debug('✅ AuthContext: Firebase Auth login successful');
-      } catch (firebaseError) {
-        // If Firebase Auth login fails, try backend login with password
-        // This handles cases where user exists in backend but not in Firebase Auth
-        logger.warn('⚠️ AuthContext: Firebase Auth login failed (will try backend with password):', firebaseError.message);
-        firebaseAuthSuccess = false;
-      }
-      
-      // If Firebase Auth succeeded, use Firebase token for backend authentication
-      // This ensures login works even after password reset via Firebase Auth
-      if (firebaseAuthSuccess && firebaseToken) {
-        try {
-          logger.debug('🔥 AuthContext: Using Firebase token for backend authentication...');
-const response = await api.post(`/auth/firebase-login`, {
-            firebase_token: firebaseToken,
-            email: credentials.email
-          });
-logger.debug('✅ AuthContext: Firebase token login response received');
-          
-          // Use helper to handle auth response
+const response = await api.post(`/auth/login`, credentials);
+logger.debug('✅ AuthContext: Backend password login response received');
 const result = handleAuthResponse(response.data);
 logger.debug('✅ AuthContext: Login complete! User:', result.user?.email);
 return result;
-        } catch (firebaseLoginError) {
-          // If Firebase token login fails, fall back to password-based login
-          logger.warn('⚠️ AuthContext: Firebase token login failed, falling back to password login:', firebaseLoginError.message);
-          // Continue to password-based login below
+      } catch (backendError) {
+        const backendStatus = backendError?.response?.status;
+        // Only attempt Firebase fallback on auth failures.
+        // For server/network errors, surface backend error directly.
+        if (backendStatus !== 401 && backendStatus !== 400) {
+          throw backendError;
         }
+        logger.warn('⚠️ AuthContext: Backend password login failed, trying Firebase fallback');
       }
-      
-      // Fallback to password-based backend login
-const response = await api.post(`/auth/login`, credentials);
-logger.debug('✅ AuthContext: Login response received');
-      
-      // Use helper to handle auth response
-const result = handleAuthResponse(response.data);
-logger.debug('✅ AuthContext: Login complete! User:', result.user?.email);
+
+      // Fallback path: useful when password was changed via Firebase reset flow
+      // and backend hash has not been synchronized yet.
+      const { signInWithEmail } = await import('../lib/firebase');
+      const firebaseResult = await signInWithEmail(credentials.email, credentials.password);
+      const firebaseToken = firebaseResult.idToken;
+
+const firebaseLoginResponse = await api.post(`/auth/firebase-login`, {
+        firebase_token: firebaseToken,
+        email: credentials.email
+      });
+logger.debug('✅ AuthContext: Firebase token login response received');
+const result = handleAuthResponse(firebaseLoginResponse.data);
+logger.debug('✅ AuthContext: Login complete via Firebase fallback! User:', result.user?.email);
 return result;
     } catch (error) {
       logger.error('❌ AuthContext: Login failed:', error);

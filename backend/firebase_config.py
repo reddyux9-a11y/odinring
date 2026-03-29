@@ -14,6 +14,7 @@ import json
 import logging
 import time
 from functools import wraps
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -21,10 +22,10 @@ logger = logging.getLogger(__name__)
 _app = None
 _db = None
 # Last error when get_firestore_client() could not return a client (for API 503 messages)
-_firestore_client_error: str | None = None
+_firestore_client_error: Optional[str] = None
 
 
-def get_firestore_client_error() -> str | None:
+def get_firestore_client_error() -> Optional[str]:
     """Human-readable reason Firestore client is unavailable, or None if not recorded."""
     return _firestore_client_error
 
