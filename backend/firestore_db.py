@@ -106,19 +106,25 @@ class FirestoreDB:
                         return result
                 return None
             
-            # Special case: if querying by 'id', use document() lookup instead of where()
-            # In Firestore, 'id' is the document ID, not a queryable field
-            if 'id' in filt and len(filt) == 1:
-                doc_id = filt['id']
+            # When `id` is in the filter, load by Firestore document ID first, then verify
+            # other predicates in memory. Many documents use the UUID as the document ID but
+            # do not store an `id` field in the payload; a compound where("id"==...) would
+            # miss them while find({"user_id": ...}) still returns them via doc snapshot id.
+            if 'id' in filt:
+                doc_id = str(filt['id'])
                 doc_ref = self.db.collection(coll_name).document(doc_id).get()
-                if doc_ref.exists:
-                    result = firestore_to_dict(doc_ref)
-                    # Cache the result
-                    if self.enable_cache and self.cache and use_cache:
-                        ttl = CACHE_TTL.get(coll_name, CACHE_TTL['default'])
-                        self.cache.set(coll_name, doc_id, result, ttl)
-                    return result
-                return None
+                if not doc_ref.exists:
+                    return None
+                result = firestore_to_dict(doc_ref)
+                for key, expected in filt.items():
+                    if key in ('$or', 'id'):
+                        continue
+                    if result.get(key) != expected:
+                        return None
+                if self.enable_cache and self.cache and use_cache and len(filt) == 1:
+                    ttl = CACHE_TTL.get(coll_name, CACHE_TTL['default'])
+                    self.cache.set(coll_name, doc_id, result, ttl)
+                return result
             
             # For other fields, use where() queries
             query = self.db.collection(coll_name)
