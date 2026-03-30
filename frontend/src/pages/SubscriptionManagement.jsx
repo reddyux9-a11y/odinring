@@ -81,7 +81,8 @@ const SubscriptionManagement = () => {
   };
 
   const handleUpgrade = () => {
-    navigate('/billing/choose-plan');
+    // Keep navigation consistent with the trial badge CTA ("14 days left")
+    navigate('/subscription');
   };
 
   const handleCancel = async () => {
