@@ -3479,7 +3479,7 @@ def _send_resend_otp_email(*, to_email: str, otp: str) -> None:
     if not api_key:
         raise RuntimeError("RESEND_API_KEY not configured")
 
-    from_email = os.getenv("RESEND_FROM_EMAIL") or getattr(settings, "RESEND_FROM_EMAIL", None) or "onboarding@resend.dev"
+    from_email = os.getenv("RESEND_FROM_EMAIL") or getattr(settings, "RESEND_FROM_EMAIL", None) or "noreply@odinring.io"
     subject = "Your OdinRing password reset code"
     html = f"""
     <div style="font-family: ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; line-height:1.5;">
