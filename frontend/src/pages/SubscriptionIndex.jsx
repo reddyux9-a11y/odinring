@@ -216,6 +216,10 @@ const SubscriptionIndex = () => {
             All plans include a 14-day free trial. 
             You can upgrade or change your plan anytime from your dashboard.
           </p>
+          <p className="mt-2">
+            When you continue, you are sent to Stripe Checkout. Paid plans are billed annually
+            (the monthly toggle is an estimate; use Subscribe / billing for the exact yearly total).
+          </p>
         </motion.div>
       </div>
     </div>
