@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button } from "./ui/button";
 import { Card, CardContent } from "./ui/card";
@@ -28,7 +29,8 @@ import {
   LogOut,
   ToggleRight,
   ToggleLeft,
-  X
+  X,
+  LifeBuoy
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Checkbox } from "./ui/checkbox";
@@ -52,6 +54,7 @@ const MobileSettingsPage = ({
   onLogout,
   onProfileUpdate
 }) => {
+  const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
   const { subscription } = useIdentityContext();
   const isDarkMode = theme === 'dark';
@@ -692,6 +695,17 @@ const MobileSettingsPage = ({
               >
                 <Edit className="w-3 h-3" />
               </Button>
+            )}
+
+            {renderSettingItem(
+              LifeBuoy,
+              "Customer Support",
+              "Guides, scripts & contact",
+              null,
+              () => {
+                addHapticFeedback('light');
+                navigate('/support');
+              }
             )}
           </div>
         </div>

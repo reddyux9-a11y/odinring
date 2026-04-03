@@ -34,7 +34,8 @@ import {
   Code,
   Music,
   Gamepad2,
-  ShoppingBag
+  ShoppingBag,
+  LifeBuoy
 } from "lucide-react";
 import { addHapticFeedback, isMobileDevice } from "../utils/mobileUtils";
 import { ThemeToggle } from "./ThemeToggle";
@@ -196,6 +197,14 @@ const PremiumSidebar = ({
       description: "Manage subscription & billing",
       isNavigation: true,
       navigationPath: "/subscription/manage"
+    },
+    {
+      id: "customer-support",
+      label: "Customer Support",
+      icon: LifeBuoy,
+      description: "Guides, scripts & contact",
+      isNavigation: true,
+      navigationPath: "/support"
     },
     // Appearance page hidden (merged with Profile Settings)
   ];

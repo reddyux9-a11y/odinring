@@ -4,11 +4,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { Separator } from '../components/ui/separator';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { 
   ArrowLeft, 
   CreditCard, 
-  Calendar, 
   CheckCircle, 
   Clock, 
   XCircle,
@@ -16,11 +14,6 @@ import {
   Sparkles,
   AlertCircle,
   Loader2,
-  ExternalLink,
-  LifeBuoy,
-  FileText,
-  PlayCircle,
-  MessageCircle
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useIdentityContext } from '../hooks/useIdentityContext';
@@ -184,13 +177,7 @@ const SubscriptionManagement = () => {
           </div>
         </motion.div>
 
-        <Tabs defaultValue="subscription" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-6">
-            <TabsTrigger value="subscription">Subscription</TabsTrigger>
-            <TabsTrigger value="support">Customer Support</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="subscription" className="space-y-6">
+        <div className="w-full space-y-6">
             {/* Current Subscription Card */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -394,87 +381,7 @@ const SubscriptionManagement = () => {
                 </CardContent>
               </Card>
             </motion.div>
-          </TabsContent>
-
-          <TabsContent value="support" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <LifeBuoy className="w-5 h-5" />
-                  Customer Support
-                </CardTitle>
-                <CardDescription>
-                  Get onboarding help, activation guidance, and branding best practices.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Card className="border-dashed">
-                    <CardContent className="pt-6">
-                      <div className="flex items-start gap-3">
-                        <FileText className="w-5 h-5 mt-0.5 text-primary" />
-                        <div className="space-y-2">
-                          <p className="font-semibold">Application Usage Guide</p>
-                          <p className="text-sm text-muted-foreground">
-                            Printable support document covering setup, activation, subscriptions,
-                            and personal branding/business use cases.
-                          </p>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => window.open('/support/application-usage-guide.html', '_blank')}
-                          >
-                            Open Guide
-                            <ExternalLink className="w-4 h-4 ml-2" />
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="border-dashed">
-                    <CardContent className="pt-6">
-                      <div className="flex items-start gap-3">
-                        <PlayCircle className="w-5 h-5 mt-0.5 text-primary" />
-                        <div className="space-y-2">
-                          <p className="font-semibold">Demo Video Script</p>
-                          <p className="text-sm text-muted-foreground">
-                            Ready-to-record storyboard for: How to use, activate subscription,
-                            subscribe, and grow branding/business.
-                          </p>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => window.open('/support/demo-video-script.md', '_blank')}
-                          >
-                            Open Script
-                            <ExternalLink className="w-4 h-4 ml-2" />
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-
-                <Card className="bg-muted/50">
-                  <CardContent className="pt-6">
-                    <div className="flex items-start gap-3">
-                      <MessageCircle className="w-5 h-5 text-muted-foreground mt-0.5" />
-                      <div className="space-y-1 text-sm text-muted-foreground">
-                        <p>
-                          Need direct assistance? Contact support at <strong className="text-foreground">support@odinring.com</strong>
-                        </p>
-                        <p>
-                          Include your account email, issue summary, and screenshot for faster resolution.
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+        </div>
       </div>
     </div>
   );

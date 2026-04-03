@@ -17,6 +17,7 @@ import Checkout from "./pages/Checkout";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentFailed from "./pages/PaymentFailed";
 import SubscriptionManagement from "./pages/SubscriptionManagement";
+import CustomerSupport from "./pages/CustomerSupport";
 import MobileLanding from "./components/MobileLanding";
 import { Toaster } from "./components/ui/sonner";
 import { initializeMobileEnvironment, isMobileDevice } from "./utils/mobileUtils";
@@ -230,6 +231,14 @@ function AppContent() {
             element={
               <ProtectedRoute requiredAuth="user">
                 <SubscriptionManagement />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/support"
+            element={
+              <ProtectedRoute requiredAuth="user">
+                <CustomerSupport />
               </ProtectedRoute>
             }
           />
