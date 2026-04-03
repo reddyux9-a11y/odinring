@@ -9,6 +9,7 @@ from pydantic import BaseModel
 import logging
 from datetime import datetime
 import json
+from urllib.parse import urlparse
 
 import stripe
 
@@ -33,6 +34,45 @@ billing_router = APIRouter(prefix="/billing", tags=["Billing"])
 subscriptions_collection = FirestoreDB('subscriptions')
 businesses_collection = FirestoreDB('businesses')
 organizations_collection = FirestoreDB('organizations')
+
+
+def _checkout_allowed_frontend_origins() -> set[str]:
+    """Origins allowed for Stripe return URLs (aligned with CORS + configured FRONTEND_URL)."""
+    origins: set[str] = set()
+    raw = (settings.CORS_ORIGINS or "").strip()
+    if raw:
+        for part in raw.split(","):
+            o = part.strip().rstrip("/")
+            if o:
+                origins.add(o)
+    fu = (settings.FRONTEND_URL or "").strip().rstrip("/")
+    if fu:
+        origins.add(fu)
+    return origins
+
+
+def _resolve_stripe_frontend_base(request: Request) -> str:
+    """
+    Prefer the request Origin (or Referer host) when allowlisted so Stripe success/cancel
+    URLs match the site the user actually opened — not only FRONTEND_URL (often localhost in .env).
+    """
+    allowed = _checkout_allowed_frontend_origins()
+    origin = (request.headers.get("origin") or "").strip().rstrip("/")
+    if origin and origin in allowed:
+        return origin
+
+    referer = (request.headers.get("referer") or "").strip()
+    if referer:
+        try:
+            parsed = urlparse(referer)
+            if parsed.scheme and parsed.netloc:
+                candidate = f"{parsed.scheme}://{parsed.netloc}".rstrip("/")
+                if candidate in allowed:
+                    return candidate
+        except Exception:
+            logger.debug("Could not parse Referer for Stripe return URL", exc_info=True)
+
+    return (settings.FRONTEND_URL or "http://localhost:3000").rstrip("/")
 
 
 def _get_available_plans() -> dict:
@@ -307,8 +347,9 @@ async def create_checkout_session(
             logger.warning("Failed to update subscription amount/currency", exc_info=True)
 
         # Create Stripe Checkout Session (subscription mode, yearly interval)
-        success_url = f"{settings.FRONTEND_URL}/billing/choose-plan?status=success"
-        cancel_url = f"{settings.FRONTEND_URL}/billing/choose-plan?status=cancelled"
+        frontend_base = _resolve_stripe_frontend_base(request)
+        success_url = f"{frontend_base}/billing/choose-plan?status=success"
+        cancel_url = f"{frontend_base}/billing/choose-plan?status=cancelled"
 
         try:
             checkout_session = stripe.checkout.Session.create(
