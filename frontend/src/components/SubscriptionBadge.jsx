@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { Badge } from './ui/badge';
 import { Skeleton } from './ui/skeleton';
 import { AlertCircle, CheckCircle, Clock, XCircle } from 'lucide-react';
+import { getSubscriptionDaysRemaining } from '../lib/subscriptionDisplay';
 
 const SubscriptionBadge = ({ subscription, loading = false, size = 'default', clickable = false, onClick, title }) => {
   const navigate = useNavigate();
@@ -31,31 +32,13 @@ const SubscriptionBadge = ({ subscription, loading = false, size = 'default', cl
     return planMap[plan.toLowerCase()] || plan.charAt(0).toUpperCase() + plan.slice(1);
   };
 
-  // Compute days remaining from trial_end_date (ISO string) if not provided
-  const getDaysRemaining = (sub) => {
-    if (sub?.days_remaining != null && typeof sub.days_remaining === 'number') {
-      return sub.days_remaining;
-    }
-    const endStr = sub?.trial_end_date;
-    if (!endStr) return null;
-    try {
-      const end = new Date(typeof endStr === 'string' ? endStr.replace('Z', '') : endStr);
-      if (Number.isNaN(end.getTime())) return null;
-      const now = new Date();
-      const diff = Math.ceil((end - now) / (1000 * 60 * 60 * 24));
-      return Math.max(0, diff);
-    } catch {
-      return null;
-    }
-  };
-
   // Get badge label based on status, plan, and trial days remaining
   const getBadgeLabel = (status, plan, sub) => {
     if (status === 'active' && plan) {
       return formatPlanName(plan);
     }
     if (status === 'trial') {
-      const days = getDaysRemaining(sub);
+      const days = getSubscriptionDaysRemaining(sub);
       if (days != null) {
         return days === 0 ? 'Trial ends today' : `${days} day${days !== 1 ? 's' : ''} left`;
       }

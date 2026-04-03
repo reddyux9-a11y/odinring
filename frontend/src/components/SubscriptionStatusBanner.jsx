@@ -6,6 +6,7 @@ import { X, AlertCircle, Clock, CheckCircle } from 'lucide-react';
 import { useIdentityContext } from '../hooks/useIdentityContext';
 import api from '../lib/api';
 import { toast } from 'sonner';
+import { getSubscriptionDaysRemaining } from '../lib/subscriptionDisplay';
 
 const SubscriptionStatusBanner = () => {
   const navigate = useNavigate();
@@ -53,26 +54,11 @@ const SubscriptionStatusBanner = () => {
   };
 
   const getDaysRemaining = () => {
-    const sub = subscriptionDetails?.subscription;
-    if (!sub) return null;
-
-    // Prefer backend-computed days_remaining for consistency across UI
-    if (sub.days_remaining != null && typeof sub.days_remaining === 'number') {
-      return sub.days_remaining;
-    }
-
-    const endStr = sub.trial_end_date;
-    if (!endStr) return null;
-
-    try {
-      const end = new Date(typeof endStr === 'string' ? endStr.replace('Z', '') : endStr);
-      if (Number.isNaN(end.getTime())) return null;
-      const now = new Date();
-      const diff = Math.ceil((end - now) / (1000 * 60 * 60 * 24));
-      return Math.max(0, diff);
-    } catch {
-      return null;
-    }
+    const merged = {
+      ...(subscription || {}),
+      ...(subscriptionDetails?.subscription || {}),
+    };
+    return getSubscriptionDaysRemaining(merged);
   };
 
   if (loading || dismissed || !subscription) {

@@ -20,6 +20,7 @@ import { useIdentityContext } from '../hooks/useIdentityContext';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import api from '../lib/api';
+import { getSubscriptionDaysRemaining } from '../lib/subscriptionDisplay';
 import SubscriptionBadge from '../components/SubscriptionBadge';
 
 const SubscriptionManagement = () => {
@@ -64,15 +65,6 @@ const SubscriptionManagement = () => {
     });
   };
 
-  const getDaysRemaining = (endDate) => {
-    if (!endDate) return null;
-    const end = new Date(endDate);
-    const now = new Date();
-    const diffTime = end - now;
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays > 0 ? diffDays : 0;
-  };
-
   const handleUpgrade = () => {
     // Keep navigation consistent with the trial badge CTA ("14 days left")
     navigate('/subscription');
@@ -98,11 +90,13 @@ const SubscriptionManagement = () => {
     }
   };
 
-  const subscriptionStatus = subscription?.status || identityContext?.subscription?.status;
-  const subscriptionPlan = subscription?.plan || identityContext?.subscription?.plan;
-  const daysRemaining = subscription?.days_remaining || 
-    (subscription?.trial_end_date ? getDaysRemaining(subscription.trial_end_date) : null) ||
-    (subscription?.current_period_end ? getDaysRemaining(subscription.current_period_end) : null);
+  const mergedSubscription = {
+    ...(identityContext?.subscription || {}),
+    ...(subscription || {}),
+  };
+  const subscriptionStatus = mergedSubscription?.status;
+  const subscriptionPlan = mergedSubscription?.plan;
+  const daysRemaining = getSubscriptionDaysRemaining(mergedSubscription);
 
   const getStatusIcon = () => {
     switch (subscriptionStatus) {
@@ -169,10 +163,7 @@ const SubscriptionManagement = () => {
               </p>
             </div>
             {subscriptionStatus && (
-              <SubscriptionBadge 
-                subscription={identityContext?.subscription || subscription} 
-                size="large"
-              />
+              <SubscriptionBadge subscription={mergedSubscription} size="large" />
             )}
           </div>
         </motion.div>
@@ -223,11 +214,11 @@ const SubscriptionManagement = () => {
                       </div>
                     )}
 
-                    {subscriptionStatus === 'trial' && subscription?.trial_end_date && (
+                    {subscriptionStatus === 'trial' && mergedSubscription?.trial_end_date && (
                       <>
                         <div className="space-y-1">
                           <p className="text-sm text-muted-foreground">Trial Ends</p>
-                          <p className="font-semibold">{formatDate(subscription.trial_end_date)}</p>
+                          <p className="font-semibold">{formatDate(mergedSubscription.trial_end_date)}</p>
                         </div>
                         {daysRemaining !== null && (
                           <div className="space-y-1">

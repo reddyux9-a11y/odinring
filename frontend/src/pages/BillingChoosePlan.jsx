@@ -8,6 +8,7 @@ import { Check, X, ArrowLeft, Loader2, AlertCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useIdentityContext } from '../hooks/useIdentityContext';
 import api from '../lib/api';
+import { getSubscriptionDaysRemaining } from '../lib/subscriptionDisplay';
 import { toast } from 'sonner';
 
 const BillingChoosePlan = () => {
@@ -97,14 +98,6 @@ const BillingChoosePlan = () => {
     }
   };
 
-  const getDaysRemaining = () => {
-    if (!subscription?.subscription?.trial_end_date) return null;
-    const endDate = new Date(subscription.subscription.trial_end_date);
-    const now = new Date();
-    const diff = Math.ceil((endDate - now) / (1000 * 60 * 60 * 24));
-    return diff > 0 ? diff : 0;
-  };
-
   const formatPrice = (price) => {
     return new Intl.NumberFormat('en-EU', {
       style: 'currency',
@@ -123,7 +116,7 @@ const BillingChoosePlan = () => {
   }
 
   const subscriptionStatus = subscription?.subscription?.status;
-  const daysRemaining = getDaysRemaining();
+  const daysRemaining = getSubscriptionDaysRemaining(subscription?.subscription);
 
   return (
     <div className="min-h-screen bg-background">
