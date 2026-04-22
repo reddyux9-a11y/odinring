@@ -1,6 +1,7 @@
 from fastapi import FastAPI, APIRouter, HTTPException, Depends, Request, File, UploadFile, Body
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.responses import Response, RedirectResponse, JSONResponse
+from fastapi.encoders import jsonable_encoder
 from fastapi.openapi.utils import get_openapi
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
@@ -1432,7 +1433,7 @@ async def admin_login(request: Request, login_data: AdminLogin):
             "token": token,
             "admin": admin.model_dump()
         }
-        response = JSONResponse(content=response_data)
+        response = JSONResponse(content=jsonable_encoder(response_data))
         _set_admin_cookie(response, token)
         return response
         
@@ -2838,7 +2839,7 @@ async def register(request: Request, user_data: UserCreate):
             # Legacy support
             "token": access_token
         }
-        response = JSONResponse(content=response_data)
+        response = JSONResponse(content=jsonable_encoder(response_data))
         _set_auth_cookies(response, access_token, refresh_token)
         return response
         
@@ -2970,7 +2971,7 @@ async def login(request: Request, login_data: UserLogin):
             # Legacy support
             "token": access_token
         }
-        response = JSONResponse(content=response_data)
+        response = JSONResponse(content=jsonable_encoder(response_data))
         _set_auth_cookies(response, access_token, refresh_token)
         return response
         
@@ -3194,7 +3195,7 @@ async def google_signin(request: Request, google_data: GoogleSignInRequest):
             # Legacy support
             "token": access_token
         }
-        response = JSONResponse(content=response_data)
+        response = JSONResponse(content=jsonable_encoder(response_data))
         _set_auth_cookies(response, access_token, refresh_token)
         return response
         
@@ -3332,7 +3333,7 @@ async def firebase_login(request: Request, login_data: FirebaseLoginRequest):
             # Legacy support
             "token": access_token
         }
-        response = JSONResponse(content=response_data)
+        response = JSONResponse(content=jsonable_encoder(response_data))
         _set_auth_cookies(response, access_token, refresh_token)
         return response
         
@@ -3393,18 +3394,18 @@ async def logout(request: Request, current_user: User = Depends(get_current_user
             user_agent=user_agent
         )
         
-        response = JSONResponse(content={
+        response = JSONResponse(content=jsonable_encoder({
             "message": "Logged out successfully"
-        })
+        }))
         _clear_auth_cookies(response)
         return response
         
     except Exception as e:
         logger.error(f"Logout error: {e}", exc_info=True)
         # Don't fail logout even if there are errors
-        response = JSONResponse(content={
+        response = JSONResponse(content=jsonable_encoder({
             "message": "Logged out successfully"
-        })
+        }))
         _clear_auth_cookies(response)
         return response
 
@@ -3508,7 +3509,7 @@ async def refresh_token(request: Request, refresh_data: Optional[RefreshTokenReq
             # Legacy support
             "token": new_access_token
         }
-        response = JSONResponse(content=response_data)
+        response = JSONResponse(content=jsonable_encoder(response_data))
         _set_auth_cookies(response, new_access_token, new_refresh_token)
         return response
         
