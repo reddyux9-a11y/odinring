@@ -1,5 +1,4 @@
 import axios from 'axios';
-import { isTokenExpired, shouldRefreshToken } from './tokenUtils';
 import { decrementInFlight, incrementInFlight } from './apiLoading';
 
 const baseURL = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -80,45 +79,12 @@ api.interceptors.request.use(
       // non-blocking
     }
 
-    // Skip token check for auth endpoints
+    // Skip refresh pre-check for auth endpoints
     if (config.url?.includes('/auth/')) {
       return config;
     }
-    
-    const token = localStorage.getItem('token');
-    // Check if token needs refresh (proactive refresh)
-    if (token && shouldRefreshToken(token) && !isRefreshing) {
-      try {
-        const newToken = await refreshAccessToken();
-        config.headers.Authorization = `Bearer ${newToken}`;
-        return config;
-      } catch (error) {
-        // Continue with cookie auth; server may still accept request.
-      }
-    }
-    
-    if (token) {
-      config.headers = config.headers || {};
-      config.headers.Authorization = `Bearer ${token}`;
-    } else {
-      // Only warn for protected routes, not for public routes like password reset
-      const isPublicRoute = config.url?.includes('/auth/forgot-password') || 
-                           config.url?.includes('/auth/reset-password') ||
-                           config.url?.includes('/auth/register') ||
-                           config.url?.includes('/auth/login');
-      
-      if (!isPublicRoute) {
-        // Suppress warning for password reset related routes
-        const isPasswordResetRoute = window.location.pathname.includes('/forgot-password') ||
-                                    window.location.pathname.includes('/reset-password') ||
-                                    window.location.pathname.includes('/auth');
-        
-        if (!isPasswordResetRoute) {
-          // Request will be sent without Authorization header
-        }
-      }
-    }
-    
+
+    // Cookie-based auth is the source of truth. No localStorage token dependency.
     return config;
   },
   (error) => {
@@ -173,8 +139,11 @@ api.interceptors.response.use(
         // Notify all queued requests
         onTokenRefreshed(newToken);
         
-        // Retry original request with new token
-        originalRequest.headers.Authorization = `Bearer ${newToken}`;
+        // Retry original request; auth cookies are already refreshed.
+        if (newToken) {
+          originalRequest.headers = originalRequest.headers || {};
+          originalRequest.headers.Authorization = `Bearer ${newToken}`;
+        }
         return api(originalRequest);
       } catch (refreshError) {
         isRefreshing = false;
