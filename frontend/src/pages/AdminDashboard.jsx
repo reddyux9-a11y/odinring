@@ -66,8 +66,6 @@ const AdminDashboard = () => {
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('admin_token');
-      const headers = { Authorization: `Bearer ${token}` };
 
       // Load all data in parallel instead of sequentially
       const [statsResponse, ringsResponse, usersResponse] = await Promise.allSettled([
@@ -110,7 +108,6 @@ const AdminDashboard = () => {
 
   const loadRingAnalytics = async (ringId) => {
     try {
-      const token = localStorage.getItem('admin_token');
       const response = await api.get(`/admin/rings/${ringId}/analytics`);
       setRingAnalytics(response.data);
       setSelectedRing(ringId);
@@ -136,9 +133,6 @@ const AdminDashboard = () => {
 
   const handleUserAction = async (action, userId, additionalData = {}) => {
     try {
-      const token = localStorage.getItem('admin_token');
-      const headers = { Authorization: `Bearer ${token}` };
-      
       let endpoint, method, data;
       
       switch (action) {
@@ -179,9 +173,6 @@ const AdminDashboard = () => {
 
   const exportData = async (type) => {
     try {
-      const token = localStorage.getItem('admin_token');
-      const headers = { Authorization: `Bearer ${token}` };
-      
       const response = await api.get(`/admin/export/${type}`);
       
       // Convert to CSV and download

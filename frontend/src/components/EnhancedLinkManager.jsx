@@ -107,9 +107,6 @@ const EnhancedLinkManager = ({ links, setLinks, isMobile = false }) => {
     setIsLoading(true);
 
     try {
-      const token = localStorage.getItem('token');
-      const headers = { Authorization: `Bearer ${token}` };
-
       // Auto-detect category if not manually set
       let finalData = { ...formData };
       if (!editingLink && formData.category === 'general') {
@@ -117,13 +114,13 @@ const EnhancedLinkManager = ({ links, setLinks, isMobile = false }) => {
       }
 
       if (editingLink) {
-        const response = await axios.put(`${API}/links/${editingLink.id}`, finalData, { headers });
+        const response = await api.put(`/links/${editingLink.id}`, finalData);
         setLinks(links.map(link => 
           link.id === editingLink.id ? response.data : link
         ));
         toast.success("Link updated successfully! ✨");
       } else {
-        const response = await axios.post(`${API}/links`, finalData, { headers });
+        const response = await api.post(`/links`, finalData);
         setLinks([...links, response.data]);
         toast.success("Premium link created! 🚀");
       }
@@ -178,10 +175,7 @@ const EnhancedLinkManager = ({ links, setLinks, isMobile = false }) => {
 
   const handleDelete = async (linkId) => {
     try {
-      const token = localStorage.getItem('token');
-      await axios.delete(`${API}/links/${linkId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await api.delete(`/links/${linkId}`);
       setLinks(links.filter(link => link.id !== linkId));
       toast.success("Link deleted successfully");
     } catch (error) {
@@ -192,13 +186,10 @@ const EnhancedLinkManager = ({ links, setLinks, isMobile = false }) => {
 
   const toggleActive = async (linkId) => {
     try {
-      const token = localStorage.getItem('token');
       const link = links.find(l => l.id === linkId);
       const newActiveState = !link.active;
       
-      await axios.put(`${API}/links/${linkId}`, { active: newActiveState }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await api.put(`/links/${linkId}`, { active: newActiveState });
       
       setLinks(links.map(link =>
         link.id === linkId ? { ...link, active: newActiveState } : link
@@ -246,10 +237,7 @@ const EnhancedLinkManager = ({ links, setLinks, isMobile = false }) => {
 
   const handleAdvancedUpdate = async (customization) => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.put(`${API}/links/${editingLink.id}`, customization, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await api.put(`/links/${editingLink.id}`, customization);
       
       setLinks(links.map(link => 
         link.id === editingLink.id ? response.data : link
@@ -511,16 +499,6 @@ const EnhancedLinkManager = ({ links, setLinks, isMobile = false }) => {
             </div>
           </div>
         </div>
-      </FadeInUp>
-                onClick={() => setViewMode("compact")}
-                className="rounded-l-none"
-              >
-                Compact
-              </Button>
-            </div>
-          </div>
-        </div>
-
         {/* Enhanced Category Filter */}
         <StaggerContainer className="flex flex-wrap gap-2">
           {linkCategories.map((category, index) => (
@@ -898,7 +876,7 @@ const EnhancedLinkManager = ({ links, setLinks, isMobile = false }) => {
           )}
         </AnimatePresence>
       </FadeInUp>
-    </>
+    </div>
   );
 };
 

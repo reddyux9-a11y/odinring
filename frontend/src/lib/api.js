@@ -4,7 +4,10 @@ import { decrementInFlight, incrementInFlight } from './apiLoading';
 
 const baseURL = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
-export const api = axios.create({ baseURL });
+export const api = axios.create({
+  baseURL,
+  withCredentials: true,
+});
 
 // Token refresh state management
 let isRefreshing = false;
@@ -32,23 +35,13 @@ const onTokenRefreshed = (token) => {
  * @returns {Promise<string>} New access token
  */
 export const refreshAccessToken = async () => {
-  const refreshToken = localStorage.getItem('refresh_token');
-  
-  if (!refreshToken) {
-    // Silent failure - user just isn't logged in or session expired
-    // Clear any stale tokens
-    localStorage.removeItem('token');
-    localStorage.removeItem('user_data');
-    localStorage.removeItem('user_id');
-    
-    throw new Error('No refresh token available');
-  }
-  
   try {
     // Create a new axios instance to avoid interceptors
-    const response = await axios.post(`${baseURL}/auth/refresh`, {
-      refresh_token: refreshToken
-    });
+    const response = await axios.post(
+      `${baseURL}/auth/refresh`,
+      {},
+      { withCredentials: true }
+    );
     
     const { access_token, refresh_token: new_refresh_token } = response.data;
     
@@ -56,28 +49,11 @@ export const refreshAccessToken = async () => {
       throw new Error('No access token in refresh response');
     }
     
-    // Store new tokens
-    localStorage.setItem('token', access_token);
-    
-    if (new_refresh_token) {
-      localStorage.setItem('refresh_token', new_refresh_token);
-    }
-    
+    // Tokens are stored in HTTP-only cookies by backend.
     return access_token;
   } catch (error) {
     const status = error.response?.status;
-    const isNetworkError = !error.response;
-    
-    // Only clear tokens if refresh token is invalid (401/403)
-    // Don't clear on network errors - might be transient
-    if (status === 401 || status === 403) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('refresh_token');
-      localStorage.removeItem('user_data');
-      localStorage.removeItem('user_id');
-    } else {
-      // Keep tokens - might be transient error
-    }
+    // Backend clears invalid/expired token cookies.
     
     // Only redirect if we're not already on auth pages
     // NOTE: Do NOT use window.location.href as it causes full page reload
@@ -112,19 +88,12 @@ api.interceptors.request.use(
     const token = localStorage.getItem('token');
     // Check if token needs refresh (proactive refresh)
     if (token && shouldRefreshToken(token) && !isRefreshing) {
-      const refreshToken = localStorage.getItem('refresh_token');
-      
-      // Only attempt refresh if we have a refresh token
-      if (refreshToken) {
-        try {
-          const newToken = await refreshAccessToken();
-          config.headers.Authorization = `Bearer ${newToken}`;
-          return config;
-        } catch (error) {
-          // Continue with existing token
-        }
-      } else {
-        // Continue with existing token, will fail if truly expired
+      try {
+        const newToken = await refreshAccessToken();
+        config.headers.Authorization = `Bearer ${newToken}`;
+        return config;
+      } catch (error) {
+        // Continue with cookie auth; server may still accept request.
       }
     }
     
@@ -183,14 +152,6 @@ api.interceptors.response.use(
     
     // Check if error is 401 and we haven't already tried to refresh
     if (error.response?.status === 401 && !originalRequest._retry) {
-      // Check if we have a refresh token before attempting refresh
-      const refreshToken = localStorage.getItem('refresh_token');
-      
-      if (!refreshToken) {
-        isRefreshing = false;
-        return Promise.reject(error);
-      }
-      
       // Attempt token refresh
       // If already refreshing, queue this request
       if (isRefreshing) {
@@ -218,20 +179,7 @@ api.interceptors.response.use(
       } catch (refreshError) {
         isRefreshing = false;
         
-        const status = refreshError.response?.status;
-        const isNetworkError = !refreshError.response;
-        
-        // Only clear tokens if refresh token is invalid (401/403)
-        // Don't clear on network errors - might be transient
-        if (status === 401 || status === 403) {
-          // Clear auth state - ProtectedRoute will handle redirect via React Router
-          localStorage.removeItem('token');
-          localStorage.removeItem('refresh_token');
-          localStorage.removeItem('user_data');
-          localStorage.removeItem('user_id');
-        } else {
-          // Keep tokens - might be transient network error, can retry later
-        }
+        // Backend controls token cookie lifecycle.
         return Promise.reject(refreshError);
       }
     }

@@ -430,7 +430,51 @@ app.openapi = custom_openapi
 api_router = APIRouter(prefix="/api")
 
 # Security
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)
+
+_COOKIE_SECURE = settings.ENV == "production"
+_COOKIE_SAMESITE = "none" if _COOKIE_SECURE else "lax"
+
+
+def _set_auth_cookies(response: Response, access_token: str, refresh_token: Optional[str] = None) -> None:
+    """Store auth tokens in HTTP-only cookies for browser clients."""
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=_COOKIE_SECURE,
+        samesite=_COOKIE_SAMESITE,
+        max_age=settings.ACCESS_TOKEN_EXPIRY_MINUTES * 60,
+        path="/",
+    )
+    if refresh_token:
+        response.set_cookie(
+            key="refresh_token",
+            value=refresh_token,
+            httponly=True,
+            secure=_COOKIE_SECURE,
+            samesite=_COOKIE_SAMESITE,
+            max_age=settings.REFRESH_TOKEN_EXPIRY_DAYS * 24 * 60 * 60,
+            path="/",
+        )
+
+
+def _set_admin_cookie(response: Response, admin_token: str) -> None:
+    response.set_cookie(
+        key="admin_access_token",
+        value=admin_token,
+        httponly=True,
+        secure=_COOKIE_SECURE,
+        samesite=_COOKIE_SAMESITE,
+        max_age=JWT_EXPIRATION * 60 * 60,
+        path="/",
+    )
+
+
+def _clear_auth_cookies(response: Response) -> None:
+    response.delete_cookie("access_token", path="/")
+    response.delete_cookie("refresh_token", path="/")
+    response.delete_cookie("admin_access_token", path="/")
 
 # ==================== MODELS ====================
 
@@ -1216,7 +1260,10 @@ def verify_jwt_token(token: str) -> str:
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Invalid token")
 
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> User:
+async def get_current_user(
+    request: Request,
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)
+) -> User:
     """
     Get current authenticated user with session validation
     
@@ -1230,12 +1277,16 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         HTTPException: If authentication or session validation fails
     """
     try:
+        token = credentials.credentials if credentials else request.cookies.get("access_token")
+        if not token:
+            raise HTTPException(status_code=401, detail="Not authenticated")
+
         # Verify JWT token
-        user_id = verify_jwt_token(credentials.credentials)
+        user_id = verify_jwt_token(token)
         
         # Decode token to get session_id if present
         try:
-            payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+            payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
             session_id = payload.get("session_id")
         except (InvalidTokenError, DecodeError, ExpiredSignatureError, Exception) as e:
             logger.debug(f"JWT decode failed in optional auth: {str(e)}")
@@ -1267,9 +1318,15 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         else:
             raise handle_authentication_error(e, "get_current_user", "Authentication failed")
 
-async def get_current_admin(credentials: HTTPAuthorizationCredentials = Depends(security)) -> Admin:
+async def get_current_admin(
+    request: Request,
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)
+) -> Admin:
     try:
-        payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        token = credentials.credentials if credentials else request.cookies.get("admin_access_token")
+        if not token:
+            raise HTTPException(status_code=401, detail="Admin authentication required")
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
         admin_id = payload.get("admin_id")
         if not admin_id:
             raise HTTPException(status_code=401, detail="Invalid admin token")
@@ -1372,10 +1429,13 @@ async def admin_login(request: Request, login_data: AdminLogin):
         )
         
         admin = Admin(**admin_doc)
-        return {
+        response_data = {
             "token": token,
             "admin": admin.model_dump()
         }
+        response = JSONResponse(content=response_data)
+        _set_admin_cookie(response, token)
+        return response
         
     except HTTPException:
         raise
@@ -2770,7 +2830,7 @@ async def register(request: Request, user_data: UserCreate):
             status="success"
         )
 
-        return {
+        response_data = {
             "access_token": access_token,
             "refresh_token": refresh_token,
             "token_type": "bearer",
@@ -2779,6 +2839,9 @@ async def register(request: Request, user_data: UserCreate):
             # Legacy support
             "token": access_token
         }
+        response = JSONResponse(content=response_data)
+        _set_auth_cookies(response, access_token, refresh_token)
+        return response
         
     except HTTPException:
         # Re-raise HTTP exceptions as-is
@@ -2899,7 +2962,7 @@ async def login(request: Request, login_data: UserLogin):
             status="success"
         )
 
-        return {
+        response_data = {
             "access_token": access_token,
             "refresh_token": refresh_token,
             "token_type": "bearer",
@@ -2908,6 +2971,9 @@ async def login(request: Request, login_data: UserLogin):
             # Legacy support
             "token": access_token
         }
+        response = JSONResponse(content=response_data)
+        _set_auth_cookies(response, access_token, refresh_token)
+        return response
         
     except HTTPException:
         # Re-raise HTTP exceptions (like 401) as-is
@@ -3120,7 +3186,7 @@ async def google_signin(request: Request, google_data: GoogleSignInRequest):
             status="success"
         )
         
-        return {
+        response_data = {
             "access_token": access_token,
             "refresh_token": refresh_token,
             "token_type": "bearer",
@@ -3129,6 +3195,9 @@ async def google_signin(request: Request, google_data: GoogleSignInRequest):
             # Legacy support
             "token": access_token
         }
+        response = JSONResponse(content=response_data)
+        _set_auth_cookies(response, access_token, refresh_token)
+        return response
         
     except HTTPException:
         raise
@@ -3255,7 +3324,7 @@ async def firebase_login(request: Request, login_data: FirebaseLoginRequest):
             status="success"
         )
         
-        return {
+        response_data = {
             "access_token": access_token,
             "refresh_token": refresh_token,
             "token_type": "bearer",
@@ -3264,6 +3333,9 @@ async def firebase_login(request: Request, login_data: FirebaseLoginRequest):
             # Legacy support
             "token": access_token
         }
+        response = JSONResponse(content=response_data)
+        _set_auth_cookies(response, access_token, refresh_token)
+        return response
         
     except HTTPException:
         raise
@@ -3298,8 +3370,9 @@ async def logout(request: Request, current_user: User = Depends(get_current_user
     try:
         # Get session_id from token if present
         auth_header = request.headers.get("Authorization", "")
-        if auth_header.startswith("Bearer "):
-            token = auth_header[7:]
+        cookie_token = request.cookies.get("access_token")
+        token = auth_header[7:] if auth_header.startswith("Bearer ") else cookie_token
+        if token:
             try:
                 payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
                 session_id = payload.get("session_id")
@@ -3321,16 +3394,20 @@ async def logout(request: Request, current_user: User = Depends(get_current_user
             user_agent=user_agent
         )
         
-        return {
+        response = JSONResponse(content={
             "message": "Logged out successfully"
-        }
+        })
+        _clear_auth_cookies(response)
+        return response
         
     except Exception as e:
         logger.error(f"Logout error: {e}", exc_info=True)
         # Don't fail logout even if there are errors
-        return {
+        response = JSONResponse(content={
             "message": "Logged out successfully"
-        }
+        })
+        _clear_auth_cookies(response)
+        return response
 
 
 # Refresh token model
@@ -3362,7 +3439,7 @@ class RefreshTokenRequest(BaseModel):
     tags=["Authentication"]
 )
 @limiter.limit("20/minute")
-async def refresh_token(request: Request, refresh_data: RefreshTokenRequest):
+async def refresh_token(request: Request, refresh_data: Optional[RefreshTokenRequest] = None):
     """
     Refresh access token using refresh token
     
@@ -3377,8 +3454,14 @@ async def refresh_token(request: Request, refresh_data: RefreshTokenRequest):
     
     try:
         # Rotate refresh token (this validates the old token)
+        cookie_refresh_token = request.cookies.get("refresh_token")
+        provided_refresh_token = refresh_data.refresh_token if refresh_data else None
+        refresh_token_value = provided_refresh_token or cookie_refresh_token
+        if not refresh_token_value:
+            raise HTTPException(status_code=401, detail="Missing refresh token")
+
         rotation_result = await RefreshTokenManager.rotate_refresh_token(
-            old_token=refresh_data.refresh_token,
+            old_token=refresh_token_value,
             ip_address=ip_address,
             user_agent=user_agent
         )
@@ -3418,7 +3501,7 @@ async def refresh_token(request: Request, refresh_data: RefreshTokenRequest):
         
         logger.info(f"Token refreshed for user: {user_id}")
         
-        return {
+        response_data = {
             "access_token": new_access_token,
             "refresh_token": new_refresh_token,
             "token_type": "bearer",
@@ -3426,6 +3509,9 @@ async def refresh_token(request: Request, refresh_data: RefreshTokenRequest):
             # Legacy support
             "token": new_access_token
         }
+        response = JSONResponse(content=response_data)
+        _set_auth_cookies(response, new_access_token, new_refresh_token)
+        return response
         
     except HTTPException:
         raise
@@ -3512,6 +3598,7 @@ def _send_resend_otp_email(*, to_email: str, otp: str) -> None:
         raise RuntimeError(f"Resend API error: {resp.status_code} {resp.text}")
 
 @api_router.post("/auth/forgot-password")
+@limiter.limit("5/minute")
 async def forgot_password(request: ForgotPasswordRequest):
     """Request password reset - sends an email OTP (if account exists)."""
     try:
@@ -3558,6 +3645,7 @@ async def forgot_password(request: ForgotPasswordRequest):
         raise HTTPException(status_code=500, detail="Error processing password reset request")
 
 @api_router.post("/auth/verify-reset-otp")
+@limiter.limit("10/minute")
 async def verify_reset_otp(request: VerifyResetOtpRequest):
     """Verify OTP and mint a short-lived reset token."""
     try:
@@ -3616,6 +3704,7 @@ async def verify_reset_otp(request: VerifyResetOtpRequest):
         raise HTTPException(status_code=500, detail="Error verifying OTP")
 
 @api_router.post("/auth/reset-password")
+@limiter.limit("5/minute")
 async def reset_password(request: ResetPasswordRequest):
     """Reset password using short-lived reset token (minted after OTP verify)."""
     try:
@@ -6371,9 +6460,24 @@ async def security_headers_middleware(request: Request, call_next):
     if settings.ENV == 'production' or request.url.scheme == 'https':
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains; preload"
     
-    # SECURITY: Content-Security-Policy (adjust based on your needs)
-    # Note: This is a restrictive policy - adjust if you need external resources
-    csp_policy = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'"
+    # SECURITY: Content-Security-Policy with explicit production API/connect origins.
+    csp_connect_sources = {"'self'"}
+    frontend_origin = os.environ.get("FRONTEND_URL")
+    backend_origin = os.environ.get("BACKEND_URL")
+    if frontend_origin:
+        csp_connect_sources.add(frontend_origin.rstrip("/"))
+    if backend_origin:
+        csp_connect_sources.add(backend_origin.rstrip("/"))
+    csp_connect_sources.update({"https://api.stripe.com", "https://*.googleapis.com"})
+    connect_src = " ".join(sorted(csp_connect_sources))
+    csp_policy = (
+        "default-src 'self'; "
+        "script-src 'self'; "
+        "style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data: https:; "
+        "font-src 'self' data:; "
+        f"connect-src {connect_src}"
+    )
     response.headers["Content-Security-Policy"] = csp_policy
     
     return response

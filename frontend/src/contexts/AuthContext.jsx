@@ -33,7 +33,7 @@ export const AuthProvider = ({ children }) => {
       } : null,
       loading,
       authChecked,
-      hasToken: !!localStorage.getItem('token')
+      hasToken: false
     });
     
     // Enhanced user logging for debugging
@@ -63,49 +63,9 @@ logger.debug('📦 AuthContext: Processing auth response...');
 throw new Error('Backend did not return an access token');
     }
     
-    logger.debug('💾 AuthContext: Storing tokens...');
-    logger.debug('🔑 AuthContext: Access token:', accessToken.substring(0, 20) + '...');
-    if (refreshToken) {
-      logger.debug('🔑 AuthContext: Refresh token:', refreshToken.substring(0, 20) + '...');
-    } else {
-      logger.warn('⚠️  AuthContext: No refresh token in response (legacy format)');
-    }
-// Clear existing tokens first
-    localStorage.removeItem('token');
-    localStorage.removeItem('refresh_token');
-    logger.debug('🗑️ AuthContext: Cleared existing tokens');
-// Store new tokens
-    localStorage.setItem('token', accessToken);
-    if (refreshToken) {
-      localStorage.setItem('refresh_token', refreshToken);
-    }
-    logger.debug('💾 AuthContext: Tokens stored');
+    logger.debug('🍪 AuthContext: Backend auth cookies set');
     
-    // Verify tokens were stored
-    const storedToken = localStorage.getItem('token');
-    const storedRefreshToken = localStorage.getItem('refresh_token');
-if (storedToken) {
-      logger.debug('✅ AuthContext: Access token stored successfully!');
-    } else {
-      logger.error('❌ AuthContext: Access token NOT stored!');
-throw new Error('Failed to store access token in localStorage');
-    }
-    
-    if (refreshToken && storedRefreshToken) {
-      logger.debug('✅ AuthContext: Refresh token stored successfully!');
-    }
-    
-    // Store user data in localStorage for instant restoration
     if (userData) {
-      try {
-localStorage.setItem('user_data', JSON.stringify(userData));
-        localStorage.setItem('user_id', userData.id);
-        logger.debug('💾 AuthContext: User data cached in localStorage');
-        logger.debug('💾 AuthContext: User ID:', userData.id);
-      } catch (e) {
-        logger.warn('⚠️ AuthContext: Failed to cache user data:', e);
-}
-      
       setUser(userData);
       logger.debug('✅ AuthContext: User state set:', userData);
 }
@@ -135,11 +95,6 @@ return { token: accessToken, refresh_token: refreshToken, user: userData };
     }
 
     // Clear all auth-related data including refresh token
-    localStorage.removeItem('token');
-    localStorage.removeItem('refresh_token');
-    localStorage.removeItem('user_data');
-    localStorage.removeItem('user_id');
-    localStorage.removeItem('admin_token');
     localStorage.removeItem('google_access_token');
 
     setUser(null);
@@ -147,7 +102,6 @@ return { token: accessToken, refresh_token: refreshToken, user: userData };
   };
 
   const adminLogout = () => {
-    localStorage.removeItem('admin_token');
     setAdmin(null);
   };
 
@@ -230,7 +184,7 @@ logger.debug('🔍 AuthContext: checkAuthStatus() called');
     logger.debug('🔍 AuthContext: Current user state before check:', user ? user.email : 'null');
     
     // If user is already set, don't clear it during check
-    if (user && localStorage.getItem('token')) {
+    if (user) {
       logger.debug('✅ AuthContext: User already authenticated, skipping re-check');
       setLoading(false);
       setAuthChecked(true);
@@ -239,39 +193,11 @@ return;
     
     try {
       // Check user authentication
-      const token = localStorage.getItem('token');
-      logger.debug('🔍 AuthContext: Token in localStorage:', token ? `EXISTS (${token.substring(0, 20)}...)` : 'NULL');
-      
-      if (token) {
-        // Instantly restore user from cache for faster UX
-        const cachedUserData = localStorage.getItem('user_data');
-        const cachedUserId = localStorage.getItem('user_id');
-        
-        if (cachedUserData && cachedUserId) {
-          try {
-            const userData = JSON.parse(cachedUserData);
-            logger.debug('⚡ AuthContext: Restoring user from cache:', userData.email);
-            logger.debug('⚡ AuthContext: User ID:', cachedUserId);
-setUser(userData);  // Instant restoration
-            setLoading(false);   // Remove loading state immediately
-            logger.debug('✅ AuthContext: User restored from cache');
-          } catch (e) {
-            logger.warn('⚠️ AuthContext: Failed to parse cached user data:', e);
-          }
-        }
-        
-        // Then fetch fresh data from backend (background refresh)
-        logger.debug('🔍 AuthContext: Fetching fresh user data from backend...');
-await fetchUserData(token);
-} else {
-        logger.debug('ℹ️ AuthContext: No token found, user not logged in');
-      }
+      logger.debug('🔍 AuthContext: Checking cookie-based session via /me...');
+      await fetchUserData();
 
       // Check admin authentication
-      const adminToken = localStorage.getItem('admin_token');
-      if (adminToken) {
-        await fetchAdminData(adminToken);
-      }
+      // Admin session is checked lazily when admin endpoints are accessed.
     } catch (error) {
       logger.error('❌ AuthContext: Auth check failed:', error);
 const status = error.response?.status;
@@ -281,8 +207,8 @@ const status = error.response?.status;
       // Don't clear on network errors, timeouts, or server errors (might be transient)
       if (status === 401 || status === 403) {
         logger.debug('🗑️ AuthContext: Clearing tokens due to auth failure (401/403)');
-        localStorage.removeItem('token');
-        localStorage.removeItem('admin_token');
+        setUser(null);
+        setAdmin(null);
       } else {
         logger.warn('⚠️ AuthContext: Auth check failed but keeping token (might be network/server issue)');
         logger.warn('⚠️ AuthContext: Error type:', isNetworkError ? 'Network Error' : `HTTP ${status}`);
@@ -295,24 +221,13 @@ const status = error.response?.status;
 }
   };
 
-  const fetchUserData = async (token) => {
+  const fetchUserData = async () => {
     logger.debug('📡 AuthContext: fetchUserData() called');
-    logger.debug('📡 AuthContext: Token param:', token ? `EXISTS (${token.substring(0, 20)}...)` : 'NULL');
-    
     try {
       logger.debug('📡 AuthContext: Sending GET /api/me request...');
       const response = await api.get(`/me`);
       logger.debug('✅ AuthContext: GET /api/me response:', response.status);
       logger.debug('✅ AuthContext: User data:', response.data);
-      
-      // Update cache with fresh data
-      try {
-        localStorage.setItem('user_data', JSON.stringify(response.data));
-        localStorage.setItem('user_id', response.data.id);
-        logger.debug('💾 AuthContext: User cache updated with fresh data');
-      } catch (e) {
-        logger.warn('⚠️ AuthContext: Failed to update user cache:', e);
-      }
       
       setUser(response.data);
     } catch (error) {
@@ -327,9 +242,6 @@ const status = error.response?.status;
       // Don't clear on network errors, timeouts, or server errors (might be transient)
       if (status === 401 || status === 403) {
         logger.debug('🗑️ AuthContext: Removing all auth data due to auth failure (401/403)');
-        localStorage.removeItem('token');
-        localStorage.removeItem('user_data');
-        localStorage.removeItem('user_id');
         setUser(null);
       } else {
         logger.warn('⚠️ AuthContext: Failed to fetch user data but keeping token (might be network/server issue)');
@@ -352,7 +264,6 @@ const status = error.response?.status;
       });
     } catch (error) {
       logger.error('Failed to fetch admin data:', error);
-      localStorage.removeItem('admin_token');
       setAdmin(null);
       throw error;
     }
@@ -440,7 +351,6 @@ throw error;
       const { token, admin } = response.data;
 
       // Store admin token
-      localStorage.setItem('admin_token', token);
       setAdmin(admin);
 
       return { token, admin };
@@ -451,10 +361,7 @@ throw error;
   };
 
   const refreshUser = async () => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      await fetchUserData(token);
-    }
+    await fetchUserData();
   };
 
   // Update user data (for profile updates, settings changes, etc.)
@@ -462,13 +369,7 @@ throw error;
     const updatedUser = { ...user, ...updates };
     setUser(updatedUser);
     
-    // Sync to localStorage
-    try {
-      localStorage.setItem('user_data', JSON.stringify(updatedUser));
-      logger.debug('💾 AuthContext: User data updated in cache');
-    } catch (e) {
-      logger.warn('⚠️ AuthContext: Failed to update user cache:', e);
-    }
+    // Keep profile state in-memory; backend remains source of truth.
   };
 
   const forgotPassword = async (email) => {
