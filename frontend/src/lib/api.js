@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { isTokenExpired, shouldRefreshToken } from './tokenUtils';
+import { decrementInFlight, incrementInFlight } from './apiLoading';
 
 const baseURL = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -94,6 +95,15 @@ export const refreshAccessToken = async () => {
 // Request interceptor - Attach token to requests
 api.interceptors.request.use(
   async (config) => {
+    // Track in-flight requests for global loader UX.
+    // Mark config so we only decrement what we incremented.
+    try {
+      incrementInFlight();
+      config._inFlightTracked = true;
+    } catch {
+      // non-blocking
+    }
+
     // Skip token check for auth endpoints
     if (config.url?.includes('/auth/')) {
       return config;
@@ -143,15 +153,33 @@ api.interceptors.request.use(
     return config;
   },
   (error) => {
+    try {
+      if (error?.config?._inFlightTracked) decrementInFlight();
+    } catch {
+      // non-blocking
+    }
     return Promise.reject(error);
   }
 );
 
 // Response interceptor - Handle 401 errors with automatic token refresh
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    try {
+      if (response?.config?._inFlightTracked) decrementInFlight();
+    } catch {
+      // non-blocking
+    }
+    return response;
+  },
   async (error) => {
     const originalRequest = error.config;
+
+    try {
+      if (originalRequest?._inFlightTracked) decrementInFlight();
+    } catch {
+      // non-blocking
+    }
     
     // Check if error is 401 and we haven't already tried to refresh
     if (error.response?.status === 401 && !originalRequest._retry) {

@@ -23,7 +23,9 @@ import { Toaster } from "./components/ui/sonner";
 import { initializeMobileEnvironment, isMobileDevice } from "./utils/mobileUtils";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import { ApiLoadingProvider } from "./contexts/ApiLoadingContext";
 import ErrorBoundary from "./components/ErrorBoundary";
+import GlobalApiLoader from "./components/GlobalApiLoader";
 import logger from "./lib/logger";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -122,6 +124,7 @@ function AppContent() {
   return (
     <div className="App">
       <BrowserRouter>
+        <GlobalApiLoader />
         <Routes>
           {/* Public Routes */}
           {/* Mobile Landing - Shows on mobile devices at root */}
@@ -284,9 +287,11 @@ function App() {
   return (
     <AuthProvider>
       <ThemeProvider>
-        <ErrorBoundary>
-          <AppContent />
-        </ErrorBoundary>
+        <ApiLoadingProvider>
+          <ErrorBoundary>
+            <AppContent />
+          </ErrorBoundary>
+        </ApiLoadingProvider>
       </ThemeProvider>
     </AuthProvider>
   );

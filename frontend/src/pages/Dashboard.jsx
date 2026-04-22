@@ -106,6 +106,7 @@ const Dashboard = () => {
     if (!hasInitialLoadRef.current && user) {
       hasInitialLoadRef.current = true;
       (async () => {
+        setIsLoading(true);
         try {
           // PERFORMANCE FIX: Load data in parallel on initial mount
           await Promise.all([
@@ -114,6 +115,8 @@ const Dashboard = () => {
           ]);
         } catch {
           // non-blocking
+        } finally {
+          if (isMounted) setIsLoading(false);
         }
       })();
     }
