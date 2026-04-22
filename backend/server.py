@@ -3644,8 +3644,9 @@ async def forgot_password(request: ForgotPasswordRequest):
             _send_resend_otp_email(to_email=email, otp=otp)
         except Exception as send_err:
             logger.error(f"Resend OTP email failed: {type(send_err).__name__}: {send_err}", exc_info=True)
-            # Don't leak provider details to client
-            raise HTTPException(status_code=500, detail="Failed to send OTP email. Please try again.")
+            # SECURITY: keep response uniform to avoid account enumeration and provider leakage.
+            # Operational failures are logged for monitoring/alerting.
+            return {"message": "If an account exists with this email, an OTP has been sent."}
 
         return {"message": "If an account exists with this email, an OTP has been sent."}
     except HTTPException:
