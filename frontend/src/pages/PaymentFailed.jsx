@@ -1,9 +1,9 @@
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
-import { Button } from '../components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../shared/ui/card';
+import { Button } from '../shared/ui/button';
 import { AlertCircle, ArrowLeft, CreditCard, RefreshCw } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { Alert, AlertDescription, AlertTitle } from '../components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '../shared/ui/alert';
 
 const PaymentFailed = () => {
   const navigate = useNavigate();

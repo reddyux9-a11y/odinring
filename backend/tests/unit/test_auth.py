@@ -2,7 +2,7 @@
 Unit tests for authentication functions
 """
 import pytest
-from server import hash_password, verify_password, create_jwt_token, verify_jwt_token
+from app.core.security import hash_password, verify_password, create_jwt_token, verify_jwt_token
 
 
 class TestAuthentication:

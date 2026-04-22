@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { Button } from "../components/ui/button";
+import { Button } from "../shared/ui/button";
 import { Download, Smartphone, Share2, ArrowLeft } from "lucide-react";
 import usePWAInstall from "../hooks/usePWAInstall";
 

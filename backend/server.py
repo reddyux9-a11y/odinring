@@ -33,9 +33,7 @@ import requests
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-# Lightweight in-process cache for expensive analytics computations.
-# This avoids repeated Firestore reads when the dashboard polls/re-renders.
-_ANALYTICS_CACHE: Dict[str, Dict[str, Any]] = {}
+# Shared cache (Redis-first, in-memory fallback) for expensive analytics computations.
 _ANALYTICS_CACHE_TTL_SECONDS = 15
 
 # Configuration (must be imported first for validation)
@@ -60,6 +58,7 @@ logger = get_logger(__name__)
 # Firebase/Firestore imports (replaces MongoDB)
 from firebase_config import initialize_firebase
 from firestore_db import FirestoreDB, DatabaseUnavailableError
+from app.infrastructure.cache import cache_service
 
 # Security and compliance utilities
 from audit_log_utils import (
@@ -6149,9 +6148,9 @@ async def get_analytics(
 
     user_id_str = str(current_user.id)
     cache_key = f"analytics:{user_id_str}:{start_date or 'default'}:{end_date or 'default'}"
-    cached = _ANALYTICS_CACHE.get(cache_key)
-    if cached and cached.get("expires_at", 0) > time.time():
-        return cached["data"]
+    cached = cache_service.get(cache_key)
+    if cached is not None:
+        return cached
 
     # --- Per-day metrics (avoid Firestore composite-index queries) ---
     # Firestore often requires composite indexes for multi-field + range queries.
@@ -6281,10 +6280,7 @@ async def get_analytics(
         link_performance=link_performance
     ).model_dump()
 
-    _ANALYTICS_CACHE[cache_key] = {
-        "expires_at": time.time() + _ANALYTICS_CACHE_TTL_SECONDS,
-        "data": result
-    }
+    cache_service.set(cache_key, result, _ANALYTICS_CACHE_TTL_SECONDS)
     return result
 
 # ==================== LEGACY ROUTES (for compatibility) ====================
@@ -6362,6 +6358,18 @@ async def health_check():
         health_status["status"] = "degraded"
         health_status["api"] = "degraded"
         health_status["message"] = "Missing required environment variables. Check /api/debug/env for details."
+
+    # Cache health (Redis-first with memory fallback)
+    try:
+        cache_status = cache_service.status()
+        health_status["services"]["cache"] = cache_status
+        if cache_status["backend"] == "redis" and not cache_status["healthy"]:
+            health_status["status"] = "degraded"
+            health_status["api"] = "degraded"
+    except Exception as e:
+        health_status["services"]["cache"] = {"backend": "unknown", "healthy": False, "error": str(e)}
+        health_status["status"] = "degraded"
+        health_status["api"] = "degraded"
     
     # Return appropriate status code
     status_code = 200 if health_status["status"] == "healthy" else 503

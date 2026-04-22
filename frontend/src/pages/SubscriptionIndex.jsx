@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
-import { Button } from '../components/ui/button';
-import { Badge } from '../components/ui/badge';
-import { ToggleGroup, ToggleGroupItem } from '../components/ui/toggle-group';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../shared/ui/card';
+import { Button } from '../shared/ui/button';
+import { Badge } from '../shared/ui/badge';
+import { ToggleGroup, ToggleGroupItem } from '../shared/ui/toggle-group';
 import { Check, Sparkles, Zap, Crown, ArrowRight } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useIdentityContext } from '../hooks/useIdentityContext';

@@ -9,6 +9,8 @@ from datetime import datetime
 import uuid
 import sys
 from pathlib import Path
+from app.main import app
+from app.domain.models import User
 
 backend_dir = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(backend_dir))
@@ -29,7 +31,6 @@ class TestCRUDPatternLinks:
              patch('server.get_current_user') as mock_get_user, \
              patch('server.log_audit_event') as mock_audit:
             
-            from server import User
             mock_user = User(id=user_id, email="test@example.com", username="testuser", name="Test User")
             mock_get_user.return_value = mock_user
             
@@ -40,7 +41,6 @@ class TestCRUDPatternLinks:
             mock_audit.return_value = True
             
             from fastapi.testclient import TestClient
-            from server import app
             client = TestClient(app)
             
             response = client.post(
@@ -66,7 +66,6 @@ class TestCRUDPatternLinks:
         with patch('server.links_collection') as mock_links, \
              patch('server.get_current_user') as mock_get_user:
             
-            from server import User
             mock_user = User(id=user_id, email="test@example.com", username="testuser", name="Test User")
             mock_get_user.return_value = mock_user
             
@@ -77,7 +76,6 @@ class TestCRUDPatternLinks:
             ])
             
             from fastapi.testclient import TestClient
-            from server import app
             client = TestClient(app)
             
             response = client.get(
@@ -99,7 +97,6 @@ class TestCRUDPatternLinks:
              patch('server.get_current_user') as mock_get_user, \
              patch('server.log_audit_event') as mock_audit:
             
-            from server import User
             mock_user = User(id=user_id, email="test@example.com", username="testuser", name="Test User")
             mock_get_user.return_value = mock_user
             
@@ -113,7 +110,6 @@ class TestCRUDPatternLinks:
             mock_audit.return_value = True
             
             from fastapi.testclient import TestClient
-            from server import app
             client = TestClient(app)
             
             response = client.put(
@@ -136,7 +132,6 @@ class TestCRUDPatternLinks:
              patch('server.get_current_user') as mock_get_user, \
              patch('server.log_audit_event') as mock_audit:
             
-            from server import User
             mock_user = User(id=user_id, email="test@example.com", username="testuser", name="Test User")
             mock_get_user.return_value = mock_user
             
@@ -149,7 +144,6 @@ class TestCRUDPatternLinks:
             mock_audit.return_value = True
             
             from fastapi.testclient import TestClient
-            from server import app
             client = TestClient(app)
             
             response = client.delete(
@@ -175,7 +169,6 @@ class TestCRUDPatternItems:
         with patch('server.users_collection') as mock_users, \
              patch('server.get_current_user') as mock_get_user:
             
-            from server import User
             mock_user = User(id=user_id, email="test@example.com", username="testuser", name="Test User")
             mock_get_user.return_value = mock_user
             
@@ -187,7 +180,6 @@ class TestCRUDPatternItems:
             mock_users.update_one = AsyncMock(return_value={'modified_count': 1})
             
             from fastapi.testclient import TestClient
-            from server import app
             client = TestClient(app)
             
             response = client.post(
@@ -212,7 +204,6 @@ class TestCRUDPatternItems:
         with patch('server.users_collection') as mock_users, \
              patch('server.get_current_user') as mock_get_user:
             
-            from server import User
             mock_user = User(id=user_id, email="test@example.com", username="testuser", name="Test User")
             mock_get_user.return_value = mock_user
             
@@ -226,7 +217,6 @@ class TestCRUDPatternItems:
             })
             
             from fastapi.testclient import TestClient
-            from server import app
             client = TestClient(app)
             
             response = client.get(
@@ -266,7 +256,6 @@ class TestAuthenticationPatterns:
             mock_refresh.create_refresh_token = AsyncMock(return_value=("refresh_token", "family_id"))
             
             from fastapi.testclient import TestClient
-            from server import app
             client = TestClient(app)
             
             response = client.post("/api/auth/login", json={
@@ -290,7 +279,6 @@ class TestAuthenticationPatterns:
         with patch('server.links_collection') as mock_links, \
              patch('server.get_current_user') as mock_get_user:
             
-            from server import User
             # Current user is user_id_1
             mock_user = User(id=user_id_1, email="user1@example.com", username="user1", name="User 1")
             mock_get_user.return_value = mock_user
@@ -302,7 +290,6 @@ class TestAuthenticationPatterns:
             })
             
             from fastapi.testclient import TestClient
-            from server import app
             client = TestClient(app)
             
             # Should fail authorization check
@@ -325,7 +312,6 @@ class TestValidationPatterns:
     async def test_required_field_pattern(self):
         """Pattern: Required field validation"""
         from fastapi.testclient import TestClient
-        from server import app
         client = TestClient(app)
         
         # Missing required field
@@ -340,7 +326,6 @@ class TestValidationPatterns:
     async def test_email_validation_pattern(self):
         """Pattern: Email format validation"""
         from fastapi.testclient import TestClient
-        from server import app
         client = TestClient(app)
         
         # Invalid email format
@@ -357,7 +342,6 @@ class TestValidationPatterns:
     async def test_string_length_pattern(self):
         """Pattern: String length validation"""
         from fastapi.testclient import TestClient
-        from server import app
         client = TestClient(app)
         
         # Username too short
@@ -385,14 +369,12 @@ class TestErrorHandlingPatterns:
         with patch('server.links_collection') as mock_links, \
              patch('server.get_current_user') as mock_get_user:
             
-            from server import User
             mock_user = User(id=user_id, email="test@example.com", username="testuser", name="Test User")
             mock_get_user.return_value = mock_user
             
             mock_links.find_one = AsyncMock(return_value=None)  # Not found
             
             from fastapi.testclient import TestClient
-            from server import app
             client = TestClient(app)
             
             response = client.get(
@@ -406,7 +388,6 @@ class TestErrorHandlingPatterns:
     async def test_unauthorized_pattern(self):
         """Pattern: 401 Unauthorized handling"""
         from fastapi.testclient import TestClient
-        from server import app
         client = TestClient(app)
         
         # No token provided
@@ -427,7 +408,6 @@ class TestErrorHandlingPatterns:
             })
             
             from fastapi.testclient import TestClient
-            from server import app
             client = TestClient(app)
             
             response = client.post("/api/auth/register", json={

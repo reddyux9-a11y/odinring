@@ -47,6 +47,9 @@ class Settings(BaseSettings):
     # Rate Limiting
     RATE_LIMIT_ENABLED: bool = True
     RATE_LIMIT_PER_MINUTE: int = 60
+
+    # Shared cache (Redis)
+    REDIS_URL: Optional[str] = None
     
     # Phase 2: Identity & Subscriptions
     SUBSCRIPTION_TRIAL_DAYS: int = 14

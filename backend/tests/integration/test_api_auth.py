@@ -3,7 +3,7 @@ Integration tests for authentication API endpoints
 """
 import pytest
 from httpx import AsyncClient
-from server import app
+from app.main import app
 
 
 @pytest.mark.integration

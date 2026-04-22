@@ -4,7 +4,7 @@ Subscription activation and plan selection
 """
 
 from fastapi import APIRouter, HTTPException, Depends, Request, Body
-from typing import Optional
+from typing import Optional, Any
 from pydantic import BaseModel
 import logging
 from datetime import datetime
@@ -13,7 +13,7 @@ from urllib.parse import urlparse
 
 import stripe
 
-from server import get_current_user, User
+from app.api.deps.auth import get_current_user
 from firestore_db import FirestoreDB
 from models.identity_models import SubscriptionStatus, SubscriptionPlan
 from services.subscription_service import SubscriptionService
@@ -193,7 +193,7 @@ async def get_subscription_plans():
     description="Get current user's subscription details"
 )
 async def get_current_subscription(
-    current_user: User = Depends(get_current_user)
+    current_user: Any = Depends(get_current_user)
 ):
     """
     Get current user's subscription
@@ -280,7 +280,7 @@ class CreateCheckoutSessionRequest(BaseModel):
 async def create_checkout_session(
     request: Request,
     body: CreateCheckoutSessionRequest = Body(...),
-    current_user: User = Depends(get_current_user),
+    current_user: Any = Depends(get_current_user),
 ):
     """
     Create a Stripe Checkout Session for the selected plan.
@@ -411,7 +411,7 @@ async def create_checkout_session(
 async def start_free_trial(
     request: Request,
     trial_request: TrialStartRequest = Body(...),
-    current_user: User = Depends(get_current_user)
+    current_user: Any = Depends(get_current_user)
 ):
     """
     Start a 14-day free trial for a subscription plan
@@ -521,7 +521,7 @@ async def activate_subscription(
     request: Request,
     subscription_id: str,
     billing_cycle: str = "yearly",
-    current_user: User = Depends(get_current_user)
+    current_user: Any = Depends(get_current_user)
 ):
     """
     Activate a subscription (after payment)

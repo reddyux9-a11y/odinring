@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
-import { Button } from "../components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
-import { Badge } from "../components/ui/badge";
+import { Button } from "../shared/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "../shared/ui/avatar";
+import { Badge } from "../shared/ui/badge";
 import { ExternalLink, Phone, Mail, MessageCircle, Link as LinkIcon, MessageSquare, Save, UserPlus, ShoppingBag, Image as ImageIcon, Tag, DollarSign, Video, Camera, Users, Copy, Check, Globe, Download, X } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../shared/ui/tabs";
 
 // WhatsApp Icon Component
 const WhatsAppIcon = ({ className, style }) => (

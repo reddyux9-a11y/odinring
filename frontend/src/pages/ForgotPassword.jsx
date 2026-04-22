@@ -1,10 +1,10 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
-import { Button } from "../components/ui/button";
-import { Input } from "../components/ui/input";
-import { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSeparator } from "../components/ui/input-otp";
-import { Label } from "../components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../shared/ui/card";
+import { Button } from "../shared/ui/button";
+import { Input } from "../shared/ui/input";
+import { InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSeparator } from "../shared/ui/input-otp";
+import { Label } from "../shared/ui/label";
 import { motion } from "framer-motion";
 import { ThemeToggle } from "../components/ThemeToggle";
 import { toast } from "sonner";

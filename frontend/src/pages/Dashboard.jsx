@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button } from "../components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
-import { Badge } from "../components/ui/badge";
+import { Button } from "../shared/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../shared/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "../shared/ui/avatar";
+import { Badge } from "../shared/ui/badge";
 import { Eye, LogOut, Palette, QrCode, Calendar, Shield, ExternalLink, Link as LinkIcon, Copy, Mail, Download, AlertCircle } from "lucide-react";
 import SimpleLinkManager from "../components/SimpleLinkManager";
 import LinksAndMediaManager from "../components/LinksAndMediaManager";

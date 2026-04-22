@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
-import { Button } from '../components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../shared/ui/card';
+import { Button } from '../shared/ui/button';
 import { CheckCircle, ArrowRight, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useIdentityContext } from '../hooks/useIdentityContext';

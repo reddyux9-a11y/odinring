@@ -7,10 +7,10 @@ Non-breaking: Falls open if context resolution fails.
 """
 
 from fastapi import HTTPException, Request, Depends
-from typing import Optional
+from typing import Optional, Any
 import logging
 
-from server import get_current_user, User
+from app.api.deps.auth import get_current_user
 from services.identity_resolver import IdentityResolver
 from models.identity_models import SubscriptionStatus
 
@@ -29,7 +29,7 @@ class ContextGuard:
     """
     
     @staticmethod
-    async def check_dashboard_access(current_user: User) -> bool:
+    async def check_dashboard_access(current_user: Any) -> bool:
         """
         Check if user has dashboard access
         
@@ -69,7 +69,7 @@ class ContextGuard:
             return True
     
     @staticmethod
-    async def get_guarded_user(current_user: User = Depends(get_current_user)) -> User:
+    async def get_guarded_user(current_user: Any = Depends(get_current_user)) -> Any:
         """
         Dependency that checks dashboard access
         
@@ -89,7 +89,7 @@ class ContextGuard:
 
 
 # Dependency for dashboard routes
-async def require_dashboard_access(current_user: User = Depends(get_current_user)) -> User:
+async def require_dashboard_access(current_user: Any = Depends(get_current_user)) -> Any:
     """
     FastAPI dependency that enforces dashboard access
     
@@ -113,7 +113,7 @@ async def require_dashboard_access(current_user: User = Depends(get_current_user
 # Helper function to check organization permission with subscription
 async def require_organization_access(
     organization_id: str,
-    current_user: User = Depends(get_current_user),
+    current_user: Any = Depends(get_current_user),
     required_role: Optional[str] = None
 ) -> User:
     """

@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
-import { Button } from "../components/ui/button";
-import { Input } from "../components/ui/input";
-import { Label } from "../components/ui/label";
-import { Separator } from "../components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../shared/ui/card";
+import { Button } from "../shared/ui/button";
+import { Input } from "../shared/ui/input";
+import { Label } from "../shared/ui/label";
+import { Separator } from "../shared/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../shared/ui/tabs";
 import { motion } from "framer-motion";
 import { initializeMobileEnvironment, isMobileDevice } from "../utils/mobileUtils";
 import { ThemeToggle } from "../components/ThemeToggle";

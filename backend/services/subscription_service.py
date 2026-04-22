@@ -16,11 +16,27 @@ from models.identity_models import (
 )
 from audit_log_utils import log_audit_event
 from config import settings
+from app.infrastructure.cache import cache_service
 
 logger = logging.getLogger(__name__)
 
 # Firestore collection
 subscriptions_collection = FirestoreDB('subscriptions')
+
+
+def _invalidate_identity_related_cache(
+    *,
+    user_id: Optional[str] = None,
+    business_id: Optional[str] = None,
+    organization_id: Optional[str] = None,
+) -> None:
+    if user_id:
+        cache_service.delete(f"identity_context:{user_id}")
+        cache_service.delete(f"identity_subscription:user_id:{user_id}")
+    if business_id:
+        cache_service.delete(f"identity_subscription:business_id:{business_id}")
+    if organization_id:
+        cache_service.delete(f"identity_subscription:organization_id:{organization_id}")
 
 
 class SubscriptionService:
@@ -120,6 +136,11 @@ class SubscriptionService:
             
             # Save to Firestore
             await subscriptions_collection.insert_one(subscription.model_dump())
+            _invalidate_identity_related_cache(
+                user_id=user_id,
+                business_id=business_id,
+                organization_id=organization_id,
+            )
             
             logger.info(f"Created subscription: {subscription.id} with status={status}, trial_days={trial_days}")
             
@@ -209,6 +230,11 @@ class SubscriptionService:
             
             if result.get('modified_count', 0) > 0:
                 logger.info(f"Activated subscription: {subscription_id}, expires in {billing_period_days} days")
+                _invalidate_identity_related_cache(
+                    user_id=sub_doc.get("user_id"),
+                    business_id=sub_doc.get("business_id"),
+                    organization_id=sub_doc.get("organization_id"),
+                )
                 
                 # Log subscription_activated audit event
                 if actor_id:
@@ -253,6 +279,9 @@ class SubscriptionService:
             True if cancelled successfully
         """
         try:
+            sub_doc = await subscriptions_collection.find_one({'id': subscription_id})
+            if not sub_doc:
+                return False
             result = await subscriptions_collection.update_one(
                 {'id': subscription_id},
                 {'$set': {
@@ -264,6 +293,11 @@ class SubscriptionService:
             
             if result.get('modified_count', 0) > 0:
                 logger.info(f"Cancelled subscription: {subscription_id}")
+                _invalidate_identity_related_cache(
+                    user_id=sub_doc.get("user_id"),
+                    business_id=sub_doc.get("business_id"),
+                    organization_id=sub_doc.get("organization_id"),
+                )
                 return True
             
             return False
@@ -305,6 +339,11 @@ class SubscriptionService:
                 if result.get('modified_count', 0) > 0:
                     count += 1
                     logger.info(f"Expired active subscription: {sub['id']}")
+                    _invalidate_identity_related_cache(
+                        user_id=sub.get("user_id"),
+                        business_id=sub.get("business_id"),
+                        organization_id=sub.get("organization_id"),
+                    )
                     
                     # Log expiry (use system actor for cron jobs)
                     await log_audit_event(
@@ -341,6 +380,11 @@ class SubscriptionService:
                 if result.get('modified_count', 0) > 0:
                     count += 1
                     logger.info(f"Expired trial subscription: {sub['id']}")
+                    _invalidate_identity_related_cache(
+                        user_id=sub.get("user_id"),
+                        business_id=sub.get("business_id"),
+                        organization_id=sub.get("organization_id"),
+                    )
                     
                     # Log expiry
                     await log_audit_event(

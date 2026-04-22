@@ -23,14 +23,16 @@ class TestSecurityEndpoints:
     async def test_revoke_token_endpoint(self, test_client, auth_headers):
         """Test token revocation endpoint"""
         # Create a mock JWT token
-        from server import JWT_SECRET, JWT_ALGORITHM
+        from config import settings
+        JWT_SECRET = settings.JWT_SECRET
+        JWT_ALGORITHM = "HS256"
         test_token = jwt.encode({
             "user_id": "user_123",
             "session_id": "session_123",
             "exp": datetime.utcnow() + timedelta(hours=1)
         }, JWT_SECRET, algorithm=JWT_ALGORITHM)
         
-            with patch('server.sessions_collection') as mock_sessions, \
+        with patch('server.sessions_collection') as mock_sessions, \
              patch('server.get_current_admin') as mock_admin, \
              patch('server.RefreshTokenManager') as mock_refresh, \
              patch('server.log_audit_event') as mock_audit:

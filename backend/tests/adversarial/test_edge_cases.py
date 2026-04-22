@@ -9,6 +9,8 @@ from datetime import datetime, timedelta
 import uuid
 import sys
 from pathlib import Path
+from app.main import app
+from app.domain.models import User
 
 backend_dir = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(backend_dir))
@@ -23,7 +25,6 @@ class TestBoundaryConditions:
     async def test_minimum_length_inputs(self):
         """Edge Case: Minimum length inputs"""
         from fastapi.testclient import TestClient
-        from server import app
         client = TestClient(app)
         
         with patch('server.users_collection') as mock_users:
@@ -51,7 +52,6 @@ class TestBoundaryConditions:
         with patch('server.links_collection') as mock_links, \
              patch('server.get_current_user') as mock_get_user:
             
-            from server import User
             mock_user = User(id=user_id, email="test@example.com", username="testuser", name="Test User")
             mock_get_user.return_value = mock_user
             
@@ -60,7 +60,6 @@ class TestBoundaryConditions:
             mock_links.insert_one = AsyncMock(return_value={'inserted_id': str(uuid.uuid4())})
             
             from fastapi.testclient import TestClient
-            from server import app
             client = TestClient(app)
             
             response = client.post(
@@ -93,7 +92,6 @@ class TestBoundaryConditions:
         with patch('server.users_collection') as mock_users, \
              patch('server.get_current_user') as mock_get_user:
             
-            from server import User
             mock_user = User(id=user_id, email="test@example.com", username="testuser", name="Test User")
             mock_get_user.return_value = mock_user
             
@@ -103,7 +101,6 @@ class TestBoundaryConditions:
             })
             
             from fastapi.testclient import TestClient
-            from server import app
             client = TestClient(app)
             
             for price in boundary_values:
@@ -145,7 +142,6 @@ class TestUnicodeAndEncoding:
         with patch('server.links_collection') as mock_links, \
              patch('server.get_current_user') as mock_get_user:
             
-            from server import User
             mock_user = User(id=user_id, email="test@example.com", username="testuser", name="Test User")
             mock_get_user.return_value = mock_user
             
@@ -154,7 +150,6 @@ class TestUnicodeAndEncoding:
             mock_links.insert_one = AsyncMock(return_value={'inserted_id': str(uuid.uuid4())})
             
             from fastapi.testclient import TestClient
-            from server import app
             client = TestClient(app)
             
             for unicode_str in unicode_strings:
@@ -178,7 +173,6 @@ class TestUnicodeAndEncoding:
         with patch('server.users_collection') as mock_users, \
              patch('server.get_current_user') as mock_get_user:
             
-            from server import User
             mock_user = User(id=user_id, email="test@example.com", username="testuser", name="Test User")
             mock_get_user.return_value = mock_user
             
@@ -186,7 +180,6 @@ class TestUnicodeAndEncoding:
             mock_users.update_one = AsyncMock(return_value={'modified_count': 1})
             
             from fastapi.testclient import TestClient
-            from server import app
             client = TestClient(app)
             
             response = client.put(
@@ -212,7 +205,6 @@ class TestEmptyAndNullInputs:
         with patch('server.users_collection') as mock_users, \
              patch('server.get_current_user') as mock_get_user:
             
-            from server import User
             mock_user = User(id=user_id, email="test@example.com", username="testuser", name="Test User")
             mock_get_user.return_value = mock_user
             
@@ -220,7 +212,6 @@ class TestEmptyAndNullInputs:
             mock_users.update_one = AsyncMock(return_value={'modified_count': 1})
             
             from fastapi.testclient import TestClient
-            from server import app
             client = TestClient(app)
             
             # Empty string in optional field
@@ -241,14 +232,12 @@ class TestEmptyAndNullInputs:
         with patch('server.users_collection') as mock_users, \
              patch('server.get_current_user') as mock_get_user:
             
-            from server import User
             mock_user = User(id=user_id, email="test@example.com", username="testuser", name="Test User")
             mock_get_user.return_value = mock_user
             
             mock_users.find_one = AsyncMock(return_value={'id': user_id})
             
             from fastapi.testclient import TestClient
-            from server import app
             client = TestClient(app)
             
             # Null in optional field (should be handled by Pydantic)
@@ -266,7 +255,6 @@ class TestEmptyAndNullInputs:
     async def test_missing_fields(self):
         """Edge Case: Missing required fields"""
         from fastapi.testclient import TestClient
-        from server import app
         client = TestClient(app)
         
         # Missing required fields
@@ -293,7 +281,6 @@ class TestConcurrentOperations:
         with patch('server.links_collection') as mock_links, \
              patch('server.get_current_user') as mock_get_user:
             
-            from server import User
             mock_user = User(id=user_id, email="test@example.com", username="testuser", name="Test User")
             mock_get_user.return_value = mock_user
             
@@ -306,7 +293,6 @@ class TestConcurrentOperations:
             mock_links.update_one = AsyncMock(return_value={'modified_count': 1})
             
             from fastapi.testclient import TestClient
-            from server import app
             client = TestClient(app)
             
             # Simulate concurrent requests (in real scenario, these would be parallel)
@@ -381,7 +367,6 @@ class TestURLValidation:
         with patch('server.links_collection') as mock_links, \
              patch('server.get_current_user') as mock_get_user:
             
-            from server import User
             mock_user = User(id=user_id, email="test@example.com", username="testuser", name="Test User")
             mock_get_user.return_value = mock_user
             
@@ -389,7 +374,6 @@ class TestURLValidation:
             mock_links.count_documents = AsyncMock(return_value=0)
             
             from fastapi.testclient import TestClient
-            from server import app
             client = TestClient(app)
             
             for url in invalid_urls:
@@ -415,7 +399,6 @@ class TestURLValidation:
         with patch('server.links_collection') as mock_links, \
              patch('server.get_current_user') as mock_get_user:
             
-            from server import User
             mock_user = User(id=user_id, email="test@example.com", username="testuser", name="Test User")
             mock_get_user.return_value = mock_user
             
@@ -423,7 +406,6 @@ class TestURLValidation:
             mock_links.count_documents = AsyncMock(return_value=0)
             
             from fastapi.testclient import TestClient
-            from server import app
             client = TestClient(app)
             
             response = client.post(
@@ -452,7 +434,6 @@ class TestArrayAndListOperations:
         with patch('server.users_collection') as mock_users, \
              patch('server.get_current_user') as mock_get_user:
             
-            from server import User
             mock_user = User(id=user_id, email="test@example.com", username="testuser", name="Test User")
             mock_get_user.return_value = mock_user
             
@@ -462,7 +443,6 @@ class TestArrayAndListOperations:
             })
             
             from fastapi.testclient import TestClient
-            from server import app
             client = TestClient(app)
             
             # Get items from empty array
@@ -491,7 +471,6 @@ class TestArrayAndListOperations:
         with patch('server.users_collection') as mock_users, \
              patch('server.get_current_user') as mock_get_user:
             
-            from server import User
             mock_user = User(id=user_id, email="test@example.com", username="testuser", name="Test User")
             mock_get_user.return_value = mock_user
             
@@ -501,7 +480,6 @@ class TestArrayAndListOperations:
             })
             
             from fastapi.testclient import TestClient
-            from server import app
             client = TestClient(app)
             
             response = client.get(

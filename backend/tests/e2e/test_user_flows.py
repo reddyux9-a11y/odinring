@@ -62,7 +62,7 @@ class TestLinkManagementFlow:
              patch('server.log_link_update') as mock_update, \
              patch('server.log_link_delete') as mock_delete:
             
-            from server import User
+            from app.domain.models import User
             mock_user_obj = User(id=user_id, email="test@example.com", username="testuser", name="Test User")
             mock_user.return_value = mock_user_obj
             mock_links.find = AsyncMock(return_value=[])
@@ -76,7 +76,7 @@ class TestLinkManagementFlow:
             mock_delete.return_value = True
             
             from fastapi.testclient import TestClient
-            from server import app
+            from app.main import app
             client = TestClient(app)
             
             token = "test_token_123"

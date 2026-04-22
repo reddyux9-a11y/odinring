@@ -20,7 +20,7 @@ async def test_vercel_deployment():
     try:
         # Test server import
         print("🔍 Testing server import...")
-        from server import app, db
+        from app.main import app, db
 
         print("✅ Server imported successfully")
         print(f"✅ Firebase/Firestore configured: {bool(db)}")

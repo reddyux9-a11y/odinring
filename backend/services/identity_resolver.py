@@ -9,11 +9,13 @@ Resolves identity context based on existing data in Firestore.
 from typing import Optional, Dict, Any
 from datetime import datetime, timezone
 import logging
+import asyncio
 
 from firestore_db import FirestoreDB
 from models.identity_models import (
     IdentityContext, AccountType, SubscriptionStatus, OrganizationRole
 )
+from app.infrastructure.cache import cache_service
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +25,8 @@ organizations_collection = FirestoreDB('organizations')
 memberships_collection = FirestoreDB('memberships')
 subscriptions_collection = FirestoreDB('subscriptions')
 users_collection = FirestoreDB('users')
+_IDENTITY_CACHE_TTL_SECONDS = 30
+_SUBSCRIPTION_CACHE_TTL_SECONDS = 30
 
 
 class IdentityResolver:
@@ -47,14 +51,21 @@ class IdentityResolver:
             IdentityContext with routing decision
         """
         try:
+            cache_key = f"identity_context:{user_id}"
+            cached = cache_service.get(cache_key)
+            if cached:
+                return IdentityContext(**cached)
+
             # Step 1: Get user profile
             user = await users_collection.find_one({"id": user_id})
             if not user:
-                return IdentityContext(
+                result = IdentityContext(
                     authenticated=False,
                     account_type=AccountType.PERSONAL,
                     next_route="/login"
                 )
+                cache_service.set(cache_key, result.model_dump(), _IDENTITY_CACHE_TTL_SECONDS)
+                return result
             
             # Step 2: Check if user owns a business
             business = await businesses_collection.find_one({
@@ -71,7 +82,7 @@ class IdentityResolver:
                 route = IdentityResolver._determine_route(subscription)
                 needs_billing = subscription['status'] == SubscriptionStatus.EXPIRED
                 
-                return IdentityContext(
+                result = IdentityContext(
                     authenticated=True,
                     account_type=AccountType.BUSINESS_SOLO,
                     user_id=user_id,
@@ -81,6 +92,8 @@ class IdentityResolver:
                     next_route=route,
                     needs_billing=needs_billing
                 )
+                cache_service.set(cache_key, result.model_dump(), _IDENTITY_CACHE_TTL_SECONDS)
+                return result
             
             # Step 3: Check if user owns an organization
             organization = await organizations_collection.find_one({
@@ -97,7 +110,7 @@ class IdentityResolver:
                 route = IdentityResolver._determine_route(subscription)
                 needs_billing = subscription['status'] == SubscriptionStatus.EXPIRED
                 
-                return IdentityContext(
+                result = IdentityContext(
                     authenticated=True,
                     account_type=AccountType.ORGANIZATION,
                     user_id=user_id,
@@ -108,6 +121,8 @@ class IdentityResolver:
                     next_route=route,
                     needs_billing=needs_billing
                 )
+                cache_service.set(cache_key, result.model_dump(), _IDENTITY_CACHE_TTL_SECONDS)
+                return result
             
             # Step 4: Check if user is a member of an organization
             membership = await memberships_collection.find_one({
@@ -136,7 +151,7 @@ class IdentityResolver:
                     
                     needs_billing = subscription['status'] == SubscriptionStatus.EXPIRED
                     
-                    return IdentityContext(
+                    result = IdentityContext(
                         authenticated=True,
                         account_type=AccountType.ORGANIZATION,
                         user_id=user_id,
@@ -148,6 +163,8 @@ class IdentityResolver:
                         next_route=next_route,
                         needs_billing=needs_billing
                     )
+                    cache_service.set(cache_key, result.model_dump(), _IDENTITY_CACHE_TTL_SECONDS)
+                    return result
             
             # Step 5: Default to personal account
             # This handles existing users who don't have business/org
@@ -159,7 +176,7 @@ class IdentityResolver:
             # Personal accounts are free, so no billing needed
             needs_billing = False
             
-            return IdentityContext(
+            result = IdentityContext(
                 authenticated=True,
                 account_type=AccountType.PERSONAL,
                 user_id=user_id,
@@ -168,6 +185,8 @@ class IdentityResolver:
                 next_route=route,
                 needs_billing=needs_billing
             )
+            cache_service.set(cache_key, result.model_dump(), _IDENTITY_CACHE_TTL_SECONDS)
+            return result
             
         except Exception as e:
             logger.error(f"Error resolving identity for user {user_id}: {e}", exc_info=True)
@@ -212,13 +231,21 @@ class IdentityResolver:
                     "plan": None
                 }
             
+            query_parts = [f"{k}:{v}" for k, v in sorted(query.items())]
+            subscription_cache_key = f"identity_subscription:{'|'.join(query_parts)}"
+            cached_subscription = cache_service.get(subscription_cache_key)
+            if cached_subscription:
+                return cached_subscription
+
             subscription = await subscriptions_collection.find_one(query)
             
             if not subscription:
-                return {
+                result = {
                     "status": SubscriptionStatus.NONE,
                     "plan": None
                 }
+                cache_service.set(subscription_cache_key, result, _SUBSCRIPTION_CACHE_TTL_SECONDS)
+                return result
             
             # Check if subscription is expired
             status = subscription.get('status', SubscriptionStatus.NONE)
@@ -304,6 +331,7 @@ class IdentityResolver:
                 days_remaining = (period_end_dt - now).days
                 result["days_remaining"] = max(0, days_remaining)
 
+            cache_service.set(subscription_cache_key, result, _SUBSCRIPTION_CACHE_TTL_SECONDS)
             return result
             
         except Exception as e:
@@ -387,8 +415,20 @@ class IdentityResolver:
             })
             
             members = []
-            for membership in memberships:
-                user = await users_collection.find_one({"id": membership['user_id']})
+            user_tasks = [
+                users_collection.find_one({"id": membership["user_id"]})
+                for membership in memberships
+            ]
+            users = await asyncio.gather(*user_tasks, return_exceptions=True)
+
+            for membership, user in zip(memberships, users):
+                if isinstance(user, Exception):
+                    logger.warning(
+                        "Failed to load org member user %s: %s",
+                        membership.get("user_id"),
+                        user,
+                    )
+                    continue
                 if user:
                     members.append({
                         "membership_id": membership['id'],

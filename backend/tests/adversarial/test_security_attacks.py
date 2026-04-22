@@ -10,6 +10,8 @@ import uuid
 import sys
 import json
 from pathlib import Path
+from app.main import app
+from app.domain.models import User
 
 backend_dir = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(backend_dir))
@@ -24,7 +26,6 @@ class TestSQLInjectionAttempts:
     async def test_sql_injection_in_email(self):
         """Adversarial: SQL injection attempt in email field"""
         from fastapi.testclient import TestClient
-        from server import app
         client = TestClient(app)
         
         # SQL injection payloads
@@ -54,7 +55,6 @@ class TestSQLInjectionAttempts:
     async def test_no_sql_injection_in_username(self):
         """Adversarial: SQL injection attempt in username field"""
         from fastapi.testclient import TestClient
-        from server import app
         client = TestClient(app)
         
         injection_payloads = [
@@ -99,7 +99,6 @@ class TestXSSAttempts:
         with patch('server.links_collection') as mock_links, \
              patch('server.get_current_user') as mock_get_user:
             
-            from server import User
             mock_user = User(id=user_id, email="test@example.com", username="testuser", name="Test User")
             mock_get_user.return_value = mock_user
             
@@ -108,7 +107,6 @@ class TestXSSAttempts:
             mock_links.insert_one = AsyncMock(return_value={'inserted_id': str(uuid.uuid4())})
             
             from fastapi.testclient import TestClient
-            from server import app
             client = TestClient(app)
             
             for payload in xss_payloads:
@@ -140,7 +138,6 @@ class TestXSSAttempts:
         with patch('server.users_collection') as mock_users, \
              patch('server.get_current_user') as mock_get_user:
             
-            from server import User
             mock_user = User(id=user_id, email="test@example.com", username="testuser", name="Test User")
             mock_get_user.return_value = mock_user
             
@@ -148,7 +145,6 @@ class TestXSSAttempts:
             mock_users.update_one = AsyncMock(return_value={'modified_count': 1})
             
             from fastapi.testclient import TestClient
-            from server import app
             client = TestClient(app)
             
             for payload in xss_payloads:
@@ -171,7 +167,6 @@ class TestPathTraversalAttempts:
     async def test_path_traversal_in_username(self):
         """Adversarial: Path traversal in username"""
         from fastapi.testclient import TestClient
-        from server import app
         client = TestClient(app)
         
         traversal_payloads = [
@@ -205,7 +200,6 @@ class TestAuthenticationAttacks:
     async def test_jwt_token_tampering(self):
         """Adversarial: Tampered JWT token"""
         from fastapi.testclient import TestClient
-        from server import app
         client = TestClient(app)
         
         tampered_tokens = [
@@ -230,7 +224,6 @@ class TestAuthenticationAttacks:
     async def test_weak_password_attempt(self):
         """Adversarial: Weak password attempts"""
         from fastapi.testclient import TestClient
-        from server import app
         client = TestClient(app)
         
         weak_passwords = [
@@ -262,7 +255,6 @@ class TestAuthenticationAttacks:
     async def test_brute_force_login_attempt(self):
         """Adversarial: Brute force login attempts"""
         from fastapi.testclient import TestClient
-        from server import app
         client = TestClient(app)
         
         with patch('server.users_collection') as mock_users, \
@@ -302,7 +294,6 @@ class TestAuthorizationBypassAttempts:
         with patch('server.links_collection') as mock_links, \
              patch('server.get_current_user') as mock_get_user:
             
-            from server import User
             # Current user is user_id_1
             mock_user = User(id=user_id_1, email="user1@example.com", username="user1", name="User 1")
             mock_get_user.return_value = mock_user
@@ -314,7 +305,6 @@ class TestAuthorizationBypassAttempts:
             })
             
             from fastapi.testclient import TestClient
-            from server import app
             client = TestClient(app)
             
             # Try to update other user's link
@@ -335,7 +325,6 @@ class TestAuthorizationBypassAttempts:
         with patch('server.get_current_user') as mock_get_user, \
              patch('server.get_current_admin') as mock_get_admin:
             
-            from server import User
             from fastapi import HTTPException
             
             mock_user = User(id=user_id, email="user@example.com", username="user", name="User")
@@ -345,7 +334,6 @@ class TestAuthorizationBypassAttempts:
             mock_get_admin.side_effect = HTTPException(status_code=401, detail="Not authenticated as admin")
             
             from fastapi.testclient import TestClient
-            from server import app
             client = TestClient(app)
             
             response = client.get(
@@ -375,7 +363,6 @@ class TestInputValidationAttacks:
         with patch('server.links_collection') as mock_links, \
              patch('server.get_current_user') as mock_get_user:
             
-            from server import User
             mock_user = User(id=user_id, email="test@example.com", username="testuser", name="Test User")
             mock_get_user.return_value = mock_user
             
@@ -383,7 +370,6 @@ class TestInputValidationAttacks:
             mock_links.count_documents = AsyncMock(return_value=0)
             
             from fastapi.testclient import TestClient
-            from server import app
             client = TestClient(app)
             
             # Try oversized title
@@ -414,7 +400,6 @@ class TestInputValidationAttacks:
         with patch('server.links_collection') as mock_links, \
              patch('server.get_current_user') as mock_get_user:
             
-            from server import User
             mock_user = User(id=user_id, email="test@example.com", username="testuser", name="Test User")
             mock_get_user.return_value = mock_user
             
@@ -422,7 +407,6 @@ class TestInputValidationAttacks:
             mock_links.count_documents = AsyncMock(return_value=0)
             
             from fastapi.testclient import TestClient
-            from server import app
             client = TestClient(app)
             
             for char in special_chars:
@@ -448,7 +432,6 @@ class TestRateLimitingAttacks:
     async def test_rate_limit_bypass_attempt(self):
         """Adversarial: Attempt to bypass rate limiting"""
         from fastapi.testclient import TestClient
-        from server import app
         client = TestClient(app)
         
         with patch('server.users_collection') as mock_users:
@@ -493,14 +476,12 @@ class TestIDORAttempts:
         with patch('server.links_collection') as mock_links, \
              patch('server.get_current_user') as mock_get_user:
             
-            from server import User
             mock_user = User(id=user_id, email="test@example.com", username="testuser", name="Test User")
             mock_get_user.return_value = mock_user
             
             mock_links.find_one = AsyncMock(return_value=None)  # Not found
             
             from fastapi.testclient import TestClient
-            from server import app
             client = TestClient(app)
             
             for link_id in guessed_ids:
@@ -516,7 +497,6 @@ class TestIDORAttempts:
     async def test_idor_in_username(self):
         """Adversarial: Try to access profile by guessing usernames"""
         from fastapi.testclient import TestClient
-        from server import app
         client = TestClient(app)
         
         # Try common usernames (public profiles are accessible, but test anyway)

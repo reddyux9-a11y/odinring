@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
-import { Button } from '../components/ui/button';
-import { Badge } from '../components/ui/badge';
-import { Alert, AlertDescription } from '../components/ui/alert';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../shared/ui/card';
+import { Button } from '../shared/ui/button';
+import { Badge } from '../shared/ui/badge';
+import { Alert, AlertDescription } from '../shared/ui/alert';
 import { Check, X, ArrowLeft, Loader2, AlertCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useIdentityContext } from '../hooks/useIdentityContext';

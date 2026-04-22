@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Button } from '../components/ui/button';
+import { Button } from '../shared/ui/button';
 import { Loader2, ArrowLeft } from 'lucide-react';
 import api from '../lib/api';
 import { toast } from 'sonner';

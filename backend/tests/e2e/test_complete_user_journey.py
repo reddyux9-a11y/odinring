@@ -50,7 +50,7 @@ class TestCompleteUserRegistrationFlow:
             
             # Step 1: Register
             from fastapi.testclient import TestClient
-            from server import app
+            from app.main import app
             
             client = TestClient(app)
             
@@ -86,7 +86,7 @@ class TestCompleteUserRegistrationFlow:
                 
                 # Mock current user
                 with patch('server.get_current_user') as mock_get_user:
-                    from server import User
+                    from app.domain.models import User
                     mock_user = User(
                         id=user_id,
                         email=register_data['email'],
@@ -133,7 +133,7 @@ class TestCompleteLinkManagementFlow:
              patch('server.get_current_user') as mock_get_user, \
              patch('server.log_audit_event') as mock_audit:
             
-            from server import User
+            from app.domain.models import User
             mock_user = User(id=user_id, email="test@example.com", username="testuser", name="Test User")
             mock_get_user.return_value = mock_user
             
@@ -152,7 +152,7 @@ class TestCompleteLinkManagementFlow:
             mock_audit.return_value = True
             
             from fastapi.testclient import TestClient
-            from server import app
+            from app.main import app
             client = TestClient(app)
             
             token = "test_token_123"

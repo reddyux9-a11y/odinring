@@ -1,12 +1,12 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { Button } from "../components/ui/button";
-import { Card, CardContent } from "../components/ui/card";
+import { Button } from "../shared/ui/button";
+import { Card, CardContent } from "../shared/ui/card";
 import { FadeInUp } from "../components/PageTransitions";
 import { Smartphone, Sparkles, BarChart3, Shield, Cpu, ArrowRightCircle, Download, Palette, Zap, Layers, ChevronRight, Globe, Share2, Heart, ChevronLeft, ShoppingCart } from "lucide-react";
 import usePWAInstall from "../hooks/usePWAInstall";
 import AnimatedNumber from "../components/AnimatedNumber";
-import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "../components/ui/accordion";
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "../shared/ui/accordion";
 import { ThemeToggle } from "../components/ThemeToggle";
 import { toast } from "sonner";
 

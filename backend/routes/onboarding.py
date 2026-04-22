@@ -6,11 +6,11 @@ New routes for onboarding flow. Non-breaking additions.
 """
 
 from fastapi import APIRouter, HTTPException, Depends, Request
-from typing import Optional
+from typing import Optional, Any
 import logging
 from datetime import datetime
 
-from server import get_current_user, User
+from app.api.deps.auth import get_current_user
 from firestore_db import FirestoreDB
 from models.identity_models import (
     AccountTypeSelection, OnboardingStatus, AccountType,
@@ -41,7 +41,7 @@ users_collection = FirestoreDB('users')
 async def create_account_type(
     request: Request,
     account_selection: AccountTypeSelection,
-    current_user: User = Depends(get_current_user)
+    current_user: Any = Depends(get_current_user)
 ):
     """
     Create account type and associated profile
@@ -279,7 +279,7 @@ async def create_account_type(
     summary="Get onboarding status",
     description="Check if user has completed onboarding"
 )
-async def get_onboarding_status(current_user: User = Depends(get_current_user)):
+async def get_onboarding_status(current_user: Any = Depends(get_current_user)):
     """
     Get onboarding status for current user
     
