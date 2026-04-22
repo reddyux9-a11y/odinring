@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import api from '../lib/api';
 import { onAuthChange, signOut as firebaseSignOut } from '../lib/firebase';
 import logger from '../lib/logger';
+import { setAuthTokens, clearAuthTokens } from '../lib/authTokenStore';
 
 const AuthContext = createContext();
 
@@ -63,7 +64,8 @@ logger.debug('📦 AuthContext: Processing auth response...');
 throw new Error('Backend did not return an access token');
     }
     
-    logger.debug('🍪 AuthContext: Backend auth cookies set');
+    setAuthTokens({ access_token: accessToken, refresh_token: refreshToken });
+    logger.debug('🍪 AuthContext: Backend auth cookies set (in-memory fallback token updated)');
     
     if (userData) {
       setUser(userData);
@@ -96,12 +98,14 @@ return { token: accessToken, refresh_token: refreshToken, user: userData };
 
     // Clear all auth-related data including refresh token
     localStorage.removeItem('google_access_token');
+    clearAuthTokens();
 
     setUser(null);
     setAdmin(null);
   };
 
   const adminLogout = () => {
+    clearAuthTokens();
     setAdmin(null);
   };
 

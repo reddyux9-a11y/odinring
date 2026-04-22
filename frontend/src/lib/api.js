@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { decrementInFlight, incrementInFlight } from './apiLoading';
+import { getAccessToken, getRefreshToken, setAuthTokens, clearAuthTokens } from './authTokenStore';
 
 const baseURL = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -35,10 +36,11 @@ const onTokenRefreshed = (token) => {
  */
 export const refreshAccessToken = async () => {
   try {
+    const refreshToken = getRefreshToken();
     // Create a new axios instance to avoid interceptors
     const response = await axios.post(
       `${baseURL}/auth/refresh`,
-      {},
+      refreshToken ? { refresh_token: refreshToken } : {},
       { withCredentials: true }
     );
     
@@ -48,7 +50,10 @@ export const refreshAccessToken = async () => {
       throw new Error('No access token in refresh response');
     }
     
-    // Tokens are stored in HTTP-only cookies by backend.
+    setAuthTokens({
+      access_token,
+      refresh_token: new_refresh_token || refreshToken || null,
+    });
     return access_token;
   } catch (error) {
     const status = error.response?.status;
@@ -84,7 +89,11 @@ api.interceptors.request.use(
       return config;
     }
 
-    // Cookie-based auth is the source of truth. No localStorage token dependency.
+    const token = getAccessToken();
+    if (token) {
+      config.headers = config.headers || {};
+      config.headers.Authorization = `Bearer ${token}`;
+    }
     return config;
   },
   (error) => {
@@ -147,8 +156,7 @@ api.interceptors.response.use(
         return api(originalRequest);
       } catch (refreshError) {
         isRefreshing = false;
-        
-        // Backend controls token cookie lifecycle.
+        clearAuthTokens();
         return Promise.reject(refreshError);
       }
     }
