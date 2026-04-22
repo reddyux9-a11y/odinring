@@ -6526,24 +6526,38 @@ async def log_requests(request: Request, call_next):
 # SECURITY: CORS origins must be set via CORS_ORIGINS environment variable in production
 # SECURITY: Don't fail hard during import - allow app to start and report via health endpoint
 cors_origins_env = os.environ.get('CORS_ORIGINS', '')
+frontend_url_env = (os.environ.get("FRONTEND_URL") or "").strip().rstrip("/")
+
+def _normalize_origins(origins):
+    return sorted({origin.strip().rstrip("/") for origin in origins if origin and origin.strip()})
+
 if not cors_origins_env:
     if settings.ENV == 'production':
         # Log error but don't raise - allows app to start and report via health endpoint
         logger.error("CORS_ORIGINS environment variable is required in production but not set")
-        # Use empty list - CORS will be restrictive but app will start
-        cors_origins = []
+        # Fallback to explicit known frontend origins so auth doesn't break hard.
+        cors_origins = _normalize_origins([
+            frontend_url_env,
+            "https://odinring.io",
+            "https://www.odinring.io",
+        ])
     else:
         # Development fallback - localhost only
-        cors_origins = ["http://localhost:3000"]
+        cors_origins = _normalize_origins(["http://localhost:3000", frontend_url_env])
         logger.warning("CORS_ORIGINS not set, using development defaults (localhost only)")
         logger.info(f"🌐 CORS Configuration (development defaults):")
         logger.info(f"   Allowed origins: {cors_origins}")
         logger.info(f"   Environment: {settings.ENV}")
 else:
     cors_origins = [origin.strip() for origin in cors_origins_env.split(',')]
+    if frontend_url_env:
+        cors_origins.append(frontend_url_env)
+    # Include canonical production domains to avoid accidental auth/CORS regressions.
+    cors_origins.extend(["https://odinring.io", "https://www.odinring.io"])
     # SECURITY: Always add localhost for development (only if not production)
     if settings.ENV != 'production' and "http://localhost:3000" not in cors_origins:
         cors_origins.append("http://localhost:3000")
+    cors_origins = _normalize_origins(cors_origins)
     logger.info(f"CORS configured from environment: {len(cors_origins)} origin(s)")
 
 # Log CORS configuration for debugging
