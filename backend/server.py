@@ -6527,6 +6527,7 @@ async def log_requests(request: Request, call_next):
 # SECURITY: Don't fail hard during import - allow app to start and report via health endpoint
 cors_origins_env = os.environ.get('CORS_ORIGINS', '')
 frontend_url_env = (os.environ.get("FRONTEND_URL") or "").strip().rstrip("/")
+cors_origin_regex = r"^https://([a-zA-Z0-9-]+\.)?odinring\.io$"
 
 def _normalize_origins(origins):
     return sorted({origin.strip().rstrip("/") for origin in origins if origin and origin.strip()})
@@ -6550,6 +6551,8 @@ if not cors_origins_env:
         logger.info(f"   Environment: {settings.ENV}")
 else:
     cors_origins = [origin.strip() for origin in cors_origins_env.split(',')]
+    # Prevent wildcard+credentials misconfiguration in production browsers.
+    cors_origins = [origin for origin in cors_origins if origin != "*"]
     if frontend_url_env:
         cors_origins.append(frontend_url_env)
     # Include canonical production domains to avoid accidental auth/CORS regressions.
@@ -6572,6 +6575,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
     allow_origins=cors_origins,
+    allow_origin_regex=cors_origin_regex,
     allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],  # SECURITY: Explicit methods only
     allow_headers=[
         "Authorization", 
