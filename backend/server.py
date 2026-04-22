@@ -1300,9 +1300,14 @@ async def get_current_user(
                     status_code=401, 
                     detail="Session expired or invalid. Please log in again."
                 )
-        
-        # Get user from database
-        user_doc = await users_collection.find_one({"id": user_id})
+
+        user_cache_key = f"auth_user:{user_id}"
+        user_doc = cache_service.get(user_cache_key)
+        if user_doc is None:
+            # Get user from database
+            user_doc = await users_collection.find_one({"id": user_id})
+            if user_doc:
+                cache_service.set(user_cache_key, user_doc, 30)
         if not user_doc:
             raise HTTPException(status_code=401, detail="User not found")
         
@@ -1337,7 +1342,12 @@ async def get_current_admin(
 
     try:
         # Use Firestore collection
-        admin_doc = await admins_collection.find_one({"id": admin_id})
+        admin_cache_key = f"auth_admin:{admin_id}"
+        admin_doc = cache_service.get(admin_cache_key)
+        if admin_doc is None:
+            admin_doc = await admins_collection.find_one({"id": admin_id})
+            if admin_doc:
+                cache_service.set(admin_cache_key, admin_doc, 30)
         if not admin_doc:
             raise HTTPException(status_code=401, detail="Admin not found")
         return Admin(**admin_doc)

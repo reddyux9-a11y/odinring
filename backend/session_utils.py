@@ -8,11 +8,14 @@ from typing import Optional, Dict, Any
 import uuid
 import logging
 from firestore_db import FirestoreDB
+from app.infrastructure.cache import cache_service
 
 logger = logging.getLogger(__name__)
 
 # Sessions collection
 sessions_collection = FirestoreDB('sessions')
+_SESSION_VALID_CACHE_TTL_SECONDS = 15
+_SESSION_LAST_ACTIVITY_THROTTLE_SECONDS = 60
 
 
 class SessionManager:
@@ -109,6 +112,12 @@ class SessionManager:
             True if session is valid, False otherwise
         """
         try:
+            validation_cache_key = f"session_valid:{session_id}"
+            cached_valid = cache_service.get(validation_cache_key)
+            if cached_valid is True:
+                await SessionManager.update_last_activity(session_id)
+                return True
+
             session = await SessionManager.get_session(session_id)
             
             if not session:
@@ -137,6 +146,7 @@ class SessionManager:
             
             # Update last activity
             await SessionManager.update_last_activity(session_id)
+            cache_service.set(validation_cache_key, True, _SESSION_VALID_CACHE_TTL_SECONDS)
             return True
             
         except Exception as e:
@@ -162,6 +172,8 @@ class SessionManager:
             
             if result.get('modified_count', 0) > 0:
                 logger.info(f"Session invalidated: {session_id}")
+                cache_service.delete(f"session_valid:{session_id}")
+                cache_service.delete(f"session_last_activity_touch:{session_id}")
                 return True
             
             logger.warning(f"Session not found for invalidation: {session_id}")
@@ -209,10 +221,15 @@ class SessionManager:
             True if updated successfully
         """
         try:
+            touch_key = f"session_last_activity_touch:{session_id}"
+            # Reduce write amplification on hot endpoints like /api/me.
+            if cache_service.get(touch_key) is True:
+                return True
             await sessions_collection.update_one(
                 {'id': session_id},
                 {'$set': {'last_activity': datetime.utcnow()}}
             )
+            cache_service.set(touch_key, True, _SESSION_LAST_ACTIVITY_THROTTLE_SECONDS)
             return True
         except Exception as e:
             logger.error(f"Failed to update last activity: {e}", exc_info=True)
