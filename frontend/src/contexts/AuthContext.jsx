@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import api from '../lib/api';
+import { refreshAccessToken } from '../lib/api';
 import { onAuthChange, signOut as firebaseSignOut } from '../lib/firebase';
 import logger from '../lib/logger';
 import { setAuthTokens, clearAuthTokens } from '../lib/authTokenStore';
@@ -182,6 +183,27 @@ return { token: accessToken, refresh_token: refreshToken, user: userData };
   useEffect(() => {
 checkAuthStatus();
   }, []);
+
+  // Keep authenticated sessions alive with silent refresh.
+  // This avoids abrupt logouts when access tokens expire during active usage.
+  useEffect(() => {
+    if (!user || !authChecked) return undefined;
+
+    const refreshPeriodMs = 10 * 60 * 1000; // every 10 minutes
+    const intervalId = setInterval(async () => {
+      try {
+        await refreshAccessToken();
+        logger.debug('🔄 AuthContext: Silent token refresh succeeded');
+      } catch (error) {
+        // Non-fatal here; normal request flow/interceptors will still handle auth failures.
+        logger.warn('⚠️ AuthContext: Silent token refresh failed', {
+          status: error?.response?.status
+        });
+      }
+    }, refreshPeriodMs);
+
+    return () => clearInterval(intervalId);
+  }, [user, authChecked]);
 
   const checkAuthStatus = async () => {
 logger.debug('🔍 AuthContext: checkAuthStatus() called');

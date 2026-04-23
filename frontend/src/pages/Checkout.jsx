@@ -7,6 +7,23 @@ import { toast } from 'sonner';
 
 const PAID_PLAN_IDS = new Set(['solo_standard', 'solo_enterprise', 'org']);
 
+const extractErrorMessage = (error, fallback) => {
+  const detail = error?.response?.data?.detail;
+  if (typeof detail === 'string') return detail;
+  if (Array.isArray(detail)) {
+    const joined = detail
+      .map((item) => (typeof item === 'string' ? item : item?.msg || JSON.stringify(item)))
+      .filter(Boolean)
+      .join(', ');
+    if (joined) return joined;
+  }
+  if (detail && typeof detail === 'object') {
+    return detail.msg || detail.message || JSON.stringify(detail);
+  }
+  const message = error?.message;
+  return typeof message === 'string' ? message : fallback;
+};
+
 /**
  * Opens Stripe Checkout via the backend. Replaces the previous mock card form.
  * Entry points: /subscription (Choose plan), PaymentFailed retry, bookmarks.
@@ -16,17 +33,19 @@ const Checkout = () => {
   const [searchParams] = useSearchParams();
   const planId = searchParams.get('plan') || 'solo_standard';
   const [status, setStatus] = useState('loading');
+  const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
     let cancelled = false;
 
     const start = async () => {
       if (!PAID_PLAN_IDS.has(planId)) {
-        toast.error(
+        const message =
           planId === 'personal'
             ? 'This plan does not require payment.'
-            : 'Invalid plan for checkout.'
-        );
+            : 'Invalid plan for checkout.';
+        toast.error(message);
+        setErrorMessage(message);
         setStatus('error');
         return;
       }
@@ -39,17 +58,21 @@ const Checkout = () => {
         const checkoutUrl = response.data?.checkout_url;
         if (cancelled) return;
         if (!checkoutUrl) {
-          toast.error('Failed to start checkout. Please try again.');
+          const message = 'Failed to start checkout. Please try again.';
+          toast.error(message);
+          setErrorMessage(message);
           setStatus('error');
           return;
         }
         window.location.href = checkoutUrl;
       } catch (error) {
         if (cancelled) return;
-        const message =
-          error.response?.data?.detail ||
-          'Failed to start checkout. Please try again.';
+        const message = extractErrorMessage(
+          error,
+          'Failed to start checkout. Please try again.'
+        );
         toast.error(message);
+        setErrorMessage(message);
         setStatus('error');
       }
     };
@@ -82,8 +105,19 @@ const Checkout = () => {
       {status === 'error' && (
         <>
           <p className="text-muted-foreground text-center max-w-md">
-            We could not open the payment page. If Stripe is not configured on the
-            server, set <code className="text-xs bg-muted px-1 rounded">STRIPE_SECRET_KEY</code>{' '}
+            We could not open the payment page.
+          </p>
+          {errorMessage ? (
+            <p className="text-sm text-red-500 text-center max-w-md">
+              {errorMessage}
+            </p>
+          ) : (
+            <p className="text-muted-foreground text-center max-w-md">
+              Please try again in a moment.
+            </p>
+          )}
+          <p className="text-muted-foreground text-center max-w-md text-xs">
+            If this error says Stripe is not configured, verify <code className="text-xs bg-muted px-1 rounded">STRIPE_SECRET_KEY</code>{' '}
             and restart the API.
           </p>
           <div className="flex flex-wrap gap-3 justify-center">

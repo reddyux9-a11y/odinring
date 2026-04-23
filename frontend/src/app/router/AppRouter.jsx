@@ -10,7 +10,6 @@ import ResetPassword from "@/features/auth/pages/ResetPassword";
 import AdminLogin from "@/features/auth/pages/AdminLogin";
 import AdminDashboard from "@/features/admin/pages/AdminDashboard";
 import Onboarding from "@/features/dashboard/pages/Onboarding";
-import BillingChoosePlan from "@/features/billing/pages/BillingChoosePlan";
 import SubscriptionIndex from "@/features/billing/pages/SubscriptionIndex";
 import Checkout from "@/features/billing/pages/Checkout";
 import PaymentSuccess from "@/features/billing/pages/PaymentSuccess";
@@ -40,7 +39,7 @@ const AppRouter = () => {
         <Route path="/onboarding" element={<ProtectedRoute requiredAuth="user"><Onboarding /></ProtectedRoute>} />
         <Route path="/dashboard" element={<ProtectedRoute requiredAuth="user"><Dashboard /></ProtectedRoute>} />
         <Route path="/subscription" element={<ProtectedRoute requiredAuth="user"><SubscriptionIndex /></ProtectedRoute>} />
-        <Route path="/billing/choose-plan" element={<ProtectedRoute requiredAuth="user"><BillingChoosePlan /></ProtectedRoute>} />
+        <Route path="/billing/choose-plan" element={<Navigate to="/subscription" replace />} />
         <Route path="/checkout" element={<ProtectedRoute requiredAuth="user"><Checkout /></ProtectedRoute>} />
         <Route path="/payment/success" element={<ProtectedRoute requiredAuth="user"><PaymentSuccess /></ProtectedRoute>} />
         <Route path="/payment/failed" element={<ProtectedRoute requiredAuth="user"><PaymentFailed /></ProtectedRoute>} />

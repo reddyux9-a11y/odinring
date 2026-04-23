@@ -22,8 +22,8 @@ class Settings(BaseSettings):
     
     # JWT Configuration (Phase 1)
     JWT_EXPIRATION: int = 168  # 7 days in hours (legacy, for backward compatibility)
-    ACCESS_TOKEN_EXPIRY_MINUTES: int = 15  # Short-lived access tokens
-    REFRESH_TOKEN_EXPIRY_DAYS: int = 7  # Long-lived refresh tokens
+    ACCESS_TOKEN_EXPIRY_MINUTES: int = 30  # Balanced UX/security for access tokens
+    REFRESH_TOKEN_EXPIRY_DAYS: int = 30  # Longer-lived refresh token for persistent login
     
     # CORS
     CORS_ORIGINS: str = "http://localhost:3000"
@@ -97,8 +97,8 @@ class Settings(BaseSettings):
         """Validate access token expiry is reasonable"""
         if v < 5:
             raise ValueError('ACCESS_TOKEN_EXPIRY_MINUTES must be at least 5 minutes')
-        if v > 60:
-            raise ValueError('ACCESS_TOKEN_EXPIRY_MINUTES should not exceed 60 minutes for security')
+        if v > 120:
+            raise ValueError('ACCESS_TOKEN_EXPIRY_MINUTES should not exceed 120 minutes for security')
         return v
     
     @field_validator('REFRESH_TOKEN_EXPIRY_DAYS')
@@ -107,8 +107,8 @@ class Settings(BaseSettings):
         """Validate refresh token expiry is reasonable"""
         if v < 1:
             raise ValueError('REFRESH_TOKEN_EXPIRY_DAYS must be at least 1 day')
-        if v > 30:
-            raise ValueError('REFRESH_TOKEN_EXPIRY_DAYS should not exceed 30 days for security')
+        if v > 90:
+            raise ValueError('REFRESH_TOKEN_EXPIRY_DAYS should not exceed 90 days for security')
         return v
     
     @field_validator('LOG_LEVEL')

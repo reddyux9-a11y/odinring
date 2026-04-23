@@ -136,12 +136,6 @@ const ProfileSettings = ({ profile, setProfile, user }) => {
         }));
         setImagePreview(logoUrl);
         
-        // Also update via /me endpoint to sync with backend
-        await api.put('/me', {
-          avatar: logoUrl,
-          custom_logo: logoUrl
-        });
-        
         toast.success("Image uploaded successfully!");
       }
     } catch (error) {

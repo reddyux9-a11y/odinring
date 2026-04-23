@@ -28,13 +28,6 @@ const SubscriptionStatusBanner = () => {
 
   const loadSubscriptionDetails = async () => {
     try {
-      // Check if user is authenticated before making API call
-      const token = localStorage.getItem('token');
-      if (!token) {
-        setLoading(false);
-        return;
-      }
-      
       const response = await api.get('/billing/subscription');
       setSubscriptionDetails(response.data);
     } catch (error) {
@@ -85,7 +78,7 @@ const SubscriptionStatusBanner = () => {
               <Button
                 size="sm"
                 variant="default"
-                onClick={() => navigate('/billing/choose-plan')}
+                onClick={() => navigate('/subscription')}
               >
                 Choose Plan
               </Button>
@@ -120,7 +113,7 @@ const SubscriptionStatusBanner = () => {
               <Button
                 size="sm"
                 variant="default"
-                onClick={() => navigate('/billing/choose-plan')}
+                onClick={() => navigate('/subscription')}
               >
                 View Plans
               </Button>
@@ -154,7 +147,7 @@ const SubscriptionStatusBanner = () => {
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => navigate('/billing/choose-plan')}
+                onClick={() => navigate('/subscription')}
               >
                 View Plans
               </Button>

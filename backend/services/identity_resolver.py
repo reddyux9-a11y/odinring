@@ -217,6 +217,44 @@ class IdentityResolver:
             Subscription dict with status and plan
         """
         try:
+            def to_datetime(value):
+                """Convert Firestore timestamp (dict / ISO string / datetime) to naive UTC datetime"""
+                if value is None:
+                    return None
+                if isinstance(value, datetime):
+                    # Normalize to naive UTC for consistency
+                    if value.tzinfo is not None:
+                        return value.astimezone(timezone.utc).replace(tzinfo=None)
+                    return value
+                # If it's a dict with timestamp fields (Firestore format)
+                if isinstance(value, dict) and '_seconds' in value:
+                    return datetime.fromtimestamp(value['_seconds'], tz=timezone.utc).replace(tzinfo=None)
+                # If it's already a string ISO format
+                if isinstance(value, str):
+                    try:
+                        return datetime.fromisoformat(value.replace('Z', '+00:00')).replace(tzinfo=None)
+                    except Exception:
+                        return None
+                return None
+
+            def status_priority(status_value: Any) -> int:
+                """
+                Prefer current/usable subscriptions over historical expired ones.
+                Higher number = better candidate for current identity state.
+                """
+                status_text = str(status_value)
+                if status_text == str(SubscriptionStatus.ACTIVE):
+                    return 4
+                if status_text == str(SubscriptionStatus.TRIAL):
+                    return 3
+                if status_text == "past_due":
+                    return 2
+                if status_text == "canceled":
+                    return 1
+                if status_text == str(SubscriptionStatus.EXPIRED):
+                    return 0
+                return 0
+
             query = {}
             if user_id:
                 query['user_id'] = user_id
@@ -237,40 +275,35 @@ class IdentityResolver:
             if cached_subscription:
                 return cached_subscription
 
-            subscription = await subscriptions_collection.find_one(query)
+            # IMPORTANT: don't use find_one here because accounts can have multiple
+            # historical subscriptions (trial -> active -> expired etc.). Picking an
+            # arbitrary one can incorrectly lock public items.
+            subscriptions = await subscriptions_collection.find(query)
             
-            if not subscription:
+            if not subscriptions:
                 result = {
                     "status": SubscriptionStatus.NONE,
                     "plan": None
                 }
                 cache_service.set(subscription_cache_key, result, _SUBSCRIPTION_CACHE_TTL_SECONDS)
                 return result
+
+            # Pick best candidate by status priority, then by most recent relevant date.
+            def subscription_sort_key(sub: Dict[str, Any]):
+                relevant_dt = (
+                    to_datetime(sub.get('current_period_end'))
+                    or to_datetime(sub.get('trial_end_date'))
+                    or to_datetime(sub.get('updated_at'))
+                    or to_datetime(sub.get('created_at'))
+                    or datetime.min
+                )
+                return (status_priority(sub.get('status')), relevant_dt)
+
+            subscription = max(subscriptions, key=subscription_sort_key)
             
             # Check if subscription is expired
             status = subscription.get('status', SubscriptionStatus.NONE)
             now = datetime.utcnow()
-            
-            # Convert Firestore timestamps to datetime if needed
-            def to_datetime(value):
-                """Convert Firestore timestamp (dict / ISO string / datetime) to naive UTC datetime"""
-                if value is None:
-                    return None
-                if isinstance(value, datetime):
-                    # Normalize to naive UTC for consistency
-                    if value.tzinfo is not None:
-                        return value.astimezone(timezone.utc).replace(tzinfo=None)
-                    return value
-                # If it's a dict with timestamp fields (Firestore format)
-                if isinstance(value, dict) and '_seconds' in value:
-                    return datetime.fromtimestamp(value['_seconds'], tz=timezone.utc).replace(tzinfo=None)
-                # If it's already a string ISO format
-                if isinstance(value, str):
-                    try:
-                        return datetime.fromisoformat(value.replace('Z', '+00:00')).replace(tzinfo=None)
-                    except Exception:
-                        return None
-                return None
             
             if status == SubscriptionStatus.ACTIVE:
                 # Verify current period hasn't ended

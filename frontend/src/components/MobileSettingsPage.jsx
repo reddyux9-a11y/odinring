@@ -238,12 +238,6 @@ const MobileSettingsPage = ({
         }));
         setImagePreview(logoUrl);
         
-        // Also update via /me endpoint to sync with backend
-        await api.put('/me', {
-          avatar: logoUrl,
-          custom_logo: logoUrl
-        });
-        
         addHapticFeedback('success');
         toast.success("Image uploaded successfully!", { duration: 1500 });
         

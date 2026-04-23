@@ -49,7 +49,7 @@ const normalizeLink = (link) => {
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { user, logout, refreshUser } = useAuth();
+  const { user, logout } = useAuth();
   const { context: identityContext, loading: identityLoading, needsBilling, accountType } = useIdentityContext();
   const [activeSection, setActiveSection] = useState(() => {
     try {
@@ -66,7 +66,6 @@ const Dashboard = () => {
   const [showLinkManager, setShowLinkManager] = useState(false);
   const isMountedRef = useRef(true);
   const hasAutoActivatedRef = useRef(false);
-  const hasInitialLoadRef = useRef(false);
 
   const [profile, setProfile] = useState({
     name: user?.name || "Loading...",
@@ -93,7 +92,6 @@ const Dashboard = () => {
   }, [identityLoading, needsBilling, identityContext, accountType]);
 
   useEffect(() => {
-    let isMounted = true;
     initializeMobileEnvironment();
     setIsMobile(isMobileDevice());
     
@@ -102,24 +100,20 @@ const Dashboard = () => {
       return;
     }
 
-    // Only load data on initial mount when user exists
-    if (!hasInitialLoadRef.current && user) {
-      hasInitialLoadRef.current = true;
-      (async () => {
-        setIsLoading(true);
-        try {
-          // PERFORMANCE FIX: Load data in parallel on initial mount
-          await Promise.all([
-            loadUserData(),
-            loadRingSettings()
-          ]);
-        } catch {
-          // non-blocking
-        } finally {
-          if (isMounted) setIsLoading(false);
-        }
-      })();
-    }
+    (async () => {
+      setIsLoading(true);
+      try {
+        // PERFORMANCE FIX: Load dashboard data in parallel
+        await Promise.all([
+          loadUserData(),
+          loadRingSettings()
+        ]);
+      } catch {
+        // non-blocking
+      } finally {
+        if (isMountedRef.current) setIsLoading(false);
+      }
+    })();
 
     const handleResize = () => {
       setIsMobile(isMobileScreen());
@@ -127,10 +121,9 @@ const Dashboard = () => {
 
     window.addEventListener('resize', handleResize);
     return () => {
-      isMounted = false;
       window.removeEventListener('resize', handleResize);
     };
-  }, [user, navigate]); // Include 'user' to handle logout, but use ref to prevent data reload loops
+  }, [user?.id, navigate]); // Run once per authenticated user session
 
   // Persist active section to avoid unexpected resets after updates
   useEffect(() => {
@@ -175,34 +168,9 @@ const Dashboard = () => {
     }
   }, [links]);
 
-  const loadUserData = async (skipUserRefresh = false) => {
+  const loadUserData = async () => {
     try {
       logger.debug('loadUserData() called');
-      
-      const token = localStorage.getItem('token');
-      if (!token) {
-        // Don't log as error - this is expected when user is not logged in
-        // Only log if we're actually on the dashboard (shouldn't happen due to ProtectedRoute)
-        if (window.location.pathname === '/dashboard') {
-          logger.warn('No token found in localStorage - user should be redirected to login');
-        }
-        return;
-      }
-      
-      // Decode JWT to see user_id
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        logger.debug('JWT Payload:', payload);
-        logger.debug('User ID from JWT:', payload.user_id);
-        logger.debug('Token expires:', new Date(payload.exp * 1000).toISOString());
-      } catch (e) {
-        logger.error('Failed to decode JWT:', e);
-      }
-      
-      // Only refresh user if explicitly needed (not on every load)
-      if (!skipUserRefresh && refreshUser) {
-        await refreshUser();
-      }
       
       // PERFORMANCE FIX: Use combined endpoint for maximum performance
       // This reduces load time from 33s to 2-3s (90% improvement)
@@ -309,19 +277,21 @@ const Dashboard = () => {
 
       // Set profile from user data - use current user from context
       if (user && isMountedRef.current) {
-        setProfile({
-          name: user.name,
-          bio: user.bio || "Digital creator & entrepreneur. Building the future one link at a time.",
-          avatar: user.avatar || "",
-          theme: user.theme || "default",
-          accentColor: user.accent_color || "#000000",
-          backgroundType: "solid",
-          backgroundColor: user.background_color || "#ffffff",
-          // Custom Branding fields
-          custom_logo: user.custom_logo || "",
+        setProfile(prev => ({
+          ...prev,
+          name: user.name || prev.name,
+          bio: user.bio || prev.bio || "Digital creator & entrepreneur. Building the future one link at a time.",
+          // Preserve latest in-session avatar/logo (upload preview + API response) instead of
+          // clobbering with potentially stale auth-context user object.
+          avatar: prev.avatar || user.avatar || "",
+          theme: user.theme || prev.theme || "default",
+          accentColor: user.accent_color || prev.accentColor || "#000000",
+          backgroundType: prev.backgroundType || "solid",
+          backgroundColor: user.background_color || prev.backgroundColor || "#ffffff",
+          custom_logo: prev.custom_logo || user.custom_logo || user.avatar || "",
           show_footer: user.show_footer !== false,
-          phone_number: user.phone_number || ""
-        });
+          phone_number: user.phone_number || prev.phone_number || ""
+        }));
       }
     } catch (error) {
       logger.error('Dashboard: Failed to load user data:', error);
@@ -333,13 +303,6 @@ const Dashboard = () => {
 
   const loadRingSettings = async () => {
     try {
-      // Check if user is authenticated before making API call
-      const token = localStorage.getItem('token');
-      if (!token) {
-        logger.debug('loadRingSettings: No token found, skipping ring settings fetch');
-        return;
-      }
-      
       // Ring settings removed (direct link mode killed)
     } catch (error) {
       // Only log error if it's not a 401/403 (expected when not authenticated)
@@ -426,14 +389,14 @@ const Dashboard = () => {
     navigate('/');
   };
 
-  const handleRefresh = async (skipUserRefresh = false) => {
+  const handleRefresh = async () => {
     setIsLoading(true);
     addHapticFeedback('light');
     
       try {
         // PERFORMANCE FIX: Load user data and ring settings in parallel
         await Promise.all([
-          loadUserData(skipUserRefresh),
+          loadUserData(),
           loadRingSettings()
         ]);
         mobileToast.success("Dashboard refreshed! ⚡");
@@ -685,7 +648,7 @@ const Dashboard = () => {
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => navigate('/billing/choose-plan')}
+                    onClick={() => navigate('/subscription')}
                   >
                     View plans
                   </Button>
@@ -700,6 +663,7 @@ const Dashboard = () => {
           {/* Premium Sidebar */}
           <PremiumSidebar
             user={user}
+            avatarSrc={profile.custom_logo || profile.avatar || user?.avatar}
             activeSection={activeSection}
             setActiveSection={setActiveSection}
             onLogout={handleLogout}
@@ -865,7 +829,7 @@ const Dashboard = () => {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => navigate('/billing/choose-plan')}
+                        onClick={() => navigate('/subscription')}
                       >
                         Go to billing
                       </Button>

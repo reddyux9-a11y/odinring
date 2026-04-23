@@ -11,6 +11,23 @@ import api from '../lib/api';
 import { getSubscriptionDaysRemaining } from '../lib/subscriptionDisplay';
 import { toast } from 'sonner';
 
+const extractErrorMessage = (error, fallback) => {
+  const detail = error?.response?.data?.detail;
+  if (typeof detail === 'string') return detail;
+  if (Array.isArray(detail)) {
+    const joined = detail
+      .map((item) => (typeof item === 'string' ? item : item?.msg || JSON.stringify(item)))
+      .filter(Boolean)
+      .join(', ');
+    if (joined) return joined;
+  }
+  if (detail && typeof detail === 'object') {
+    return detail.msg || detail.message || JSON.stringify(detail);
+  }
+  const message = error?.message;
+  return typeof message === 'string' ? message : fallback;
+};
+
 const BillingChoosePlan = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -67,9 +84,10 @@ const BillingChoosePlan = () => {
       // Redirect to Stripe Checkout
       window.location.href = checkoutUrl;
     } catch (error) {
-      const message =
-        error.response?.data?.detail ||
-        'Failed to start checkout. Please try again.';
+      const message = extractErrorMessage(
+        error,
+        'Failed to start checkout. Please try again.'
+      );
       toast.error(message);
       setSubscribingPlan(null);
     }
@@ -91,7 +109,10 @@ const BillingChoosePlan = () => {
         navigate('/dashboard');
       }
     } catch (error) {
-      const errorMessage = error.response?.data?.detail || 'Failed to start free trial. Please try again.';
+      const errorMessage = extractErrorMessage(
+        error,
+        'Failed to start free trial. Please try again.'
+      );
       toast.error(errorMessage);
     } finally {
       setStartingTrial(null);

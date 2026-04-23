@@ -3802,6 +3802,13 @@ async def get_dashboard_data(current_user: User = Depends(get_current_user)):
     logger.info(f"📊 GET /dashboard/data - Loading all data for user: {current_user.email}")
     
     try:
+        # Short TTL cache to absorb frequent dashboard refreshes and reduce repeated Firestore scans.
+        dashboard_cache_key = f"dashboard_data:{current_user.id}"
+        cached_dashboard_data = cache_service.get(dashboard_cache_key)
+        if cached_dashboard_data is not None:
+            logger.info(f"⚡ GET /dashboard/data - Cache hit for user: {current_user.email}")
+            return cached_dashboard_data
+
         # Load all data in parallel using asyncio
         import asyncio
         
@@ -3825,13 +3832,9 @@ async def get_dashboard_data(current_user: User = Depends(get_current_user)):
             logger.error(f"Error loading user: {user_doc}")
             user_doc = None
         
-        # Process links
-        links = [Link(**link_doc) for link_doc in link_docs] if link_docs else []
-        links.sort(key=lambda x: x.order)
-        
-        # Process media
-        media = [Media(**media_doc) for media_doc in media_docs] if media_docs else []
-        media.sort(key=lambda x: x.order)
+        # Process links/media using plain dict sorting (faster than model instantiation).
+        links = sorted((link_docs or []), key=lambda x: x.get("order", 0))
+        media = sorted((media_docs or []), key=lambda x: x.get("order", 0))
         
         # Process items (from user document)
         items = []
@@ -3851,13 +3854,15 @@ async def get_dashboard_data(current_user: User = Depends(get_current_user)):
                 logger.warning(f"Failed to load ring settings: {e}")
         
         logger.info(f"✅ GET /dashboard/data - Loaded {len(links)} links, {len(media)} media, {len(items)} items")
-        
-        return {
-            "links": [link.model_dump() for link in links],
-            "media": [m.model_dump() for m in media],
+
+        response_payload = {
+            "links": links,
+            "media": media,
             "items": items,
             "ring_settings": ring_settings
         }
+        cache_service.set(dashboard_cache_key, response_payload, 10)
+        return response_payload
         
     except Exception as e:
         logger.error(f"Error in get_dashboard_data: {e}", exc_info=True)
@@ -4182,18 +4187,47 @@ async def upload_custom_logo(file: UploadFile = File(...), current_user: User = 
     # Validate file type
     if not file.content_type.startswith('image/'):
         raise HTTPException(status_code=400, detail="Only image files are allowed")
-    
-    # Validate file size (5MB limit)
-    if file.size > 5 * 1024 * 1024:
-        raise HTTPException(status_code=400, detail="File size must be less than 5MB")
-    
+
     try:
         # Read file content
         file_content = await file.read()
+
+        # Validate file size (5MB limit)
+        if len(file_content) > 5 * 1024 * 1024:
+            raise HTTPException(status_code=400, detail="File size must be less than 5MB")
+
+        processed_content = file_content
+        processed_content_type = file.content_type
+
+        # Optimize image before storing to reduce payload and response time.
+        # Keep this best-effort so uploads still work even without Pillow.
+        try:
+            from PIL import Image
+            import io
+
+            image = Image.open(io.BytesIO(file_content))
+            if image.mode in ('RGBA', 'LA', 'P'):
+                image = image.convert('RGBA')
+            elif image.mode != 'RGB':
+                image = image.convert('RGB')
+
+            # Clamp to a reasonable avatar/logo size.
+            image.thumbnail((512, 512), Image.Resampling.LANCZOS)
+
+            optimized = io.BytesIO()
+            # Preserve transparency when present, otherwise use RGB for compact output.
+            if image.mode == 'RGBA':
+                image.save(optimized, format='WEBP', quality=82, method=6)
+            else:
+                image.convert('RGB').save(optimized, format='WEBP', quality=82, method=6)
+            processed_content = optimized.getvalue()
+            processed_content_type = "image/webp"
+        except Exception as image_err:
+            logger.warning(f"Logo optimization skipped: {image_err}")
         
         # Convert to base64 for storage (simple approach)
-        base64_content = base64.b64encode(file_content).decode('utf-8')
-        logo_url = f"data:{file.content_type};base64,{base64_content}"
+        base64_content = base64.b64encode(processed_content).decode('utf-8')
+        logo_url = f"data:{processed_content_type};base64,{base64_content}"
         
         # Update user's custom logo and avatar (they use the same image)
         await users_collection.update_one(

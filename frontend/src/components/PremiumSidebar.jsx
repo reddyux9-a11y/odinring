@@ -44,6 +44,7 @@ import SubscriptionBadge from "./SubscriptionBadge";
 
 const PremiumSidebar = ({ 
   user, 
+  avatarSrc,
   activeSection, 
   setActiveSection, 
   onLogout,
@@ -316,7 +317,7 @@ const PremiumSidebar = ({
           <div className="mt-4 p-3 bg-muted rounded-xl">
             <div className="flex items-center space-x-3">
               <Avatar className="w-10 h-10 ring-2 ring-background">
-                <AvatarImage src={user?.avatar} />
+                <AvatarImage src={avatarSrc || user?.avatar} />
                 <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-500 text-white text-sm font-semibold">
                   {user?.name?.split(' ').map(n => n[0]).join('') || 'U'}
                 </AvatarFallback>
@@ -342,7 +343,7 @@ const PremiumSidebar = ({
         {isCollapsed && !isMobile && (
           <div className="mt-3 flex justify-center">
             <Avatar className="w-9 h-9 ring-2 ring-border">
-              <AvatarImage src={user?.avatar} />
+              <AvatarImage src={avatarSrc || user?.avatar} />
               <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-500 text-white text-xs font-semibold">
                 {user?.name?.split(' ').map(n => n[0]).join('') || 'U'}
               </AvatarFallback>

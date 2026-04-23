@@ -348,8 +348,8 @@ async def create_checkout_session(
 
         # Create Stripe Checkout Session (subscription mode, yearly interval)
         frontend_base = _resolve_stripe_frontend_base(request)
-        success_url = f"{frontend_base}/billing/choose-plan?status=success"
-        cancel_url = f"{frontend_base}/billing/choose-plan?status=cancelled"
+        success_url = f"{frontend_base}/subscription?status=success"
+        cancel_url = f"{frontend_base}/subscription?status=cancelled"
 
         try:
             checkout_session = stripe.checkout.Session.create(

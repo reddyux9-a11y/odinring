@@ -20,14 +20,6 @@ export const useIdentityContext = () => {
    */
   const fetchContext = useCallback(async () => {
     try {
-      // Check if user is authenticated before making API call
-      const token = localStorage.getItem('token');
-      if (!token) {
-        setLoading(false);
-        setError(null);
-        return null;
-      }
-      
       setLoading(true);
       setError(null);
       
