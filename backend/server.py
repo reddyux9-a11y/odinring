@@ -3609,10 +3609,10 @@ def _send_resend_otp_email(*, to_email: str, otp: str) -> None:
 
 @api_router.post("/auth/forgot-password")
 @limiter.limit("5/minute")
-async def forgot_password(request: ForgotPasswordRequest):
+async def forgot_password(request: Request, payload: ForgotPasswordRequest):
     """Request password reset - sends an email OTP (if account exists)."""
     try:
-        email = _normalize_email(request.email)
+        email = _normalize_email(payload.email)
         if not email:
             raise HTTPException(status_code=400, detail="Email is required")
 
@@ -3657,11 +3657,11 @@ async def forgot_password(request: ForgotPasswordRequest):
 
 @api_router.post("/auth/verify-reset-otp")
 @limiter.limit("10/minute")
-async def verify_reset_otp(request: VerifyResetOtpRequest):
+async def verify_reset_otp(request: Request, payload: VerifyResetOtpRequest):
     """Verify OTP and mint a short-lived reset token."""
     try:
-        email = _normalize_email(request.email)
-        otp = (request.otp or "").strip()
+        email = _normalize_email(payload.email)
+        otp = (payload.otp or "").strip()
         if not email or not otp:
             raise HTTPException(status_code=400, detail="Email and OTP are required")
         if not re.fullmatch(r"\d{6}", otp):
@@ -3716,11 +3716,11 @@ async def verify_reset_otp(request: VerifyResetOtpRequest):
 
 @api_router.post("/auth/reset-password")
 @limiter.limit("5/minute")
-async def reset_password(request: ResetPasswordRequest):
+async def reset_password(request: Request, payload: ResetPasswordRequest):
     """Reset password using short-lived reset token (minted after OTP verify)."""
     try:
         # Find user by reset token
-        user_doc = await users_collection.find_one({"reset_token": request.token})
+        user_doc = await users_collection.find_one({"reset_token": payload.token})
         if not user_doc:
             raise HTTPException(status_code=400, detail="Invalid or expired reset token")
         
@@ -3732,13 +3732,13 @@ async def reset_password(request: ResetPasswordRequest):
         if _utcnow() > reset_token_expiry:
             # Clear expired token
             await users_collection.update_one(
-                {"reset_token": request.token},
+                {"reset_token": payload.token},
                 {"$unset": {"reset_token": "", "reset_token_expiry": ""}}
             )
             raise HTTPException(status_code=400, detail="Reset token has expired. Please request a new one.")
         
         # Validate new password
-        if len(request.new_password) < 8:
+        if len(payload.new_password) < 8:
             raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
         
         # Keep Firebase Auth password in sync for users that exist there.
@@ -3747,20 +3747,20 @@ async def reset_password(request: ResetPasswordRequest):
             from firebase_admin import auth as firebase_auth
             firebase_uid = user_doc.get("firebase_uid")
             if firebase_uid:
-                firebase_auth.update_user(firebase_uid, password=request.new_password)
+                firebase_auth.update_user(firebase_uid, password=payload.new_password)
             else:
                 # Best-effort fallback for legacy records without stored firebase_uid
                 firebase_user = firebase_auth.get_user_by_email(user_doc["email"])
-                firebase_auth.update_user(firebase_user.uid, password=request.new_password)
+                firebase_auth.update_user(firebase_user.uid, password=payload.new_password)
         except Exception as e:
             logger.warning(f"Firebase password sync skipped/failed during reset: {e}")
 
         # Hash new password
-        hashed_password = hash_password(request.new_password)
+        hashed_password = hash_password(payload.new_password)
         
         # Update password and clear reset token
         await users_collection.update_one(
-            {"reset_token": request.token},
+            {"reset_token": payload.token},
             {"$set": {
                 "password": hashed_password,
                 "updated_at": _utcnow()
