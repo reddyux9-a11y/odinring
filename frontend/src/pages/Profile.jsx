@@ -429,7 +429,6 @@ const Profile = () => {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading profile...</p>
         </div>
       </div>
     );
@@ -569,8 +568,8 @@ const Profile = () => {
               value="items" 
               className="text-xs h-9 rounded-[999px] bg-transparent text-gray-600"
               style={activeTab === "items" ? {
-                backgroundColor: buttonBackgroundColor || accentColor,
-                color: buttonTextColor || (isDarkBackground(buttonBackgroundColor || accentColor) ? "#ffffff" : "#000000")
+                backgroundColor: accentColor,
+                color: isDarkBackground(accentColor) ? "#ffffff" : "#000000"
               } : {
                 color: textColor
               }}
@@ -582,8 +581,8 @@ const Profile = () => {
               value="media" 
               className="text-xs h-9 rounded-[999px] bg-transparent text-gray-600"
               style={activeTab === "media" ? {
-                backgroundColor: buttonBackgroundColor || accentColor,
-                color: buttonTextColor || (isDarkBackground(buttonBackgroundColor || accentColor) ? "#ffffff" : "#000000")
+                backgroundColor: accentColor,
+                color: isDarkBackground(accentColor) ? "#ffffff" : "#000000"
               } : {
                 color: textColor
               }}
@@ -595,8 +594,8 @@ const Profile = () => {
               value="community" 
               className="text-xs h-9 rounded-[999px] bg-transparent text-gray-600"
               style={activeTab === "community" ? {
-                backgroundColor: buttonBackgroundColor || accentColor,
-                color: buttonTextColor || (isDarkBackground(buttonBackgroundColor || accentColor) ? "#ffffff" : "#000000")
+                backgroundColor: accentColor,
+                color: isDarkBackground(accentColor) ? "#ffffff" : "#000000"
               } : {
                 color: textColor
               }}

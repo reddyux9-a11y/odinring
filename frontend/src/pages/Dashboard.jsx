@@ -68,8 +68,8 @@ const Dashboard = () => {
   const hasAutoActivatedRef = useRef(false);
 
   const [profile, setProfile] = useState({
-    name: user?.name || "Loading...",
-    bio: "Loading profile...",
+    name: user?.name || "",
+    bio: user?.bio || "",
     avatar: "",
     theme: "default",
     accentColor: "#000000",
