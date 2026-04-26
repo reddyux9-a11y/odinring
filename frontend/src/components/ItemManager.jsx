@@ -49,12 +49,14 @@ const CustomDialogContent = React.forwardRef(({ className, children, ...props },
 CustomDialogContent.displayName = "CustomDialogContent";
 
 const ItemManager = ({ items, setItems }) => {
+  const ITEMS_PAGE_SIZE = 6;
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [loading, setLoading] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [imagePreview, setImagePreview] = useState(null);
+  const [visibleItemCount, setVisibleItemCount] = useState(ITEMS_PAGE_SIZE);
   const nameInputRef = useRef(null);
   const priceInputRef = useRef(null);
   
@@ -358,6 +360,10 @@ const ItemManager = ({ items, setItems }) => {
     };
     return `${symbols[currency] || currency} ${price.toFixed(2)}`;
   };
+
+  useEffect(() => {
+    setVisibleItemCount(ITEMS_PAGE_SIZE);
+  }, [items.length]);
 
   return (
     <FadeInUp>
@@ -677,7 +683,7 @@ const ItemManager = ({ items, setItems }) => {
             </div>
           ) : (
             <div className="space-y-3 overflow-x-hidden">
-              {items.map((item, index) => (
+              {items.slice(0, visibleItemCount).map((item, index) => (
                 <div key={item.id} className="border border-border rounded-2xl transition-all duration-300 bg-card/80 backdrop-blur-sm hover:bg-card/90 hover:shadow-lg hover:border-border">
                   <div className="p-2 sm:p-4">
                     <div className="flex items-center sm:items-start gap-1 sm:gap-3">
@@ -772,6 +778,20 @@ const ItemManager = ({ items, setItems }) => {
                   </div>
                 </div>
               ))}
+              {items.length > visibleItemCount && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={() =>
+                    setVisibleItemCount((prev) =>
+                      Math.min(prev + ITEMS_PAGE_SIZE, items.length),
+                    )
+                  }
+                >
+                  View more items
+                </Button>
+              )}
             </div>
           )}
         </CardContent>

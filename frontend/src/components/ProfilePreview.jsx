@@ -80,7 +80,6 @@ const ProfilePreview = ({
   username,
 }) => {
   const [activeTab, setActiveTab] = useState("items");
-  const [publicItemsVisibleCount, setPublicItemsVisibleCount] = useState(4);
 
   const actualUsername = username || profile.username || "user";
 
@@ -728,10 +727,6 @@ const ProfilePreview = ({
 
   // Public view mode - matches Profile.jsx styling
   if (publicView) {
-    const activePublicItems = items.filter((item) => item.active);
-    const visiblePublicItems = activePublicItems.slice(0, publicItemsVisibleCount);
-    const hasMorePublicItems = activePublicItems.length > publicItemsVisibleCount;
-
     return (
       <div
         className={`w-full shadow-xl relative min-h-[500px] flex flex-col ${fontClass}`}
@@ -1069,7 +1064,7 @@ const ProfilePreview = ({
             </TabsContent>
 
             <TabsContent value="items" className="mt-0 space-y-1.5">
-              {activePublicItems.length === 0 ? (
+              {items.filter((item) => item.active).length === 0 ? (
                 <div className="text-center py-8">
                   <div className="text-3xl mb-2">🛍️</div>
                   <p className="text-xs" style={{ color: secondaryTextColor }}>
@@ -1077,7 +1072,9 @@ const ProfilePreview = ({
                   </p>
                 </div>
               ) : (
-                visiblePublicItems.map((item) => {
+                items
+                  .filter((item) => item.active)
+                  .map((item) => {
                     return (
                       <div
                         key={item.id}
@@ -1166,17 +1163,6 @@ const ProfilePreview = ({
                       </div>
                     );
                   })
-              )}
-              {hasMorePublicItems && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full mt-2"
-                  style={{ borderColor: accentColor, color: accentColor }}
-                  onClick={() => setPublicItemsVisibleCount((prev) => prev + 4)}
-                >
-                  View more items
-                </Button>
               )}
             </TabsContent>
           </Tabs>
