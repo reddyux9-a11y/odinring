@@ -74,7 +74,9 @@ const Dashboard = () => {
     theme: "default",
     accentColor: "#000000",
     backgroundType: "solid",
-    backgroundColor: "#ffffff"
+    backgroundColor: "#ffffff",
+    buttonBackgroundColor: "",
+    buttonTextColor: ""
   });
 
   // Handle identity-based subscription logging (no hard redirect)
@@ -288,6 +290,26 @@ const Dashboard = () => {
           accentColor: user.accent_color || prev.accentColor || "#000000",
           backgroundType: prev.backgroundType || "solid",
           backgroundColor: user.background_color || prev.backgroundColor || "#ffffff",
+          button_background_color:
+            user.button_background_color ||
+            prev.button_background_color ||
+            prev.buttonBackgroundColor ||
+            "",
+          button_text_color:
+            user.button_text_color ||
+            prev.button_text_color ||
+            prev.buttonTextColor ||
+            "",
+          buttonBackgroundColor:
+            user.button_background_color ||
+            prev.buttonBackgroundColor ||
+            prev.button_background_color ||
+            "",
+          buttonTextColor:
+            user.button_text_color ||
+            prev.buttonTextColor ||
+            prev.button_text_color ||
+            "",
           custom_logo: prev.custom_logo || user.custom_logo || user.avatar || "",
           show_footer: user.show_footer !== false,
           phone_number: user.phone_number || prev.phone_number || ""
