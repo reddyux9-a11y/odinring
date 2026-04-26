@@ -287,28 +287,28 @@ const Dashboard = () => {
           // clobbering with potentially stale auth-context user object.
           avatar: prev.avatar || user.avatar || "",
           theme: user.theme || prev.theme || "default",
-          accentColor: prev.accentColor || user.accent_color || "#000000",
+          accentColor: user.accent_color || prev.accentColor || "#000000",
           backgroundType: prev.backgroundType || "solid",
-          backgroundColor: prev.backgroundColor || user.background_color || "#ffffff",
+          backgroundColor: user.background_color || prev.backgroundColor || "#ffffff",
           button_background_color:
+            user.button_background_color ||
             prev.button_background_color ||
             prev.buttonBackgroundColor ||
-            user.button_background_color ||
             "",
           button_text_color:
+            user.button_text_color ||
             prev.button_text_color ||
             prev.buttonTextColor ||
-            user.button_text_color ||
             "",
           buttonBackgroundColor:
+            user.button_background_color ||
             prev.buttonBackgroundColor ||
             prev.button_background_color ||
-            user.button_background_color ||
             "",
           buttonTextColor:
+            user.button_text_color ||
             prev.buttonTextColor ||
             prev.button_text_color ||
-            user.button_text_color ||
             "",
           custom_logo: prev.custom_logo || user.custom_logo || user.avatar || "",
           show_footer: user.show_footer !== false,

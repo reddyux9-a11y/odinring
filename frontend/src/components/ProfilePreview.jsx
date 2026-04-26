@@ -114,15 +114,8 @@ const ProfilePreview = ({
   const isBackgroundDark = isDarkBackground(backgroundColor);
   const textColor = isBackgroundDark ? "#ffffff" : "#000000";
   const secondaryTextColor = isBackgroundDark ? "#e5e7eb" : "#6b7280";
-  const previewSurfaceColor = isBackgroundDark
-    ? "rgba(255,255,255,0.14)"
-    : "rgba(15,23,42,0.08)";
-  const previewBorderColor = isBackgroundDark
-    ? "rgba(255,255,255,0.24)"
-    : "rgba(15,23,42,0.14)";
-  const previewCardColor = isBackgroundDark
-    ? "rgba(255,255,255,0.08)"
-    : "rgba(15,23,42,0.04)";
+  const tabActiveBgColor = accentColor;
+  const tabActiveTextColor = isDarkBackground(accentColor) ? "#ffffff" : "#000000";
 
   // Get banner pattern with optimized hook
   const { className: bannerPatternClass } = useBannerPattern(profile);
@@ -306,8 +299,10 @@ const ProfilePreview = ({
                 href={`mailto:${profile.email}`}
                 className="flex items-center justify-center w-10 h-10 rounded-full transition-all hover:scale-110 active:scale-95"
                 style={{
-                  backgroundColor: previewSurfaceColor,
-                  borderColor: previewBorderColor,
+                  backgroundColor: isBackgroundDark
+                    ? "rgba(255,255,255,0.1)"
+                    : "rgba(0,0,0,0.1)",
+                  borderColor: accentColor,
                   borderWidth: "1px",
                   borderStyle: "solid",
                 }}
@@ -323,8 +318,10 @@ const ProfilePreview = ({
                 href={`tel:${profile.phone_number}`}
                 className="flex items-center justify-center w-10 h-10 rounded-full transition-all hover:scale-110 active:scale-95"
                 style={{
-                  backgroundColor: previewSurfaceColor,
-                  borderColor: previewBorderColor,
+                  backgroundColor: isBackgroundDark
+                    ? "rgba(255,255,255,0.1)"
+                    : "rgba(0,0,0,0.1)",
+                  borderColor: accentColor,
                   borderWidth: "1px",
                   borderStyle: "solid",
                 }}
@@ -343,8 +340,10 @@ const ProfilePreview = ({
                 onClick={saveContact}
                 className="flex items-center justify-center w-10 h-10 rounded-full transition-all hover:scale-110 active:scale-95"
                 style={{
-                  backgroundColor: previewSurfaceColor,
-                  borderColor: previewBorderColor,
+                  backgroundColor: isBackgroundDark
+                    ? "rgba(255,255,255,0.1)"
+                    : "rgba(0,0,0,0.1)",
+                  borderColor: accentColor,
                   borderWidth: "1px",
                   borderStyle: "solid",
                 }}
@@ -361,8 +360,10 @@ const ProfilePreview = ({
               rel="noopener noreferrer"
               className="flex items-center justify-center w-10 h-10 rounded-full transition-all hover:scale-110 active:scale-95"
               style={{
-                backgroundColor: previewSurfaceColor,
-                borderColor: previewBorderColor,
+                backgroundColor: isBackgroundDark
+                  ? "rgba(255,255,255,0.1)"
+                  : "rgba(0,0,0,0.1)",
+                borderColor: accentColor,
                 borderWidth: "1px",
                 borderStyle: "solid",
               }}
@@ -380,27 +381,15 @@ const ProfilePreview = ({
             onValueChange={setActiveTab}
             className="w-full"
           >
-            <TabsList
-              className="h-9 items-center justify-center rounded-md p-0.5 grid w-full grid-cols-3 mb-3 border"
-              style={{
-                backgroundColor: previewCardColor,
-                borderColor: previewBorderColor,
-              }}
-            >
+            <TabsList className="h-9 items-center justify-center rounded-md p-0.5 grid w-full grid-cols-3 mb-3 bg-transparent border-0">
               <TabsTrigger
                 value="items"
                 className="text-xs h-9 rounded-[999px] bg-transparent text-gray-600"
                 style={
                   activeTab === "items"
                     ? {
-                        backgroundColor: buttonBackgroundColor || accentColor,
-                        color:
-                          buttonTextColor ||
-                          (isDarkBackground(
-                            buttonBackgroundColor || accentColor,
-                          )
-                            ? "#ffffff"
-                            : "#000000"),
+                        backgroundColor: tabActiveBgColor,
+                        color: tabActiveTextColor,
                       }
                     : {
                         color: textColor,
@@ -416,14 +405,8 @@ const ProfilePreview = ({
                 style={
                   activeTab === "media"
                     ? {
-                        backgroundColor: buttonBackgroundColor || accentColor,
-                        color:
-                          buttonTextColor ||
-                          (isDarkBackground(
-                            buttonBackgroundColor || accentColor,
-                          )
-                            ? "#ffffff"
-                            : "#000000"),
+                        backgroundColor: tabActiveBgColor,
+                        color: tabActiveTextColor,
                       }
                     : {
                         color: textColor,
@@ -439,14 +422,8 @@ const ProfilePreview = ({
                 style={
                   activeTab === "community"
                     ? {
-                        backgroundColor: buttonBackgroundColor || accentColor,
-                        color:
-                          buttonTextColor ||
-                          (isDarkBackground(
-                            buttonBackgroundColor || accentColor,
-                          )
-                            ? "#ffffff"
-                            : "#000000"),
+                        backgroundColor: tabActiveBgColor,
+                        color: tabActiveTextColor,
                       }
                     : {
                         color: textColor,
@@ -556,8 +533,12 @@ const ProfilePreview = ({
                         key={mediaItem.id}
                         className="rounded-lg overflow-hidden border"
                         style={{
-                          backgroundColor: previewCardColor,
-                          borderColor: previewBorderColor,
+                          backgroundColor: isBackgroundDark
+                            ? "rgba(255,255,255,0.05)"
+                            : "rgba(0,0,0,0.02)",
+                          borderColor: isBackgroundDark
+                            ? "rgba(255,255,255,0.1)"
+                            : "rgba(0,0,0,0.1)",
                         }}
                       >
                         {mediaItem.type === "image" ? (
@@ -618,8 +599,12 @@ const ProfilePreview = ({
                         key={item.id}
                         className="p-4 rounded-lg border"
                         style={{
-                          backgroundColor: previewCardColor,
-                          borderColor: previewBorderColor,
+                          backgroundColor: isBackgroundDark
+                            ? "rgba(255,255,255,0.05)"
+                            : "rgba(0,0,0,0.02)",
+                          borderColor: isBackgroundDark
+                            ? "rgba(255,255,255,0.1)"
+                            : "rgba(0,0,0,0.1)",
                         }}
                       >
                         <div className="flex items-start space-x-3">
@@ -872,14 +857,8 @@ const ProfilePreview = ({
                 style={
                   activeTab === "items"
                     ? {
-                        backgroundColor: buttonBackgroundColor || accentColor,
-                        color:
-                          buttonTextColor ||
-                          (isDarkBackground(
-                            buttonBackgroundColor || accentColor,
-                          )
-                            ? "#ffffff"
-                            : "#000000"),
+                        backgroundColor: tabActiveBgColor,
+                        color: tabActiveTextColor,
                       }
                     : {
                         color: textColor,
@@ -895,14 +874,8 @@ const ProfilePreview = ({
                 style={
                   activeTab === "media"
                     ? {
-                        backgroundColor: buttonBackgroundColor || accentColor,
-                        color:
-                          buttonTextColor ||
-                          (isDarkBackground(
-                            buttonBackgroundColor || accentColor,
-                          )
-                            ? "#ffffff"
-                            : "#000000"),
+                        backgroundColor: tabActiveBgColor,
+                        color: tabActiveTextColor,
                       }
                     : {
                         color: textColor,
@@ -918,14 +891,8 @@ const ProfilePreview = ({
                 style={
                   activeTab === "community"
                     ? {
-                        backgroundColor: buttonBackgroundColor || accentColor,
-                        color:
-                          buttonTextColor ||
-                          (isDarkBackground(
-                            buttonBackgroundColor || accentColor,
-                          )
-                            ? "#ffffff"
-                            : "#000000"),
+                        backgroundColor: tabActiveBgColor,
+                        color: tabActiveTextColor,
                       }
                     : {
                         color: textColor,
@@ -1371,15 +1338,8 @@ const ProfilePreview = ({
                     style={
                       activeTab === "items"
                         ? {
-                            backgroundColor:
-                              buttonBackgroundColor || accentColor,
-                            color:
-                              buttonTextColor ||
-                              (isDarkBackground(
-                                buttonBackgroundColor || accentColor,
-                              )
-                                ? "#ffffff"
-                                : "#000000"),
+                            backgroundColor: tabActiveBgColor,
+                            color: tabActiveTextColor,
                           }
                         : {
                             color: textColor,
@@ -1395,15 +1355,8 @@ const ProfilePreview = ({
                     style={
                       activeTab === "media"
                         ? {
-                            backgroundColor:
-                              buttonBackgroundColor || accentColor,
-                            color:
-                              buttonTextColor ||
-                              (isDarkBackground(
-                                buttonBackgroundColor || accentColor,
-                              )
-                                ? "#ffffff"
-                                : "#000000"),
+                            backgroundColor: tabActiveBgColor,
+                            color: tabActiveTextColor,
                           }
                         : {
                             color: textColor,
@@ -1419,15 +1372,8 @@ const ProfilePreview = ({
                     style={
                       activeTab === "community"
                         ? {
-                            backgroundColor:
-                              buttonBackgroundColor || accentColor,
-                            color:
-                              buttonTextColor ||
-                              (isDarkBackground(
-                                buttonBackgroundColor || accentColor,
-                              )
-                                ? "#ffffff"
-                                : "#000000"),
+                            backgroundColor: tabActiveBgColor,
+                            color: tabActiveTextColor,
                           }
                         : {
                             color: textColor,
