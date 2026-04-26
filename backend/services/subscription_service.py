@@ -41,6 +41,21 @@ def _invalidate_identity_related_cache(
 
 class SubscriptionService:
     """Service for managing subscriptions"""
+
+    @staticmethod
+    def _coerce_dt(value: Optional[datetime]) -> Optional[datetime]:
+        """Normalize datetime/string values to naive UTC datetimes."""
+        if value is None:
+            return None
+        if isinstance(value, datetime):
+            return value.replace(tzinfo=None) if value.tzinfo else value
+        if isinstance(value, str):
+            try:
+                parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+                return parsed.replace(tzinfo=None) if parsed.tzinfo else parsed
+            except Exception:
+                return None
+        return None
     
     @staticmethod
     async def get_subscription(
@@ -70,8 +85,51 @@ class SubscriptionService:
             else:
                 return None
             
-            sub_doc = await subscriptions_collection.find_one(query)
-            
+            sub_docs = await subscriptions_collection.find(query)
+            if not sub_docs:
+                return None
+
+            now = datetime.utcnow()
+
+            # Convert stale trial/active docs to expired on read so status is always correct
+            # even if background expiry job has not run yet.
+            for doc in sub_docs:
+                status = doc.get("status")
+                trial_end = SubscriptionService._coerce_dt(doc.get("trial_end_date"))
+                period_end = SubscriptionService._coerce_dt(doc.get("current_period_end"))
+
+                should_expire = (
+                    (status == SubscriptionStatus.TRIAL and trial_end and trial_end <= now)
+                    or (status == SubscriptionStatus.ACTIVE and period_end and period_end <= now)
+                )
+                if should_expire:
+                    await subscriptions_collection.update_one(
+                        {"id": doc.get("id"), "status": status},
+                        {"$set": {"status": SubscriptionStatus.EXPIRED, "updated_at": now}},
+                    )
+                    doc["status"] = SubscriptionStatus.EXPIRED
+                    doc["updated_at"] = now
+                    _invalidate_identity_related_cache(
+                        user_id=doc.get("user_id"),
+                        business_id=doc.get("business_id"),
+                        organization_id=doc.get("organization_id"),
+                    )
+
+            # Pick the most relevant record deterministically.
+            status_priority = {
+                SubscriptionStatus.ACTIVE: 4,
+                SubscriptionStatus.TRIAL: 3,
+                SubscriptionStatus.EXPIRED: 2,
+                SubscriptionStatus.NONE: 1,
+            }
+
+            def sort_key(doc: Dict[str, Any]):
+                updated = SubscriptionService._coerce_dt(doc.get("updated_at")) or SubscriptionService._coerce_dt(
+                    doc.get("created_at")
+                ) or datetime.min
+                return (status_priority.get(doc.get("status"), 0), updated)
+
+            sub_doc = max(sub_docs, key=sort_key)
             if sub_doc:
                 return Subscription(**sub_doc)
             
