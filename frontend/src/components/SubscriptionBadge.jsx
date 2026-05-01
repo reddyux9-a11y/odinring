@@ -45,7 +45,7 @@ const SubscriptionBadge = ({ subscription, loading = false, size = 'default', cl
       return 'Trial';
     }
     if (!status || status === 'none') {
-      return '14-days trial';
+      return 'Free plan';
     }
     if (status === 'expired') {
       return 'Expired';
@@ -63,7 +63,7 @@ const SubscriptionBadge = ({ subscription, loading = false, size = 'default', cl
   }
 
   if (!subscription) {
-    const defaultLabel = '14-days trial';
+    const defaultLabel = 'Free plan';
     return (
       <Badge 
         variant="outline" 

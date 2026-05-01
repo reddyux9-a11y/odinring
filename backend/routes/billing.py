@@ -314,23 +314,34 @@ async def create_checkout_session(
         # Resolve identity to attach subscription to correct owner
         context = await IdentityResolver.resolve_identity(current_user.id)
 
-        from models.identity_models import SubscriptionCreate
-
-        subscription_data = SubscriptionCreate(
-            plan=plan_id,
-            billing_cycle=billing_cycle,
-            trial_days=0,  # paid subscription, no trial here
-        )
-
-        subscription = await SubscriptionService.create_subscription(
-            subscription_data=subscription_data,
+        # IMPORTANT:
+        # Reuse an existing subscription record when possible.
+        # Creating a fresh "none" record on every checkout attempt (even canceled ones)
+        # can make the UI appear as if trial reset to day 1.
+        subscription = await SubscriptionService.get_subscription(
             user_id=context.user_id,
             business_id=context.business_id,
             organization_id=context.organization_id,
-            actor_id=current_user.id,
-            ip_address=get_client_ip(request),
-            user_agent=get_user_agent(request),
         )
+
+        if not subscription:
+            from models.identity_models import SubscriptionCreate
+
+            subscription_data = SubscriptionCreate(
+                plan=plan_id,
+                billing_cycle=billing_cycle,
+                trial_days=0,  # paid checkout, no free trial auto-start here
+            )
+
+            subscription = await SubscriptionService.create_subscription(
+                subscription_data=subscription_data,
+                user_id=context.user_id,
+                business_id=context.business_id,
+                organization_id=context.organization_id,
+                actor_id=current_user.id,
+                ip_address=get_client_ip(request),
+                user_agent=get_user_agent(request),
+            )
 
         # Persist amount & currency on the subscription
         try:
@@ -644,6 +655,8 @@ async def stripe_webhook(request: Request):
                     "stripe_customer_id": data_object.get("customer"),
                     "stripe_subscription_id": data_object.get("subscription"),
                     "transaction_id": data_object.get("payment_intent") or data_object.get("id"),
+                    # Persist selected checkout plan on successful payment.
+                    "plan": metadata.get("plan_id"),
                     "checkout_details": {
                         "payment_status": data_object.get("payment_status"),
                         "amount_total": data_object.get("amount_total"),
