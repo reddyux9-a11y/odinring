@@ -2,7 +2,6 @@ import React from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import Dashboard from "@/features/dashboard/pages/Dashboard";
 import Profile from "@/features/profile/pages/Profile";
-import Landing from "@/features/profile/pages/Landing";
 import Install from "@/features/profile/pages/Install";
 import AuthPage from "@/features/auth/pages/AuthPage";
 import ForgotPassword from "@/features/auth/pages/ForgotPassword";
@@ -16,9 +15,7 @@ import PaymentSuccess from "@/features/billing/pages/PaymentSuccess";
 import PaymentFailed from "@/features/billing/pages/PaymentFailed";
 import SubscriptionManagement from "@/features/billing/pages/SubscriptionManagement";
 import CustomerSupport from "@/features/dashboard/pages/CustomerSupport";
-import MobileLanding from "@/components/MobileLanding";
 import GlobalApiLoader from "@/components/GlobalApiLoader";
-import { isMobileDevice } from "@/utils/mobileUtils";
 import { AuthRedirect, ProtectedRoute } from "./guards";
 
 const AppRouter = () => {
@@ -26,7 +23,7 @@ const AppRouter = () => {
     <BrowserRouter>
       <GlobalApiLoader />
       <Routes>
-        <Route path="/" element={isMobileDevice() ? <MobileLanding /> : <Landing />} />
+        <Route path="/" element={<Navigate to="/odinring-landing.html" replace />} />
         <Route path="/install" element={<Install />} />
         <Route path="/profile/:username" element={<Profile />} />
         <Route path="/ring/:ringId" element={<Profile />} />
