@@ -40,6 +40,16 @@
         <title>OdinRing</title>
     </head>
     <body>
+        <script>
+            // Bypass React boot for root path so landing opens instantly.
+            (function () {
+                var path = window.location.pathname;
+                if (path === "/" || path === "/index.html") {
+                    var target = "/odinring-landing.html" + window.location.search + window.location.hash;
+                    window.location.replace(target);
+                }
+            })();
+        </script>
         <noscript>You need to enable JavaScript to run this app.</noscript>
         <div id="root"></div>
         <script>
