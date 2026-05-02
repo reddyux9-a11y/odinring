@@ -2,13 +2,12 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { Button } from "../shared/ui/button";
 import { Card, CardContent } from "../shared/ui/card";
-import { FadeInUp } from "../components/PageTransitions";
-import { Smartphone, Sparkles, BarChart3, Shield, Cpu, ArrowRightCircle, Download, Palette, Zap, Layers, ChevronRight, Globe, Share2, Heart, ChevronLeft, ShoppingCart } from "lucide-react";
+import { Smartphone, Sparkles, BarChart3, Shield, Cpu, Download, Palette, Zap, ChevronRight, Share2, Heart, ChevronLeft, ShoppingCart } from "lucide-react";
+import "../styles/landingOdinOpening.css";
 import usePWAInstall from "../hooks/usePWAInstall";
 import AnimatedNumber from "../components/AnimatedNumber";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "../shared/ui/accordion";
 import { ThemeToggle } from "../components/ThemeToggle";
-import { toast } from "sonner";
 
 // Mocha Medley palette
 // #332820 (coffee-dk), #5A4D40 (coffee), #98867B (taupe), #D0C6BD (sand), #EFEDEA (off-white)
@@ -157,6 +156,33 @@ const Landing = () => {
       }
     }
   };
+
+  React.useEffect(() => {
+    const nav = document.getElementById("odin-nav");
+    if (!nav) return undefined;
+    const onScroll = () => {
+      nav.style.boxShadow =
+        window.scrollY > 20 ? "0 2px 20px rgba(109,40,217,.1)" : "none";
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  React.useEffect(() => {
+    const els = document.querySelectorAll(".landing-odin-open .odin-rv");
+    if (!els.length) return undefined;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting) e.target.classList.add("on");
+        });
+      },
+      { threshold: 0.1, rootMargin: "0px 0px -36px 0px" }
+    );
+    els.forEach((el) => obs.observe(el));
+    return () => obs.disconnect();
+  }, []);
+
   const featureTiles = [
     { Icon: Smartphone, title: 'Mobile‑first Experience', desc: 'Seamless gestures, crisp typography, and smooth transitions designed for small screens.' },
     { Icon: Palette, title: 'Premium Themes', desc: 'Curated palettes and typography with live previews and instant apply.' },
@@ -172,109 +198,201 @@ const Landing = () => {
   ];
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border bg-card">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-3 sm:py-4 md:py-6 gap-2">
-            <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-shrink">
-              <img 
-                src="/OdinRingLogo.png" 
-                alt="OdinRing Logo" 
-                className="h-6 w-6 sm:h-8 sm:w-8 md:h-10 md:w-10 object-contain flex-shrink-0"
-              />
-              <h1 className="text-base sm:text-xl md:text-2xl font-bold text-foreground truncate">OdinRing</h1>
-            </div>
-            <div className="flex items-center gap-1.5 sm:gap-2 md:gap-4 flex-shrink-0">
-              <ThemeToggle />
-              <Link to="/auth">
-                <Button variant="outline" size="sm" className="border text-xs sm:text-sm px-2 sm:px-3 md:px-4 h-8 sm:h-9">
-                  Sign In
-                </Button>
-              </Link>
-              {!isInstalled && (
-                <Button 
-                  onClick={async () => {
-                    try {
-                      const result = await promptInstall();
-                      // If iOS, directly open share sheet
-                      if (result?.outcome === 'ios_instruction_required') {
-                        await openIOSShareSheet();
-                      }
-                  } catch (error) {
-                  }
-                  }}
-                  size="sm"
-                  className="flex items-center gap-1 sm:gap-1.5 md:gap-2 text-xs sm:text-sm px-2 sm:px-3 md:px-4 h-8 sm:h-9"
-                >
-                  <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
-                  <span className="whitespace-nowrap hidden sm:inline">Download<span className="hidden md:inline"> App</span></span>
-                  <span className="whitespace-nowrap sm:hidden">App</span>
-                </Button>
-              )}
-              {isInstalled && (
-                <Link to="/auth">
-                  <Button size="sm" className="text-xs sm:text-sm px-2 sm:px-3 md:px-4 h-8 sm:h-9">
-                    <span className="whitespace-nowrap hidden sm:inline">Get<span className="hidden md:inline"> Started</span></span>
-                    <span className="whitespace-nowrap sm:hidden">Start</span>
-                  </Button>
-                </Link>
-              )}
-            </div>
+      <div className="landing-odin-open">
+        <nav id="odin-nav">
+          <a href="#hero" className="odin-nav-logo">
+            <span className="odin-logo-ring" aria-hidden="true" />
+            OdinRing
+          </a>
+          <div className="odin-nav-links">
+            <a href="#features">Features</a>
+            <a href="#how">How It Works</a>
+            <a href="#pricing">Pricing</a>
+            <a href="#usecases">Use Cases</a>
           </div>
-        </div>
-      </header>
-
-      {/* Hero Section */}
-      <section className="py-12 sm:py-16 md:py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-7xl font-bold mb-4 sm:mb-6 text-foreground leading-tight">
-            Your Digital Identity<br />
-            <span className="text-muted-foreground">In One Tap</span>
-          </h1>
-          <p className="text-base sm:text-lg md:text-xl mb-6 sm:mb-8 max-w-2xl mx-auto text-muted-foreground px-2">
-            Transform your NFC ring into a powerful personal brand. Share your links, 
-            showcase your content, and connect with others instantly.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center px-2">
-            <Link to="/auth" className="w-full sm:w-auto">
-              <Button size="lg" className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg">
-                Start Building Your Profile
-              </Button>
+          <div className="odin-nav-actions">
+            <ThemeToggle />
+            <Link to="/auth" className="odin-nav-signin">
+              Sign In
             </Link>
-            <Button size="lg" variant="outline" className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg">
-              View Demo Profile
-            </Button>
-          </div>
-
-          {/* PWA Install CTA */}
-          {!isInstalled && (
-            <div className="mt-6 sm:mt-8 flex flex-col items-center justify-center gap-2 sm:gap-3 px-2">
-              <Button 
+            {!isInstalled && (
+              <button
+                type="button"
+                className="odin-nav-download"
                 onClick={async () => {
                   try {
                     const result = await promptInstall();
-                    // If iOS, directly open share sheet
-                    if (result?.outcome === 'ios_instruction_required') {
+                    if (result?.outcome === "ios_instruction_required") {
                       await openIOSShareSheet();
                     }
-                  } catch (error) {
+                  } catch {
+                    /* noop */
                   }
                 }}
-                variant="secondary" 
-                className="flex items-center space-x-2 px-4 sm:px-6 py-2 sm:py-3 text-sm sm:text-base w-full sm:w-auto"
               >
-                <Download className="w-4 h-4 flex-shrink-0" />
-                <span className="truncate">Install OdinRing App</span>
-              </Button>
-              <Link to="/install" className="text-xs sm:text-sm text-muted-foreground hover:text-foreground underline text-center">
-                Or visit install page
-              </Link>
-            </div>
-          )}
-        </div>
-      </section>
+                <Download className="w-3.5 h-3.5 shrink-0" aria-hidden />
+                <span className="hidden sm:inline">App</span>
+              </button>
+            )}
+            <Link to="/auth" className="odin-nav-cta">
+              Start Free — €3.99/mo →
+            </Link>
+          </div>
+        </nav>
 
-      
+        <section id="hero">
+          <div className="odin-hero-mesh" aria-hidden="true" />
+          <div className="odin-container">
+            <div className="odin-hero-grid">
+              <div>
+                <div className="odin-hero-badge odin-rv">
+                  <div className="odin-tag">
+                    <span className="odin-dot" />
+                    Tap. Share. Convert. — Powered by NFC
+                  </div>
+                </div>
+                <h1 className="odin-hero-h1 odin-rv odin-d1">
+                  Your Entire Business
+                  <br />— In <em>One Tap.</em>
+                </h1>
+                <p className="odin-hero-sub odin-rv odin-d2">
+                  No website. No hosting. No tech headaches.
+                  <br />
+                  OdinRing gives merchants and service providers a{" "}
+                  <strong>smart digital profile, product catalog, and lead tracker</strong> —
+                  shareable in one link or one tap of your NFC ring.
+                </p>
+                <div className="odin-hero-pills odin-rv odin-d2">
+                  <span>No credit card</span>
+                  <span>Setup in 10 minutes</span>
+                  <span>From €3.99/month</span>
+                </div>
+                <div className="odin-hero-btns odin-rv odin-d3">
+                  <Link to="/auth" className="odin-btn-p">
+                    Get Started Free <span className="odin-arr">→</span>
+                  </Link>
+                  <a href="#how" className="odin-btn-s">
+                    ▶ &nbsp;See How It Works
+                  </a>
+                </div>
+                <div className="odin-hero-trust odin-rv odin-d4">
+                  <div className="odin-trust-faces" aria-label="User avatars">
+                    <div className="odin-face odin-f1">A</div>
+                    <div className="odin-face odin-f2">M</div>
+                    <div className="odin-face odin-f3">S</div>
+                    <div className="odin-face odin-f4">R</div>
+                  </div>
+                  <div>
+                    <div className="odin-trust-stars">★★★★★</div>
+                    <div className="odin-trust-text">
+                      Trusted by <strong>2,400+</strong> growing businesses
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="odin-hero-visual odin-rv odin-d2" aria-hidden="true">
+                <div className="odin-phone">
+                  <div className="odin-phone-inner">
+                    <div className="odin-ph-notch" />
+                    <div className="odin-ph-profile">
+                      <div className="odin-ph-avi">AB</div>
+                      <div className="odin-ph-name">Asha&apos;s Boutique</div>
+                      <div className="odin-ph-role">✦ Fashion &amp; Accessories</div>
+                    </div>
+                    <div className="odin-ph-link">odinring.io/ashasboutique</div>
+                    <div className="odin-ph-nfc">💳 Tap NFC to share instantly</div>
+                    <div className="odin-ph-sec">Featured Products</div>
+                    <div className="odin-ph-card">
+                      <div className="odin-ph-img odin-pc1" />
+                      <div style={{ flex: 1 }}>
+                        <div className="odin-ph-card-name">Summer Dress</div>
+                        <div className="odin-ph-card-sub">3 colours · In stock</div>
+                      </div>
+                      <div className="odin-ph-price">€49</div>
+                    </div>
+                    <div className="odin-ph-card">
+                      <div className="odin-ph-img odin-pc2" />
+                      <div style={{ flex: 1 }}>
+                        <div className="odin-ph-card-name">Silk Scarf</div>
+                        <div className="odin-ph-card-sub">Limited edition</div>
+                      </div>
+                      <div className="odin-ph-price">€28</div>
+                    </div>
+                    <div className="odin-ph-card">
+                      <div className="odin-ph-img odin-pc3" />
+                      <div style={{ flex: 1 }}>
+                        <div className="odin-ph-card-name">Gold Earrings</div>
+                        <div className="odin-ph-card-sub">Bestseller</div>
+                      </div>
+                      <div className="odin-ph-price">€22</div>
+                    </div>
+                  </div>
+                </div>
+                <div className="odin-chip odin-chip-1">
+                  <div className="odin-chip-label">Profile Views</div>
+                  <div className="odin-chip-value">1,284</div>
+                  <div className="odin-chip-sub">↑ 34% this week</div>
+                  <div className="odin-chip-bar">
+                    <div className="odin-chip-fill" />
+                  </div>
+                </div>
+                <div className="odin-chip odin-chip-2">
+                  <div className="odin-chip-label">New Leads Today</div>
+                  <div className="odin-chip-value">18</div>
+                  <div className="odin-chip-sub">↑ from catalog clicks</div>
+                </div>
+                <div className="odin-nfc-ring-wrap">
+                  <div className="odin-nfc-ring" />
+                  <div className="odin-nfc-label">NFC Ring</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <div id="strip">
+          <div className="odin-container">
+            <p className="odin-strip-label odin-rv">Works where your customers already are</p>
+            <div className="odin-strip-row odin-rv odin-d1">
+              <div className="odin-strip-pill">💬 WhatsApp</div>
+              <div className="odin-strip-pill">📸 Instagram</div>
+              <div className="odin-strip-pill">📘 Facebook</div>
+              <div className="odin-strip-pill">📧 Email</div>
+              <div className="odin-strip-pill">💳 NFC Tap</div>
+              <div className="odin-strip-pill">🔗 Any Link</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {!isInstalled && (
+        <div className="flex flex-col items-center justify-center gap-2 border-b border-border bg-muted/30 py-6 px-4 sm:flex-row sm:gap-6">
+          <Button
+            onClick={async () => {
+              try {
+                const result = await promptInstall();
+                if (result?.outcome === "ios_instruction_required") {
+                  await openIOSShareSheet();
+                }
+              } catch {
+                /* noop */
+              }
+            }}
+            variant="secondary"
+            className="flex w-full max-w-md items-center gap-2 sm:w-auto"
+          >
+            <Download className="h-4 w-4 shrink-0" />
+            Install OdinRing App
+          </Button>
+          <Link
+            to="/install"
+            className="text-center text-sm text-muted-foreground underline hover:text-foreground"
+          >
+            Or visit install page
+          </Link>
+        </div>
+      )}
 
       {/* Sections */}
       {/* Stats - lightweight, natural numbers */}
@@ -307,7 +425,7 @@ const Landing = () => {
       </section>
 
       {/* 1. Features (Editorial grid) */}
-      <section className="py-14 bg-muted/30">
+      <section id="features" className="py-14 bg-muted/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-8">
             <h2 className="text-3xl font-bold text-foreground">Everything You Need to Shine</h2>
@@ -339,7 +457,7 @@ const Landing = () => {
       </section>
 
       {/* 2. How it works */}
-      <section className="py-14">
+      <section id="how" className="py-14">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Gradient band container to match reference */}
           <div className="rounded-2xl shadow-sm overflow-hidden">
@@ -437,7 +555,7 @@ const Landing = () => {
       </section>
 
       {/* Use Cases - directly after Trust section */}
-      <section className="py-14">
+      <section id="usecases" className="py-14">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-4">
             <h2 className="text-2xl sm:text-3xl font-bold text-foreground px-2">Built for real‑world moments</h2>
@@ -493,7 +611,7 @@ const Landing = () => {
       </section>
 
       {/* Products Section */}
-      <section className="py-16 bg-muted/30">
+      <section id="pricing" className="py-16 bg-muted/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-3">Shop Our Products</h2>
