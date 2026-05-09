@@ -545,6 +545,7 @@ class User(BaseModel):
     button_text_color: Optional[str] = None
     # Custom Branding fields
     custom_logo: Optional[str] = ""  # URL to uploaded logo
+    cover_photo: Optional[str] = ""  # URL to uploaded cover photo
     show_footer: bool = True  # Whether to show "Powered by OdinRing" footer
     show_ring_badge: bool = True  # Whether to show "Ring Connected" badge
     phone_number: Optional[str] = None  # User's phone number for WhatsApp and Call buttons
@@ -565,6 +566,7 @@ class UserUpdate(BaseModel):
     button_text_color: Optional[str] = None
     # Custom Branding fields
     custom_logo: Optional[str] = None
+    cover_photo: Optional[str] = None
     show_footer: Optional[bool] = None
     show_ring_badge: Optional[bool] = None
     phone_number: Optional[str] = None
@@ -589,7 +591,7 @@ class UserUpdate(BaseModel):
             raise ValueError('Bio must be 500 characters or less')
         return v.strip() if v else None
     
-    @field_validator('avatar', 'custom_logo')
+    @field_validator('avatar', 'custom_logo', 'cover_photo')
     @classmethod
     def validate_url_field(cls, v):
         if v is not None and v.strip():
@@ -1059,6 +1061,7 @@ class PublicProfile(BaseModel):
     button_text_color: Optional[str] = None
     # Custom Branding fields
     custom_logo: Optional[str]
+    cover_photo: Optional[str] = None
     show_footer: bool
     show_ring_badge: bool = True
     email: Optional[str] = None  # User's email for mail button
@@ -6061,6 +6064,7 @@ async def get_public_profile(request: Request, username: str):
         button_text_color=getattr(user, 'button_text_color', None),
         # Custom Branding fields
         custom_logo=user.custom_logo,
+        cover_photo=getattr(user, 'cover_photo', None),
         show_footer=user.show_footer,
         show_ring_badge=show_ring_badge,
         email=user.email,  # Include email for mail button

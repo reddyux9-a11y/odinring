@@ -30,6 +30,7 @@ import api from "../lib/api";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
+const ITEM_TOAST_DURATION = 2000;
 
 // Custom DialogContent without close button
 const CustomDialogContent = React.forwardRef(({ className, children, ...props }, ref) => (
@@ -90,13 +91,13 @@ const ItemManager = ({ items, setItems }) => {
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
-      mobileToast.error("Please select an image file");
+      mobileToast.error("Please select an image file", { duration: ITEM_TOAST_DURATION });
       return;
     }
 
     // Validate file size (5MB limit)
     if (file.size > 5 * 1024 * 1024) {
-      mobileToast.error("Image size must be less than 5MB");
+      mobileToast.error("Image size must be less than 5MB", { duration: ITEM_TOAST_DURATION });
       return;
     }
 
@@ -135,11 +136,11 @@ const ItemManager = ({ items, setItems }) => {
         }));
         setImagePreview(imageUrl);
         
-        mobileToast.success("Image uploaded successfully!");
+        mobileToast.success("Image uploaded successfully!", { duration: ITEM_TOAST_DURATION });
         addHapticFeedback('success');
       }
     } catch (error) {
-      mobileToast.error("Failed to upload image");
+      mobileToast.error("Failed to upload image", { duration: ITEM_TOAST_DURATION });
       addHapticFeedback('error');
       // Revert preview on error
       setImagePreview(null);
@@ -164,7 +165,7 @@ const ItemManager = ({ items, setItems }) => {
         }
         targetRef.current.focus();
       }
-      mobileToast.error("Please fill in required fields");
+      mobileToast.error("Please fill in required fields", { duration: ITEM_TOAST_DURATION });
       return;
     }
 
@@ -195,10 +196,10 @@ const ItemManager = ({ items, setItems }) => {
       setIsAddDialogOpen(false);
       resetForm();
       addHapticFeedback('success');
-      mobileToast.success("Item added successfully");
+      mobileToast.success("Item added successfully", { duration: ITEM_TOAST_DURATION });
     } catch (error) {
       addHapticFeedback('error');
-      mobileToast.error(error.response?.data?.detail || "Failed to add item");
+      mobileToast.error(error.response?.data?.detail || "Failed to add item", { duration: ITEM_TOAST_DURATION });
     } finally {
       setLoading(false);
     }
@@ -221,7 +222,7 @@ const ItemManager = ({ items, setItems }) => {
 
   const handleUpdate = async () => {
     if (!formData.name || !formData.price) {
-      mobileToast.error("Please fill in required fields");
+      mobileToast.error("Please fill in required fields", { duration: ITEM_TOAST_DURATION });
       return;
     }
 
@@ -244,10 +245,10 @@ const ItemManager = ({ items, setItems }) => {
       setEditingItem(null);
       resetForm();
       addHapticFeedback('success');
-      mobileToast.success("Item updated successfully");
+      mobileToast.success("Item updated successfully", { duration: ITEM_TOAST_DURATION });
     } catch (error) {
       addHapticFeedback('error');
-      mobileToast.error(error.response?.data?.detail || "Failed to update item");
+      mobileToast.error(error.response?.data?.detail || "Failed to update item", { duration: ITEM_TOAST_DURATION });
     } finally {
       setLoading(false);
     }
@@ -267,10 +268,10 @@ const ItemManager = ({ items, setItems }) => {
 
       setItems(prev => prev.filter(item => item.id !== itemId));
       addHapticFeedback('success');
-      mobileToast.success("Item deleted successfully");
+      mobileToast.success("Item deleted successfully", { duration: ITEM_TOAST_DURATION });
     } catch (error) {
       addHapticFeedback('error');
-      mobileToast.error("Failed to delete item");
+      mobileToast.error("Failed to delete item", { duration: ITEM_TOAST_DURATION });
     } finally {
       setLoading(false);
     }
@@ -287,10 +288,10 @@ const ItemManager = ({ items, setItems }) => {
       ));
       
       addHapticFeedback('success');
-      mobileToast.success(currentActive ? "Item hidden" : "Item visible");
+      mobileToast.success(currentActive ? "Item hidden" : "Item visible", { duration: ITEM_TOAST_DURATION });
     } catch (error) {
       addHapticFeedback('error');
-      mobileToast.error("Failed to toggle visibility");
+      mobileToast.error("Failed to toggle visibility", { duration: ITEM_TOAST_DURATION });
     }
   };
 
@@ -305,7 +306,7 @@ const ItemManager = ({ items, setItems }) => {
     // Validate that all items have IDs
     const itemsWithoutIds = newItems.filter(item => !item.id);
     if (itemsWithoutIds.length > 0) {
-      mobileToast.error("Cannot reorder: Some items are missing IDs");
+      mobileToast.error("Cannot reorder: Some items are missing IDs", { duration: ITEM_TOAST_DURATION });
       return;
     }
     
@@ -315,11 +316,29 @@ const ItemManager = ({ items, setItems }) => {
     }));
     
     try {
-      const response = await api.put(`/items/reorder`, reorderedItems);
+      // Some backend deployments expect a raw array body, while others expect
+      // an object like { items_order: [...] }. Try array first, then fallback.
+      await api.put(`/items/reorder`, reorderedItems);
       setItems(newItems);
       addHapticFeedback('light');
-      mobileToast.success("Items reordered successfully! 🔄");
+      mobileToast.success("Items reordered successfully! 🔄", { duration: ITEM_TOAST_DURATION });
     } catch (error) {
+      const shouldRetryWithObjectPayload =
+        error?.response?.status === 422 &&
+        Array.isArray(error?.response?.data?.detail);
+
+      if (shouldRetryWithObjectPayload) {
+        try {
+          await api.put(`/items/reorder`, { items_order: reorderedItems });
+          setItems(newItems);
+          addHapticFeedback('light');
+          mobileToast.success("Items reordered successfully! 🔄", { duration: ITEM_TOAST_DURATION });
+          return;
+        } catch (retryError) {
+          error = retryError;
+        }
+      }
+
       // Extract error message safely - handle both string and array formats
       let errorMessage = "Failed to reorder items";
       if (error.response?.data?.detail) {
@@ -340,7 +359,7 @@ const ItemManager = ({ items, setItems }) => {
         errorMessage = error.message;
       }
       
-      mobileToast.error(errorMessage);
+      mobileToast.error(errorMessage, { duration: ITEM_TOAST_DURATION });
       // Revert the UI change on error
       setItems(items);
     }
@@ -364,6 +383,10 @@ const ItemManager = ({ items, setItems }) => {
   useEffect(() => {
     setVisibleItemCount(ITEMS_PAGE_SIZE);
   }, [items.length]);
+
+  const totalItems = items.length;
+  const activeItems = items.filter((item) => item.active).length;
+  const hiddenItems = totalItems - activeItems;
 
   return (
     <FadeInUp>
@@ -665,6 +688,21 @@ const ItemManager = ({ items, setItems }) => {
         </CardHeader>
 
         <CardContent className="w-full p-3 sm:p-6 ml-0">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+            <div className="rounded-xl border border-border bg-card p-3">
+              <div className="text-2xl font-bold text-foreground">{totalItems}</div>
+              <div className="text-xs text-muted-foreground">Total Items</div>
+            </div>
+            <div className="rounded-xl border border-border bg-card p-3">
+              <div className="text-2xl font-bold text-foreground">{activeItems}</div>
+              <div className="text-xs text-muted-foreground">Visible</div>
+            </div>
+            <div className="rounded-xl border border-border bg-card p-3">
+              <div className="text-2xl font-bold text-foreground">{hiddenItems}</div>
+              <div className="text-xs text-muted-foreground">Hidden</div>
+            </div>
+          </div>
+
           {!items || items.length === 0 ? (
             <div className="text-center py-8 sm:py-12">
               <ShoppingBag className="w-12 h-12 sm:w-16 sm:h-16 text-muted mx-auto mb-4" />

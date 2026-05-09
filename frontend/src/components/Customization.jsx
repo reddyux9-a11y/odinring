@@ -400,7 +400,7 @@ const Customization = ({ user, profile, setProfile, setUser, links, setLinks, on
                         />
                       </div>
                     </div>
-                    <div>
+                    {/* <div>
                       <Label>Button Background Color</Label>
                       <div className="flex space-x-2">
                         <Input
@@ -463,7 +463,7 @@ const Customization = ({ user, profile, setProfile, setUser, links, setLinks, on
                           className="flex-1"
                         />
                       </div>
-                    </div>
+                    </div> */}
                   </div>
                 </CardContent>
               </Card>

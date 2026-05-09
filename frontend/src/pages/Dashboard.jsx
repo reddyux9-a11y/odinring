@@ -76,7 +76,8 @@ const Dashboard = () => {
     backgroundType: "solid",
     backgroundColor: "#ffffff",
     buttonBackgroundColor: "",
-    buttonTextColor: ""
+    buttonTextColor: "",
+    cover_photo: ""
   });
 
   // Handle identity-based subscription logging (no hard redirect)
@@ -310,6 +311,7 @@ const Dashboard = () => {
             prev.buttonTextColor ||
             prev.button_text_color ||
             "",
+          cover_photo: user.cover_photo || prev.cover_photo || "",
           custom_logo: prev.custom_logo || user.custom_logo || user.avatar || "",
           show_footer: user.show_footer !== false,
           phone_number: user.phone_number || prev.phone_number || ""
@@ -397,6 +399,31 @@ const Dashboard = () => {
     } catch (error) {
       logger.error("Failed to save contact from dashboard:", error);
       toast.error("Failed to download contact.");
+    }
+  };
+
+  const handleDownloadProfileQr = async () => {
+    try {
+      const profileUrl = `${window.location.origin}/profile/${sanitizeUsernameForUrl(user.username)}`;
+      const qrApiUrl = `https://quickchart.io/qr?size=1024&text=${encodeURIComponent(profileUrl)}`;
+      const response = await fetch(qrApiUrl);
+      if (!response.ok) {
+        throw new Error("Failed to generate QR code");
+      }
+
+      const blob = await response.blob();
+      const objectUrl = window.URL.createObjectURL(blob);
+      const linkEl = document.createElement("a");
+      linkEl.href = objectUrl;
+      linkEl.download = `${sanitizeUsernameForUrl(user.username)}-profile-qr.png`;
+      document.body.appendChild(linkEl);
+      linkEl.click();
+      document.body.removeChild(linkEl);
+      window.URL.revokeObjectURL(objectUrl);
+      mobileToast.success("QR code downloaded!");
+    } catch (error) {
+      logger.error("Failed to download profile QR code:", error);
+      mobileToast.error("Failed to download QR code");
     }
   };
 
@@ -690,6 +717,7 @@ const Dashboard = () => {
             setActiveSection={setActiveSection}
             onLogout={handleLogout}
             links={links}
+            items={items}
             totalClicks={totalClicks}
           />
 
@@ -717,35 +745,6 @@ const Dashboard = () => {
                       <div className="sticky top-6">
                         <div className="flex items-center justify-between mb-4">
                           <h3 className="font-semibold text-foreground">Live Preview</h3>
-                          <div className="flex items-center gap-1.5">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0"
-                              onClick={handleSendEmail}
-                              title="Send message"
-                            >
-                              <Mail className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0"
-                              onClick={handleSaveContact}
-                              title="Download contact"
-                            >
-                              <Download className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0"
-                              onClick={() => window.open(`/profile/${sanitizeUsernameForUrl(user.username)}`, '_blank')}
-                              title="View public profile"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </Button>
-                          </div>
                         </div>
                         
                         {/* Public Profile URL Preview Link */}
@@ -764,6 +763,15 @@ const Dashboard = () => {
                             >
                               {window.location.origin}/profile/{sanitizeUsernameForUrl(user.username)}
                             </a>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 w-7 p-0 flex-shrink-0"
+                              onClick={handleDownloadProfileQr}
+                              title="Download QR (Profile URL)"
+                            >
+                              <QrCode className="w-3.5 h-3.5" />
+                            </Button>
                             <Button
                               variant="ghost"
                               size="sm"

@@ -207,13 +207,13 @@ const Landing = () => {
           <div className="odin-nav-links">
             <a href="#features">Features</a>
             <a href="#how">How It Works</a>
-            <a href="#pricing">Pricing</a>
+            <a href="#store">Store</a>
             <a href="#usecases">Use Cases</a>
           </div>
           <div className="odin-nav-actions">
             <ThemeToggle />
-            <Link to="/auth" className="odin-nav-signin">
-              Sign In
+            <Link to="/auth?tab=register" className="odin-nav-signin">
+              Sign Up
             </Link>
             {!isInstalled && (
               <button
@@ -234,8 +234,8 @@ const Landing = () => {
                 <span className="hidden sm:inline">App</span>
               </button>
             )}
-            <Link to="/auth" className="odin-nav-cta">
-              Start Free — €3.99/mo →
+            <Link to="/auth?tab=login" className="odin-nav-cta">
+              Sign In
             </Link>
           </div>
         </nav>
@@ -611,7 +611,7 @@ const Landing = () => {
       </section>
 
       {/* Products Section */}
-      <section id="pricing" className="py-16 bg-muted/30">
+      <section id="store" className="py-16 bg-muted/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-3">Shop Our Products</h2>

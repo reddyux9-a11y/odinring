@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
@@ -10,13 +10,11 @@ import {
   Link as LinkIcon,
   ShoppingBag,
   DollarSign,
-  Tag,
   Image as ImageIcon,
   Video,
   Camera,
   Users,
   Mail,
-  Globe,
   Download,
 } from "lucide-react";
 import { getIconByName } from "../lib/iconMap";
@@ -80,8 +78,21 @@ const ProfilePreview = ({
   username,
 }) => {
   const [activeTab, setActiveTab] = useState("items");
+  const ITEMS_PER_PAGE = 6;
+  const [itemsPage, setItemsPage] = useState(1);
 
   const actualUsername = username || profile.username || "user";
+  const activeItems = items.filter((item) => item.active);
+  const totalItemPages = Math.max(1, Math.ceil(activeItems.length / ITEMS_PER_PAGE));
+  const paginatedActiveItems = activeItems.slice(
+    (itemsPage - 1) * ITEMS_PER_PAGE,
+    itemsPage * ITEMS_PER_PAGE,
+  );
+
+  useEffect(() => {
+    if (activeTab !== "items") return;
+    setItemsPage((prev) => Math.min(prev, totalItemPages));
+  }, [activeTab, totalItemPages]);
 
   // Apply font class or font-family string
   const fontValue = profile.fontFamily || profile.font_family || "font-sans";
@@ -119,6 +130,15 @@ const ProfilePreview = ({
 
   // Get banner pattern with optimized hook
   const { className: bannerPatternClass } = useBannerPattern(profile);
+  const coverPhoto = profile?.cover_photo;
+  const bannerStyle = coverPhoto
+    ? {
+        backgroundImage: `url(${coverPhoto})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+      }
+    : undefined;
+  const bannerClassName = coverPhoto ? "" : bannerPatternClass;
 
   // Helper functions for contact actions
   const getProfileUrl = () => {
@@ -249,7 +269,7 @@ const ProfilePreview = ({
         style={{ backgroundColor, ...(fontFamilyStyle || {}) }}
       >
         {/* Top Banner Section */}
-        <div className={`h-32 ${bannerPatternClass} relative`}></div>
+        <div className={`h-32 ${bannerClassName} relative`} style={bannerStyle}></div>
 
         {/* Profile Section */}
         <div className="relative text-center p-6 pb-4 -mt-16">
@@ -367,9 +387,9 @@ const ProfilePreview = ({
                 borderWidth: "1px",
                 borderStyle: "solid",
               }}
-              title="View profile website"
+              title="Preview profile"
             >
-              <Globe className="w-5 h-5" style={{ color: accentColor }} />
+              <Eye className="w-5 h-5" style={{ color: accentColor }} />
             </a>
           </div>
         </div>
@@ -378,7 +398,10 @@ const ProfilePreview = ({
         <div className="px-6 pb-6">
           <Tabs
             value={activeTab}
-            onValueChange={setActiveTab}
+            onValueChange={(value) => {
+              setActiveTab(value);
+              if (value === "items") setItemsPage(1);
+            }}
             className="w-full"
           >
             <TabsList className="h-9 items-center justify-center rounded-md p-0.5 grid w-full grid-cols-3 mb-3 bg-transparent border-0">
@@ -583,7 +606,7 @@ const ProfilePreview = ({
             </TabsContent>
 
             <TabsContent value="items" className="mt-0 space-y-3">
-              {items.filter((item) => item.active).length === 0 ? (
+              {activeItems.length === 0 ? (
                 <div className="text-center py-8">
                   <div className="text-3xl mb-2">🛍️</div>
                   <p className="text-xs" style={{ color: secondaryTextColor }}>
@@ -591,9 +614,7 @@ const ProfilePreview = ({
                   </p>
                 </div>
               ) : (
-                items
-                  .filter((item) => item.active)
-                  .map((item) => {
+                paginatedActiveItems.map((item) => {
                     return (
                       <div
                         key={item.id}
@@ -651,10 +672,6 @@ const ProfilePreview = ({
                                 </div>
                                 {item.description && (
                                   <div className="flex items-center gap-1 mt-1">
-                                    <Tag
-                                      className="w-3 h-3"
-                                      style={{ color: secondaryTextColor }}
-                                    />
                                     <span
                                       className="text-sm opacity-70"
                                       style={{ color: secondaryTextColor }}
@@ -682,6 +699,29 @@ const ProfilePreview = ({
                       </div>
                     );
                   })
+              )}
+              {activeItems.length > ITEMS_PER_PAGE && (
+                <div className="flex items-center justify-between pt-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setItemsPage((prev) => Math.max(prev - 1, 1))}
+                    disabled={itemsPage === 1}
+                  >
+                    Prev
+                  </Button>
+                  <span className="text-xs" style={{ color: secondaryTextColor }}>
+                    Page {itemsPage} of {totalItemPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setItemsPage((prev) => Math.min(prev + 1, totalItemPages))}
+                    disabled={itemsPage === totalItemPages}
+                  >
+                    Next
+                  </Button>
+                </div>
               )}
             </TabsContent>
           </Tabs>
@@ -718,7 +758,7 @@ const ProfilePreview = ({
         style={{ backgroundColor, ...(fontFamilyStyle || {}) }}
       >
         {/* Top Banner Section */}
-        <div className={`h-32 ${bannerPatternClass} relative`}></div>
+        <div className={`h-32 ${bannerClassName} relative`} style={bannerStyle}></div>
 
         {/* Profile Section */}
         <div className="relative text-center p-6 pb-4 -mt-16">
@@ -836,9 +876,9 @@ const ProfilePreview = ({
                 borderWidth: "1px",
                 borderStyle: "solid",
               }}
-              title="View profile website"
+              title="Preview profile"
             >
-              <Globe className="w-5 h-5" style={{ color: accentColor }} />
+              <Eye className="w-5 h-5" style={{ color: accentColor }} />
             </a>
           </div>
         </div>
@@ -847,7 +887,10 @@ const ProfilePreview = ({
         <div className="px-6 pb-6 flex-1">
           <Tabs
             value={activeTab}
-            onValueChange={setActiveTab}
+            onValueChange={(value) => {
+              setActiveTab(value);
+              if (value === "items") setItemsPage(1);
+            }}
             className="w-full"
           >
             <TabsList className="h-9 items-center justify-center rounded-md p-0.5 text-muted-foreground grid w-full grid-cols-3 mb-3 bg-transparent border-0">
@@ -1031,7 +1074,7 @@ const ProfilePreview = ({
             </TabsContent>
 
             <TabsContent value="items" className="mt-0 space-y-1.5">
-              {items.filter((item) => item.active).length === 0 ? (
+              {activeItems.length === 0 ? (
                 <div className="text-center py-8">
                   <div className="text-3xl mb-2">🛍️</div>
                   <p className="text-xs" style={{ color: secondaryTextColor }}>
@@ -1039,9 +1082,7 @@ const ProfilePreview = ({
                   </p>
                 </div>
               ) : (
-                items
-                  .filter((item) => item.active)
-                  .map((item) => {
+                paginatedActiveItems.map((item) => {
                     return (
                       <div
                         key={item.id}
@@ -1099,10 +1140,6 @@ const ProfilePreview = ({
                                 </div>
                                 {item.description && (
                                   <div className="flex items-center gap-1 mt-0.5">
-                                    <Tag
-                                      className="w-2.5 h-2.5"
-                                      style={{ color: secondaryTextColor }}
-                                    />
                                     <span
                                       className="text-[10px] opacity-70"
                                       style={{ color: secondaryTextColor }}
@@ -1130,6 +1167,29 @@ const ProfilePreview = ({
                       </div>
                     );
                   })
+              )}
+              {activeItems.length > ITEMS_PER_PAGE && (
+                <div className="flex items-center justify-between pt-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setItemsPage((prev) => Math.max(prev - 1, 1))}
+                    disabled={itemsPage === 1}
+                  >
+                    Prev
+                  </Button>
+                  <span className="text-xs" style={{ color: secondaryTextColor }}>
+                    Page {itemsPage} of {totalItemPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setItemsPage((prev) => Math.min(prev + 1, totalItemPages))}
+                    disabled={itemsPage === totalItemPages}
+                  >
+                    Next
+                  </Button>
+                </div>
               )}
             </TabsContent>
           </Tabs>
@@ -1194,7 +1254,7 @@ const ProfilePreview = ({
             style={{ backgroundColor }}
           >
             {/* Top Banner Section */}
-            <div className={`h-32 ${bannerPatternClass} relative`}></div>
+            <div className={`h-32 ${bannerClassName} relative`} style={bannerStyle}></div>
 
             {/* Profile Section */}
             <div className="relative text-center p-6 pb-4 -mt-16">
@@ -1317,9 +1377,9 @@ const ProfilePreview = ({
                     borderWidth: "1px",
                     borderStyle: "solid",
                   }}
-                  title="View profile website"
+                  title="Preview profile"
                 >
-                  <Globe className="w-5 h-5" style={{ color: accentColor }} />
+                  <Eye className="w-5 h-5" style={{ color: accentColor }} />
                 </a>
               </div>
             </div>
@@ -1328,7 +1388,10 @@ const ProfilePreview = ({
             <div className="px-6 pb-6">
               <Tabs
                 value={activeTab}
-                onValueChange={setActiveTab}
+                onValueChange={(value) => {
+                  setActiveTab(value);
+                  if (value === "items") setItemsPage(1);
+                }}
                 className="w-full"
               >
                 <TabsList className="h-9 items-center justify-center rounded-md p-0.5 text-muted-foreground grid w-full grid-cols-3 mb-3 bg-transparent border-0">
@@ -1538,7 +1601,7 @@ const ProfilePreview = ({
                 </TabsContent>
 
                 <TabsContent value="items" className="mt-0 space-y-3">
-                  {items.filter((item) => item.active).length === 0 ? (
+                  {activeItems.length === 0 ? (
                     <div className="text-center py-8">
                       <div className="text-3xl mb-2">🛍️</div>
                       <p
@@ -1549,9 +1612,7 @@ const ProfilePreview = ({
                       </p>
                     </div>
                   ) : (
-                    items
-                      .filter((item) => item.active)
-                      .map((item) => {
+                    paginatedActiveItems.map((item) => {
                         return (
                           <div
                             key={item.id}
@@ -1609,10 +1670,6 @@ const ProfilePreview = ({
                                     </div>
                                     {item.description && (
                                       <div className="flex items-center gap-1 mt-1">
-                                        <Tag
-                                          className="w-3 h-3"
-                                          style={{ color: secondaryTextColor }}
-                                        />
                                         <span
                                           className="text-sm opacity-70"
                                           style={{ color: secondaryTextColor }}
@@ -1642,6 +1699,29 @@ const ProfilePreview = ({
                           </div>
                         );
                       })
+                  )}
+                  {activeItems.length > ITEMS_PER_PAGE && (
+                    <div className="flex items-center justify-between pt-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setItemsPage((prev) => Math.max(prev - 1, 1))}
+                        disabled={itemsPage === 1}
+                      >
+                        Prev
+                      </Button>
+                      <span className="text-xs" style={{ color: secondaryTextColor }}>
+                        Page {itemsPage} of {totalItemPages}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setItemsPage((prev) => Math.min(prev + 1, totalItemPages))}
+                        disabled={itemsPage === totalItemPages}
+                      >
+                        Next
+                      </Button>
+                    </div>
                   )}
                 </TabsContent>
               </Tabs>

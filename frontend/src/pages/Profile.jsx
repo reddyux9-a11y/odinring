@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import { Button } from "../shared/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "../shared/ui/avatar";
 import { Badge } from "../shared/ui/badge";
-import { ExternalLink, Phone, Mail, MessageCircle, Link as LinkIcon, MessageSquare, Save, UserPlus, ShoppingBag, Image as ImageIcon, Tag, DollarSign, Video, Camera, Users, Copy, Check, Globe, Download, X } from "lucide-react";
+import { ExternalLink, Phone, Mail, MessageCircle, Link as LinkIcon, MessageSquare, Save, UserPlus, ShoppingBag, Image as ImageIcon, DollarSign, Video, Camera, Users, Copy, Check, Globe, Download, X } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../shared/ui/tabs";
 
 // WhatsApp Icon Component
@@ -143,6 +143,15 @@ const Profile = () => {
 
   // Get banner pattern with optimized hook - MUST be called before any conditional returns
   const { className: bannerPatternClass } = useBannerPattern(profile);
+  const coverPhoto = profile?.cover_photo;
+  const bannerStyle = coverPhoto
+    ? {
+        backgroundImage: `url(${coverPhoto})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+      }
+    : undefined;
+  const bannerClassName = coverPhoto ? "" : bannerPatternClass;
 
   // Check if mobile screen size
   useEffect(() => {
@@ -459,7 +468,7 @@ const Profile = () => {
       style={{ backgroundColor, ...fontStyle }}
     >
       {/* Top Banner Section - Gradient Header */}
-      <div className={`h-32 ${bannerPatternClass} relative`}>
+      <div className={`h-32 ${bannerClassName} relative`} style={bannerStyle}>
         <div className="absolute inset-0 bg-gradient-to-r from-purple-500 via-purple-600 to-pink-500"></div>
         <div className="absolute inset-0 bg-black/10"></div>
       </div>
@@ -764,7 +773,6 @@ const Profile = () => {
                             </div>
                             {item.description && (
                               <div className="flex items-center gap-1 mt-1">
-                                <Tag className="w-3 h-3" style={{ color: secondaryTextColor }} />
                                 <span className="text-sm opacity-70" style={{ color: secondaryTextColor }}>
                                   {item.description}
                                 </span>

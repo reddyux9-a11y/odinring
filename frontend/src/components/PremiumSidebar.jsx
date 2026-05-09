@@ -49,6 +49,7 @@ const PremiumSidebar = ({
   setActiveSection, 
   onLogout,
   links = [],
+  items = [],
   totalClicks = 0 
 }) => {
   const { subscription, loading: contextLoading } = useIdentityContext();
@@ -77,6 +78,7 @@ const PremiumSidebar = ({
       label: "Items",
       icon: ShoppingBag,
       description: "Merchant items",
+      badge: items.length,
       gradient: "from-emerald-500 to-green-600"
     },
     {

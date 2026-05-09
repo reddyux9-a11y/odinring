@@ -27,8 +27,11 @@ const ProfileSettings = ({ profile, setProfile, user }) => {
   });
   const [copied, setCopied] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadingCover, setUploadingCover] = useState(false);
   const [imagePreview, setImagePreview] = useState(null);
+  const [coverPreview, setCoverPreview] = useState(profile.cover_photo || null);
   const fileInputRef = useRef(null);
+  const coverInputRef = useRef(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -44,6 +47,7 @@ const ProfileSettings = ({ profile, setProfile, user }) => {
         name: formData.name,
         bio: formData.bio,
         avatar: formData.avatar,
+        cover_photo: formData.cover_photo || null,
         email: normalizedEmail,
         phone_number: normalizedPhone,
         whatsapp_number: normalizedWhatsapp
@@ -153,6 +157,60 @@ const ProfileSettings = ({ profile, setProfile, user }) => {
     }
   };
 
+  const handleCoverUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image size must be less than 5MB");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const previewUrl = reader.result;
+      setCoverPreview(previewUrl);
+      setFormData((prev) => ({ ...prev, cover_photo: previewUrl }));
+      setProfile((prev) => ({ ...prev, cover_photo: previewUrl }));
+    };
+    reader.readAsDataURL(file);
+
+    setUploadingCover(true);
+    try {
+      const uploadFormData = new FormData();
+      uploadFormData.append("file", file);
+
+      const response = await api.post("/upload-media", uploadFormData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      if (response.data.success) {
+        const coverUrl = response.data.image_url;
+        setFormData((prev) => ({ ...prev, cover_photo: coverUrl }));
+        setProfile((prev) => ({ ...prev, cover_photo: coverUrl }));
+        setCoverPreview(coverUrl);
+        toast.success("Cover photo uploaded successfully!");
+      }
+    } catch (error) {
+      const errorMessage =
+        error?.response?.data?.detail ||
+        error?.response?.data?.message ||
+        "Failed to upload cover photo";
+      toast.error(errorMessage);
+      setCoverPreview(profile.cover_photo || null);
+      setFormData((prev) => ({ ...prev, cover_photo: profile.cover_photo || "" }));
+    } finally {
+      setUploadingCover(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Profile Information */}
@@ -165,30 +223,78 @@ const ProfileSettings = ({ profile, setProfile, user }) => {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Avatar */}
-            <div className="flex items-center space-x-4">
-              <Avatar className="w-20 h-20">
-                <AvatarImage src={imagePreview || formData.custom_logo || formData.avatar || user.avatar} />
-                <AvatarFallback className="bg-black text-white text-xl">
-                  {formData.name.split(' ').map(n => n[0]).join('')}
-                </AvatarFallback>
-              </Avatar>
-              <div>
+            {/* Avatar + Cover Photo */}
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="flex items-center space-x-4">
+                <Avatar className="w-20 h-20">
+                  <AvatarImage src={imagePreview || formData.custom_logo || formData.avatar || user.avatar} />
+                  <AvatarFallback className="bg-black text-white text-xl">
+                    {formData.name.split(' ').map(n => n[0]).join('')}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                    ref={fileInputRef}
+                  />
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="border-border"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadingImage}
+                  >
+                    {uploadingImage ? (
+                      <>
+                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-primary mr-2"></div>
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <Camera className="w-3 h-3 mr-2" />
+                        Change Photo
+                      </>
+                    )}
+                  </Button>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    JPG, PNG or GIF. Max size 5MB.
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="w-full h-20 rounded-lg border border-border overflow-hidden bg-muted">
+                  {coverPreview ? (
+                    <img
+                      src={coverPreview}
+                      alt="Cover preview"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
+                      No cover photo selected
+                    </div>
+                  )}
+                </div>
                 <input
                   type="file"
                   accept="image/*"
-                  onChange={handleImageUpload}
+                  onChange={handleCoverUpload}
                   className="hidden"
-                  ref={fileInputRef}
+                  ref={coverInputRef}
                 />
-                <Button 
-                  variant="outline" 
-                  size="sm" 
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
                   className="border-border"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={uploadingImage}
+                  onClick={() => coverInputRef.current?.click()}
+                  disabled={uploadingCover}
                 >
-                  {uploadingImage ? (
+                  {uploadingCover ? (
                     <>
                       <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-primary mr-2"></div>
                       Uploading...
@@ -196,12 +302,12 @@ const ProfileSettings = ({ profile, setProfile, user }) => {
                   ) : (
                     <>
                       <Camera className="w-3 h-3 mr-2" />
-                      Change Photo
+                      Upload Cover Photo
                     </>
                   )}
                 </Button>
-                <p className="text-sm text-muted-foreground mt-1">
-                  JPG, PNG or GIF. Max size 5MB.
+                <p className="text-sm text-muted-foreground">
+                  WhatsApp-style cover: recommended 640×360 (16:9), max 5MB.
                 </p>
               </div>
             </div>
