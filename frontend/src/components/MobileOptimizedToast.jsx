@@ -81,8 +81,8 @@ export const mobileToast = {
         {...options}
       />
     ), {
-      duration: options.duration || 3000,
-      position: "top-center"
+      duration: options.duration || 2000,
+      position: "bottom-center"
     });
   },
 
@@ -95,8 +95,8 @@ export const mobileToast = {
         {...options}
       />
     ), {
-      duration: options.duration || 4000,
-      position: "top-center"
+      duration: options.duration || 3000,
+      position: "bottom-center"
     });
   },
 
@@ -109,8 +109,8 @@ export const mobileToast = {
         {...options}
       />
     ), {
-      duration: options.duration || 3000,
-      position: "top-center"
+      duration: options.duration || 2000,
+      position: "bottom-center"
     });
   },
 
@@ -149,8 +149,8 @@ export const mobileToast = {
         {...options}
       />
     ), {
-      duration: options.duration || 3000,
-      position: "top-center"
+      duration: options.duration || 2000,
+      position: "bottom-center"
     });
   },
 
