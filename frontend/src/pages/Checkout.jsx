@@ -5,7 +5,8 @@ import { Loader2, ArrowLeft } from 'lucide-react';
 import api from '../lib/api';
 import { toast } from 'sonner';
 
-const PAID_PLAN_IDS = new Set(['solo_standard', 'solo_enterprise', 'org']);
+const PAID_PLAN_IDS = new Set(['pro']);
+const VALID_BILLING_CYCLES = new Set(['monthly', 'quarterly', 'yearly']);
 
 const extractErrorMessage = (error, fallback) => {
   const detail = error?.response?.data?.detail;
@@ -31,7 +32,8 @@ const extractErrorMessage = (error, fallback) => {
 const Checkout = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const planId = searchParams.get('plan') || 'solo_standard';
+  const planId = searchParams.get('plan') || 'pro';
+  const billingCycle = VALID_BILLING_CYCLES.has(searchParams.get('billing')) ? searchParams.get('billing') : 'yearly';
   const [status, setStatus] = useState('loading');
   const [errorMessage, setErrorMessage] = useState('');
 
@@ -53,7 +55,7 @@ const Checkout = () => {
       try {
         const response = await api.post('/billing/checkout-session', {
           plan_id: planId,
-          billing_cycle: 'yearly',
+          billing_cycle: billingCycle,
         });
         const checkoutUrl = response.data?.checkout_url;
         if (cancelled) return;

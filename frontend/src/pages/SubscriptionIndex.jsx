@@ -1,194 +1,144 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../shared/ui/card';
+import { Card, CardContent, CardHeader } from '../shared/ui/card';
 import { Button } from '../shared/ui/button';
 import { Badge } from '../shared/ui/badge';
-import { ToggleGroup, ToggleGroupItem } from '../shared/ui/toggle-group';
-import { Check, Sparkles, Zap, Crown, ArrowRight } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
-import { useIdentityContext } from '../hooks/useIdentityContext';
+import { Check } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { toast } from 'sonner';
+
+const FEATURES = [
+  'Smart business profile with custom link',
+  'Custom brand logo, colours & fonts',
+  'Digital product & service catalog',
+  'Media hub — photos, videos, documents',
+  'WhatsApp direct contact button',
+  'Social media links & distribution',
+  'Real-time analytics dashboard',
+  'Free QR code generator',
+  'Whats app, Email, Website,',
+];
+
+const BILLING_OPTIONS = [
+  {
+    id: 'monthly',
+    label: 'Monthly Plan',
+    badgeClass: 'bg-purple-500 text-white',
+    price: 1.99,
+    suffix: '/ month',
+    note: 'save more with monthly billing',
+  },
+  {
+    id: 'quarterly',
+    label: 'Quarterly Plan',
+    badgeClass: 'bg-blue-400 text-white',
+    price: 11.99,
+    suffix: '/ 3-months',
+    note: 'save more with annual billing',
+  },
+  {
+    id: 'yearly',
+    label: 'Annual Plan',
+    badgeClass: 'bg-yellow-400 text-gray-900',
+    price: 47.99,
+    suffix: '/ year',
+    note: 'save more with annual billing',
+  },
+];
 
 const SubscriptionIndex = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const { context: identityContext } = useIdentityContext();
   const [loading, setLoading] = useState(false);
-  const [billingCycle, setBillingCycle] = useState('monthly'); // Default to monthly
 
   const handleSkip = () => {
-    // Mark subscription onboarding as skipped
     localStorage.setItem('subscription_onboarding_skipped', 'true');
     navigate('/dashboard');
   };
 
-  const handleChoosePlan = (planId) => {
-    // Pass billing cycle as query parameter
-    navigate(`/checkout?plan=${planId}&billing=${billingCycle}`);
+  const handleChoosePlan = (billingCycle) => {
+    navigate(`/checkout?plan=pro&billing=${billingCycle}`);
   };
-
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat('en-EU', {
-      style: 'currency',
-      currency: 'EUR',
-      minimumFractionDigits: price % 1 !== 0 ? 2 : 0,
-      maximumFractionDigits: 2,
-    }).format(price);
-  };
-
-  const plans = [
-    {
-      id: 'solo_standard',
-      name: 'Standard',
-      price: {
-        monthly: 3.99,
-        yearly: 43
-      },
-      description: 'For solo businesses',
-      features: ['Unlimited links', 'Advanced customization', 'Advanced analytics', 'Custom branding', 'QR codes'],
-      popular: true
-    },
-    {
-      id: 'solo_enterprise',
-      name: 'Enterprise',
-      price: {
-        monthly: 5.99,
-        yearly: 64
-      },
-      description: 'Enhanced features',
-      features: ['Everything in Standard', 'Priority support', 'Enhanced features'],
-      popular: false
-    },
-    {
-      id: 'org',
-      name: 'Organization',
-      price: {
-        monthly: 10.99,
-        yearly: 118
-      },
-      description: 'For teams and organizations',
-      features: ['All Business Solo features', 'Team Collaboration', 'Multiple Departments', 'Priority Support'],
-      popular: false
-    }
-  ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
-      <div className="container mx-auto px-4 py-12 max-w-5xl">
+    <div className="min-h-screen bg-white">
+      <div className="container mx-auto px-4 py-16 max-w-5xl">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           className="text-center mb-12"
         >
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
-            <Sparkles className="w-8 h-8 text-primary" />
-          </div>
-          <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
-            Choose Your Plan
-          </h1>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-6">
-            Choose the perfect plan for your business needs. 
-            You can always upgrade or change your plan later.
+          <p className="text-sm font-semibold tracking-widest text-gray-500 uppercase mb-4">
+            — Simple, Honest Pricing
           </p>
-          
-          {/* Billing Cycle Toggle */}
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="flex items-center justify-center mt-4"
-          >
-            <ToggleGroup
-              type="single"
-              value={billingCycle}
-              onValueChange={(value) => {
-                if (value) setBillingCycle(value);
-              }}
-              className="bg-muted rounded-lg p-1"
-            >
-              <ToggleGroupItem value="monthly" aria-label="Monthly billing" className="data-[state=on]:bg-background data-[state=on]:shadow-sm px-4">
-                Monthly
-              </ToggleGroupItem>
-              <ToggleGroupItem value="yearly" aria-label="Yearly billing" className="data-[state=on]:bg-background data-[state=on]:shadow-sm px-4">
-                Yearly
-              </ToggleGroupItem>
-            </ToggleGroup>
-          </motion.div>
+          <h1 className="text-5xl md:text-6xl font-black text-gray-900 leading-tight mb-4">
+            Less than your morning coffee.<br />
+            More powerful than a website.
+          </h1>
+          <p className="text-gray-500 text-base">
+            One flat price. No hidden fees. No hosting. No domain. No developer.
+          </p>
         </motion.div>
 
-        {/* Plans Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          {plans.map((plan, index) => (
+        {/* Billing cycle cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+          {BILLING_OPTIONS.map((option, index) => (
             <motion.div
-              key={plan.id}
+              key={option.id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
             >
-              <Card className={`relative h-full flex flex-col ${plan.popular ? 'border-primary border-2 shadow-lg scale-105' : ''}`}>
-                {plan.popular && (
-                  <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-primary text-primary-foreground">
-                    <Crown className="w-3 h-3 mr-1" />
-                    Popular
-                  </Badge>
-                )}
-
-                <CardHeader>
-                  <CardTitle className="text-2xl">{plan.name}</CardTitle>
-                  <CardDescription>{plan.description}</CardDescription>
-                  
-                  <div className="mt-4">
-                    <div className="flex items-baseline">
-                      <span className="text-4xl font-bold">
-                        {plan.price[billingCycle] === 0 ? 'Free' : formatPrice(plan.price[billingCycle])}
-                      </span>
-                      {plan.price[billingCycle] > 0 && (
-                        <>
-                          <span className="text-muted-foreground ml-2">/{billingCycle === 'monthly' ? 'month' : 'year'}</span>
-                        </>
-                      )}
-                    </div>
-                    {billingCycle === 'yearly' && plan.price[billingCycle] > 0 && (
-                      <div className="mt-2 flex items-center gap-2">
-                        <span className="text-sm text-muted-foreground line-through">
-                          {formatPrice(plan.price.monthly * 12)}
-                        </span>
-                        <span className="text-sm text-green-600 dark:text-green-400 font-medium">
-                          Save 10%
-                        </span>
-                      </div>
-                    )}
+              <Card className="relative h-full flex flex-col border border-gray-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                <CardHeader className="pb-2 pt-6 px-6">
+                  <div className="mb-4">
+                    <Badge className={`${option.badgeClass} rounded-full px-3 py-1 text-xs font-semibold`}>
+                      {option.label}
+                    </Badge>
                   </div>
+                  <p className="text-sm font-semibold text-gray-700 mb-2">
+                    Everything you need to grow
+                  </p>
+                  <div className="flex items-end gap-1 mb-1">
+                    <span className="text-2xl font-bold text-gray-800">€</span>
+                    <span className="text-5xl font-black text-gray-900 leading-none">
+                      {option.price.toFixed(2).split('.')[0]}
+                    </span>
+                    <span className="text-2xl font-bold text-gray-800 mb-1">
+                      .{option.price.toFixed(2).split('.')[1]}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-400">
+                    {option.suffix} · {option.note}
+                  </p>
                 </CardHeader>
 
-                <CardContent className="flex-1 flex flex-col">
-                  <ul className="space-y-3 mb-6 flex-1">
-                    {plan.features.map((feature) => (
-                      <li key={feature} className="flex items-start">
-                        <Check className="w-5 h-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
-                        <span className="text-sm">{feature}</span>
+                <CardContent className="flex-1 flex flex-col px-6 pb-6">
+                  <ul className="space-y-2 mb-6 flex-1">
+                    {FEATURES.map((feature) => (
+                      <li key={feature} className="flex items-start gap-2">
+                        <Check className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
+                        <span className="text-sm text-gray-600">{feature}</span>
                       </li>
                     ))}
                   </ul>
 
                   <Button
-                    className="w-full"
-                    variant={plan.popular ? 'default' : 'outline'}
-                    onClick={() => handleChoosePlan(plan.id)}
+                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white rounded-full font-semibold"
+                    onClick={() => handleChoosePlan(option.id)}
                     disabled={loading}
                   >
-                    Choose {plan.name}
-                    <ArrowRight className="w-4 h-4 ml-2" />
+                    Start Free — No Card Required →
                   </Button>
+                  <p className="text-xs text-center text-gray-400 mt-3">
+                    Cancel any time · No long-term contracts · Your data always stays yours
+                  </p>
                 </CardContent>
               </Card>
             </motion.div>
           ))}
         </div>
 
-        {/* Skip Button */}
+        {/* Skip */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -204,27 +154,9 @@ const SubscriptionIndex = () => {
             Skip for now, I'll choose later
           </Button>
         </motion.div>
-
-        {/* Info Note */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-          className="mt-8 text-center text-sm text-muted-foreground max-w-2xl mx-auto"
-        >
-          <p>
-            All plans include a 14-day free trial. 
-            You can upgrade or change your plan anytime from your dashboard.
-          </p>
-          <p className="mt-2">
-            When you continue, you are sent to Stripe Checkout. Paid plans are billed annually
-            (the monthly toggle is an estimate; use Subscribe / billing for the exact yearly total).
-          </p>
-        </motion.div>
       </div>
     </div>
   );
 };
 
 export default SubscriptionIndex;
-

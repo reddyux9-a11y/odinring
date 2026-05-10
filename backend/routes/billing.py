@@ -86,72 +86,42 @@ def _get_available_plans() -> dict:
             "name": "Personal Plan",
             "description": "Free tier for individual users",
             "price": {
+                "monthly": 0,
+                "quarterly": 0,
                 "yearly": 0,
                 "currency": "EUR",
             },
             "features": {
-                "links": "unlimited",
-                "items": "unlimited",
-                "customization": "basic",
-                "analytics": "basic",
+                "smart_business_profile": True,
                 "custom_branding": False,
+                "digital_product_catalog": True,
+                "media_hub": False,
+                "whatsapp_direct_contact": False,
+                "social_media_links": True,
+                "real_time_analytics": False,
                 "qr_codes": False,
             },
         },
-        "solo_standard": {
-            "id": "solo_standard",
-            "name": "Business Solo - Standard",
-            "description": "For solo businesses and micro enterprises",
+        "pro": {
+            "id": "pro",
+            "name": "Everything you need to grow",
+            "description": "One flat price. No hidden fees. No hosting. No domain. No developer.",
             "price": {
-                "yearly": settings.SUBSCRIPTION_PRICE_SOLO_STANDARD,
+                "monthly": settings.SUBSCRIPTION_PRICE_MONTHLY,
+                "quarterly": settings.SUBSCRIPTION_PRICE_QUARTERLY,
+                "yearly": settings.SUBSCRIPTION_PRICE_YEARLY,
                 "currency": "EUR",
             },
             "features": {
-                "links": "unlimited",
-                "items": "unlimited",
-                "customization": "advanced",
-                "analytics": "advanced",
+                "smart_business_profile": True,
                 "custom_branding": True,
+                "digital_product_catalog": True,
+                "media_hub": True,
+                "whatsapp_direct_contact": True,
+                "social_media_links": True,
+                "real_time_analytics": True,
                 "qr_codes": True,
-            },
-        },
-        "solo_enterprise": {
-            "id": "solo_enterprise",
-            "name": "Business Solo - Enterprise",
-            "description": "Enhanced features for growing businesses",
-            "price": {
-                "yearly": settings.SUBSCRIPTION_PRICE_SOLO_ENTERPRISE,
-                "currency": "EUR",
-            },
-            "features": {
-                "links": "unlimited",
-                "items": "unlimited",
-                "customization": "advanced",
-                "analytics": "advanced",
-                "custom_branding": True,
-                "qr_codes": True,
-                "priority_support": True,
-            },
-        },
-        "org": {
-            "id": "org",
-            "name": "Organization Plan",
-            "description": "For organizations with multiple members",
-            "price": {
-                "yearly": settings.SUBSCRIPTION_PRICE_ORG,
-                "currency": "EUR",
-            },
-            "features": {
-                "links": "unlimited",
-                "items": "unlimited",
-                "customization": "advanced",
-                "analytics": "advanced",
-                "custom_branding": True,
-                "qr_codes": True,
-                "team_collaboration": True,
-                "departments": True,
-                "max_members": 10,
-                "max_departments": 5,
+                "whatsapp_email_website": True,
             },
         },
     }
@@ -268,7 +238,7 @@ class TrialStartRequest(BaseModel):
 class CreateCheckoutSessionRequest(BaseModel):
     """Request model for creating a Stripe Checkout Session for a paid plan"""
     plan_id: str
-    billing_cycle: str = "yearly"  # currently only yearly is used
+    billing_cycle: str = "yearly"  # monthly, quarterly, yearly
 
 
 @billing_router.post(
@@ -302,10 +272,23 @@ async def create_checkout_session(
             raise HTTPException(status_code=400, detail="Invalid plan_id")
 
         plan = plans[plan_id]
-        price_yearly = plan["price"]["yearly"]
         currency = plan["price"]["currency"].lower()
 
-        if price_yearly <= 0:
+        if billing_cycle == "monthly":
+            price_amount = plan["price"]["monthly"]
+            stripe_interval = "month"
+            stripe_interval_count = 1
+        elif billing_cycle == "quarterly":
+            price_amount = plan["price"]["quarterly"]
+            stripe_interval = "month"
+            stripe_interval_count = 3
+        else:
+            billing_cycle = "yearly"
+            price_amount = plan["price"]["yearly"]
+            stripe_interval = "year"
+            stripe_interval_count = 1
+
+        if price_amount <= 0:
             raise HTTPException(
                 status_code=400,
                 detail="Selected plan is free and does not require payment."
@@ -349,7 +332,7 @@ async def create_checkout_session(
                 {"id": subscription.id},
                 {
                     "$set": {
-                        "amount": float(price_yearly),
+                        "amount": float(price_amount),
                         "currency": plan["price"]["currency"],
                     }
                 },
@@ -357,10 +340,14 @@ async def create_checkout_session(
         except Exception:
             logger.warning("Failed to update subscription amount/currency", exc_info=True)
 
-        # Create Stripe Checkout Session (subscription mode, yearly interval)
+        # Create Stripe Checkout Session with the correct billing interval
         frontend_base = _resolve_stripe_frontend_base(request)
         success_url = f"{frontend_base}/subscription?status=success"
         cancel_url = f"{frontend_base}/subscription?status=cancelled"
+
+        recurring = {"interval": stripe_interval}
+        if stripe_interval_count > 1:
+            recurring["interval_count"] = stripe_interval_count
 
         try:
             checkout_session = stripe.checkout.Session.create(
@@ -370,14 +357,12 @@ async def create_checkout_session(
                     {
                         "price_data": {
                             "currency": currency,
-                            "unit_amount": int(price_yearly * 100),
+                            "unit_amount": int(price_amount * 100),
                             "product_data": {
                                 "name": plan["name"],
                                 "description": plan.get("description") or "",
                             },
-                            "recurring": {
-                                "interval": "year",
-                            },
+                            "recurring": recurring,
                         },
                         "quantity": 1,
                     }
@@ -441,7 +426,7 @@ async def start_free_trial(
     
     try:
         # Validate plan ID
-        valid_plans = ['solo_standard', 'solo_enterprise', 'org']
+        valid_plans = ['pro']
         if plan_id not in valid_plans:
             raise HTTPException(
                 status_code=400,

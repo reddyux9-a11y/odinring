@@ -56,10 +56,10 @@ class Settings(BaseSettings):
     SUBSCRIPTION_GRACE_PERIOD_DAYS: int = 3
     MAX_ORG_MEMBERS_DEFAULT: int = 10
     
-    # Phase 2: Subscription Pricing (EUR/year)
-    SUBSCRIPTION_PRICE_SOLO_STANDARD: float = 24.0  # Business Solo Standard: €24/year
-    SUBSCRIPTION_PRICE_SOLO_ENTERPRISE: float = 36.0  # Business Solo Enterprise: €36/year
-    SUBSCRIPTION_PRICE_ORG: float = 68.0  # Organization: €68/year
+    # Phase 2: Subscription Pricing (EUR)
+    SUBSCRIPTION_PRICE_MONTHLY: float = 1.99    # €1.99/month
+    SUBSCRIPTION_PRICE_QUARTERLY: float = 11.99  # €11.99/3 months
+    SUBSCRIPTION_PRICE_YEARLY: float = 47.99    # €47.99/year
     
     # Phase 2: Payment (Stripe)
     STRIPE_SECRET_KEY: Optional[str] = None
