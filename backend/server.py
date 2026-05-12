@@ -29,6 +29,8 @@ import io
 import hashlib
 import secrets
 import requests
+import asyncio
+from functools import partial
 
 # Load environment variables BEFORE importing config
 ROOT_DIR = Path(__file__).parent
@@ -195,6 +197,7 @@ if not _IS_TEST_MODE:
         departments_collection = FirestoreDB('departments')
         memberships_collection = FirestoreDB('memberships')
         subscriptions_collection = FirestoreDB('subscriptions')
+        contact_submissions_collection = FirestoreDB('contact_submissions')
     except Exception as e:
         # If collection creation fails (e.g., Firebase not initialized),
         # create mock collections so the app can still start
@@ -218,6 +221,7 @@ if not _IS_TEST_MODE:
         departments_collection = MagicMock()
         memberships_collection = MagicMock()
         subscriptions_collection = MagicMock()
+        contact_submissions_collection = MagicMock()
 else:
     # In test mode, create placeholder objects that will be replaced by mocks
     from unittest.mock import MagicMock
@@ -239,6 +243,7 @@ else:
     departments_collection = MagicMock()
     memberships_collection = MagicMock()
     subscriptions_collection = MagicMock()
+    contact_submissions_collection = MagicMock()
 
 # Function to get current environment variables (for runtime checking)
 def get_current_env_vars():
@@ -550,6 +555,7 @@ class User(BaseModel):
     show_ring_badge: bool = True  # Whether to show "Ring Connected" badge
     phone_number: Optional[str] = None  # User's phone number for WhatsApp and Call buttons
     whatsapp_number: Optional[str] = None  # Optional WhatsApp number if different from phone_number
+    show_phone_in_preview: bool = True  # Whether to show phone number on public profile
     items: List[Dict[str, Any]] = []  # Store items directly in user document
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
@@ -571,6 +577,7 @@ class UserUpdate(BaseModel):
     show_ring_badge: Optional[bool] = None
     phone_number: Optional[str] = None
     whatsapp_number: Optional[str] = None
+    show_phone_in_preview: Optional[bool] = None
     # Typography
     font_family: Optional[str] = None
 
@@ -1067,6 +1074,7 @@ class PublicProfile(BaseModel):
     email: Optional[str] = None  # User's email for mail button
     phone_number: Optional[str] = None  # User's phone number for WhatsApp/Call buttons
     whatsapp_number: Optional[str] = None  # Optional WhatsApp number (if different from phone_number)
+    show_phone_in_preview: bool = True
     links: List[Link]
     media: List[Media] = []  # User's media files for public view
     items: List[Dict[str, Any]] = []  # User's items for public view
@@ -3052,16 +3060,28 @@ async def google_signin(request: Request, google_data: GoogleSignInRequest):
     try:
         # Import Firebase Admin SDK
         from firebase_admin import auth as firebase_auth
-        
-        # Verify the Firebase ID token
+
+        # Verify the Firebase ID token in a thread (verify_id_token is blocking)
         try:
-            decoded_token = firebase_auth.verify_id_token(google_data.firebase_token)
+            loop = asyncio.get_event_loop()
+            decoded_token = await asyncio.wait_for(
+                loop.run_in_executor(
+                    None,
+                    partial(firebase_auth.verify_id_token, google_data.firebase_token)
+                ),
+                timeout=10.0
+            )
             firebase_uid = decoded_token['uid']
-            
+
             # Verify the UID matches
             if firebase_uid != google_data.uid:
                 raise HTTPException(status_code=401, detail="Invalid Firebase token")
-                
+
+        except asyncio.TimeoutError:
+            logger.error("Firebase token verification timed out after 10s")
+            raise HTTPException(status_code=504, detail="Authentication service timeout")
+        except HTTPException:
+            raise
         except Exception as e:
             logger.error(f"Firebase token verification failed: {str(e)}", exc_info=True)
             raise HTTPException(status_code=401, detail="Invalid Firebase token")
@@ -3262,17 +3282,29 @@ async def firebase_login(request: Request, login_data: FirebaseLoginRequest):
     try:
         # Import Firebase Admin SDK
         from firebase_admin import auth as firebase_auth
-        
-        # Verify the Firebase ID token
+
+        # Verify the Firebase ID token in a thread (verify_id_token is blocking)
         try:
-            decoded_token = firebase_auth.verify_id_token(login_data.firebase_token)
+            loop = asyncio.get_event_loop()
+            decoded_token = await asyncio.wait_for(
+                loop.run_in_executor(
+                    None,
+                    partial(firebase_auth.verify_id_token, login_data.firebase_token)
+                ),
+                timeout=10.0
+            )
             firebase_uid = decoded_token['uid']
             firebase_email = decoded_token.get('email', '')
-            
+
             # Verify email matches
             if firebase_email.lower() != login_data.email.lower():
                 raise HTTPException(status_code=401, detail="Email mismatch in Firebase token")
-                
+
+        except asyncio.TimeoutError:
+            logger.error("Firebase token verification timed out after 10s")
+            raise HTTPException(status_code=504, detail="Authentication service timeout")
+        except HTTPException:
+            raise
         except Exception as e:
             logger.error(f"Firebase token verification failed: {str(e)}", exc_info=True)
             raise HTTPException(status_code=401, detail="Invalid Firebase token")
@@ -6068,8 +6100,9 @@ async def get_public_profile(request: Request, username: str):
         show_footer=user.show_footer,
         show_ring_badge=show_ring_badge,
         email=user.email,  # Include email for mail button
-        phone_number=user_doc.get('phone_number') if isinstance(user_doc, dict) else getattr(user, 'phone_number', None),  # Include phone for Call button
-        whatsapp_number=user_doc.get('whatsapp_number') if isinstance(user_doc, dict) else getattr(user, 'whatsapp_number', None),  # Prefer WhatsApp number if different
+        show_phone_in_preview=user_doc.get('show_phone_in_preview', True) if isinstance(user_doc, dict) else getattr(user, 'show_phone_in_preview', True),
+        phone_number=(user_doc.get('phone_number') if isinstance(user_doc, dict) else getattr(user, 'phone_number', None)) if (user_doc.get('show_phone_in_preview', True) if isinstance(user_doc, dict) else getattr(user, 'show_phone_in_preview', True)) else None,
+        whatsapp_number=user_doc.get('whatsapp_number') if isinstance(user_doc, dict) else getattr(user, 'whatsapp_number', None),
         links=[link.model_dump() for link in links],
         media=[media.model_dump() for media in media_list],  # Include active media files
         items=gated_items,  # Include (possibly gated) active items
@@ -6482,6 +6515,36 @@ async def create_status_check(input: StatusCheckCreate):
 async def get_status_checks():
     status_checks = await status_checks_collection.find({}, limit=1000)
     return [StatusCheck(**status_check).model_dump() for status_check in status_checks]
+
+
+class ContactForm(BaseModel):
+    full_name: str
+    email: str
+    subject: str
+    comment: str
+
+
+CONTACT_SUBJECTS = {"sells", "affiliate", "products", "complains", "suggestions"}
+
+
+@api_router.post("/contact")
+async def submit_contact_form(form: ContactForm):
+    if not form.full_name.strip() or not form.email.strip() or not form.comment.strip():
+        raise HTTPException(status_code=400, detail="All fields are required")
+    if form.subject not in CONTACT_SUBJECTS:
+        raise HTTPException(status_code=400, detail="Invalid subject")
+
+    doc = {
+        "full_name": form.full_name.strip(),
+        "email": form.email.strip().lower(),
+        "subject": form.subject,
+        "comment": form.comment.strip(),
+        "created_at": datetime.utcnow().isoformat(),
+    }
+    await contact_submissions_collection.insert_one(doc)
+    logger.info(f"Contact form submission from {doc['email']} — subject: {doc['subject']}")
+    return {"success": True, "message": "Message received"}
+
 
 # Include the router in the main app
 app.include_router(api_router)

@@ -398,7 +398,7 @@ const Profile = () => {
       if (profile?.email) {
         vCard += `EMAIL:${profile.email}\n`;
       }
-      if (profile?.phone_number) {
+      if (profile?.phone_number && profile?.show_phone_in_preview !== false) {
         vCard += `TEL:${profile.phone_number}\n`;
       }
       if (profile?.bio) {
@@ -514,11 +514,11 @@ const Profile = () => {
           )}
           
           {/* Phone Icon */}
-          {profile.phone_number && (
+          {profile.phone_number && profile.show_phone_in_preview !== false && (
             <a
               href={`tel:${profile.phone_number}`}
               className="flex items-center justify-center w-10 h-10 rounded-full transition-all hover:scale-110 active:scale-95"
-              style={{ 
+              style={{
                 backgroundColor: isBackgroundDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)",
                 borderColor: accentColor,
                 borderWidth: "1px",
@@ -529,9 +529,9 @@ const Profile = () => {
               <Phone className="w-5 h-5" style={{ color: accentColor }} />
             </a>
           )}
-          
+
           {/* Save Contact Icon */}
-          {(profile.email || profile.phone_number) && (
+          {(profile.email || (profile.phone_number && profile.show_phone_in_preview !== false)) && (
             <button
               onClick={saveContact}
               className="flex items-center justify-center w-10 h-10 rounded-full transition-all hover:scale-110 active:scale-95"

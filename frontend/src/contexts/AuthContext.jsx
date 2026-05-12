@@ -1,9 +1,9 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import api from '../lib/api';
-import { refreshAccessToken } from '../lib/api';
+import api, { refreshAccessToken, setOnAuthFailure } from '../lib/api';
 import { onAuthChange, signOut as firebaseSignOut } from '../lib/firebase';
 import logger from '../lib/logger';
-import { setAuthTokens, clearAuthTokens } from '../lib/authTokenStore';
+import { setAuthTokens, clearAuthTokens, getAccessToken } from '../lib/authTokenStore';
+import { shouldRefreshToken } from '../lib/tokenUtils';
 
 const AuthContext = createContext();
 
@@ -125,8 +125,8 @@ return { token: accessToken, refresh_token: refreshToken, user: userData };
         name: googleData.name,
         photo_url: googleData.photoURL,
         uid: googleData.uid,
-        google_access_token: googleData.accessToken || null  // ✅ NEW: Google API access token
-      });
+        google_access_token: googleData.accessToken || null
+      }, { timeout: 15000 });
 
       // Store access token for API calls (if provided)
       if (googleData.accessToken) {
@@ -184,18 +184,30 @@ return { token: accessToken, refresh_token: refreshToken, user: userData };
 checkAuthStatus();
   }, []);
 
+  // Register auth-failure callback with the API layer so it can trigger a full
+  // logout (clear user state + redirect) when a token refresh fails.
+  // Without this, tokens are cleared but user state stays set → broken UI.
+  useEffect(() => {
+    setOnAuthFailure(() => {
+      logger.warn('⚠️ AuthContext: Token refresh failed — forcing logout');
+      clearAuthTokens();
+      setUser(null);
+      setAdmin(null);
+    });
+  }, []);
+
   // Keep authenticated sessions alive with silent refresh.
-  // This avoids abrupt logouts when access tokens expire during active usage.
+  // Runs every 4 minutes (well within the 30-min access-token window) so the
+  // token is always fresh while the user is actively using the dashboard.
   useEffect(() => {
     if (!user || !authChecked) return undefined;
 
-    const refreshPeriodMs = 10 * 60 * 1000; // every 10 minutes
+    const refreshPeriodMs = 4 * 60 * 1000;
     const intervalId = setInterval(async () => {
       try {
         await refreshAccessToken();
         logger.debug('🔄 AuthContext: Silent token refresh succeeded');
       } catch (error) {
-        // Non-fatal here; normal request flow/interceptors will still handle auth failures.
         logger.warn('⚠️ AuthContext: Silent token refresh failed', {
           status: error?.response?.status
         });
@@ -203,6 +215,30 @@ checkAuthStatus();
     }, refreshPeriodMs);
 
     return () => clearInterval(intervalId);
+  }, [user, authChecked]);
+
+  // Refresh token when the user returns to the tab after a break.
+  // Browsers throttle setInterval in background tabs, so the periodic refresh
+  // above can't be relied upon when the user is away for >30 minutes.
+  useEffect(() => {
+    if (!user || !authChecked) return undefined;
+
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState !== 'visible') return;
+      const token = getAccessToken();
+      if (!token || !shouldRefreshToken(token)) return;
+      try {
+        await refreshAccessToken();
+        logger.debug('🔄 AuthContext: Token refreshed on tab focus');
+      } catch (error) {
+        logger.warn('⚠️ AuthContext: Tab-focus token refresh failed', {
+          status: error?.response?.status
+        });
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [user, authChecked]);
 
   const checkAuthStatus = async () => {

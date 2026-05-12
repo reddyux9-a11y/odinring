@@ -25,6 +25,9 @@ const ProfileSettings = ({ profile, setProfile, user }) => {
     const wa = (profile.whatsapp_number || user.whatsapp_number || "").trim();
     return !wa || wa === phone;
   });
+  const [showPhoneInPreview, setShowPhoneInPreview] = useState(
+    profile.show_phone_in_preview ?? true
+  );
   const [copied, setCopied] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
@@ -50,7 +53,8 @@ const ProfileSettings = ({ profile, setProfile, user }) => {
         cover_photo: formData.cover_photo || null,
         email: normalizedEmail,
         phone_number: normalizedPhone,
-        whatsapp_number: normalizedWhatsapp
+        whatsapp_number: normalizedWhatsapp,
+        show_phone_in_preview: showPhoneInPreview,
       };
       await api.put('/me', updateData);
       setProfile({ ...profile, ...formData });
@@ -369,19 +373,28 @@ const ProfileSettings = ({ profile, setProfile, user }) => {
             <div className="space-y-2">
               <div className="flex items-center justify-between gap-3">
                 <Label htmlFor="phone_number">Mobile Number</Label>
-                <label className="flex items-center gap-2 text-xs text-muted-foreground select-none">
-                  <Checkbox
-                    checked={isWhatsAppSameAsMobile}
-                    onCheckedChange={(checked) => {
-                      const next = checked === true;
-                      setIsWhatsAppSameAsMobile(next);
-                      if (next) {
-                        handleChange('whatsapp_number', '');
-                      }
-                    }}
-                  />
-                  Same as WhatsApp number
-                </label>
+                <div className="flex items-center gap-4">
+                  <label className="flex items-center gap-2 text-xs text-muted-foreground select-none">
+                    <Checkbox
+                      checked={showPhoneInPreview}
+                      onCheckedChange={(checked) => setShowPhoneInPreview(checked === true)}
+                    />
+                    Show in preview
+                  </label>
+                  <label className="flex items-center gap-2 text-xs text-muted-foreground select-none">
+                    <Checkbox
+                      checked={isWhatsAppSameAsMobile}
+                      onCheckedChange={(checked) => {
+                        const next = checked === true;
+                        setIsWhatsAppSameAsMobile(next);
+                        if (next) {
+                          handleChange('whatsapp_number', '');
+                        }
+                      }}
+                    />
+                    Same as WhatsApp number
+                  </label>
+                </div>
               </div>
               <Input
                 id="phone_number"

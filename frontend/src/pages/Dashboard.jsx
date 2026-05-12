@@ -825,14 +825,28 @@ const Dashboard = () => {
                           </div>
                         </div>
                         
-                        <ProfilePreview 
-                          profile={profile}
-                          links={links.filter(link => link.active)}
-                          media={media.filter(m => m.active)}
-                          items={items.filter(item => item.active)}
-                          username={user.username}
-                          publicView={true}
-                        />
+                        {/* Clicking the preview navigates to the Items section */}
+                        <div
+                          className="relative cursor-pointer group"
+                          onClick={() => setActiveSection("items")}
+                          title="Go to Items"
+                        >
+                          <ProfilePreview
+                            profile={profile}
+                            links={links.filter(link => link.active)}
+                            media={media.filter(m => m.active)}
+                            items={items.filter(item => item.active)}
+                            username={user.username}
+                            publicView={true}
+                          />
+                          {/* Hover overlay hint */}
+                          <div className="pointer-events-none absolute inset-0 rounded-xl bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-end justify-center pb-4">
+                            <span className="flex items-center gap-1.5 bg-background border border-primary/30 text-primary text-xs font-semibold rounded-full px-3 py-1.5 shadow-md">
+                              <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+                              Manage Items
+                            </span>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>

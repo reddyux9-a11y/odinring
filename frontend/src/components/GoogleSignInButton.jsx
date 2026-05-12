@@ -93,7 +93,7 @@ const GoogleSignInButton = ({ mode = 'signin', onSuccess }) => {
       }
       
       let errorMessage = 'Failed to sign in with Google';
-      
+
       if (error.code === 'auth/popup-closed-by-user') {
         errorMessage = 'Sign-in cancelled';
       } else if (error.code === 'auth/popup-blocked') {
@@ -102,6 +102,8 @@ const GoogleSignInButton = ({ mode = 'signin', onSuccess }) => {
         return; // Don't set loading to false, redirect will happen
       } else if (error.code === 'auth/network-request-failed') {
         errorMessage = 'Network error. Please check your connection.';
+      } else if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+        errorMessage = 'Server is warming up — please try again in a moment.';
       }
       
       toast.error(errorMessage);

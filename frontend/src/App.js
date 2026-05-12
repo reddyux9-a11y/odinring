@@ -24,8 +24,10 @@ function AppContent() {
     <div className="App">
       <AppRouter />
       <Toaster
-        position="top-center"
+        position="bottom-center"
+        duration={2000}
         toastOptions={{
+          duration: 2000,
           style: {
             borderRadius: "12px",
             padding: "16px",

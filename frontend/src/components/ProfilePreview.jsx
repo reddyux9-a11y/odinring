@@ -156,7 +156,7 @@ const ProfilePreview = ({
       if (profile?.email) {
         vCard += `EMAIL:${profile.email}\n`;
       }
-      if (profile?.phone_number) {
+      if (profile?.phone_number && profile?.show_phone_in_preview !== false) {
         vCard += `TEL:${profile.phone_number}\n`;
       }
       if (profile?.bio) {
@@ -333,7 +333,7 @@ const ProfilePreview = ({
             )}
 
             {/* WhatsApp Icon (uses mobile number) */}
-            {profile.phone_number && (
+            {profile.phone_number && profile.show_phone_in_preview !== false && (
               <a
                 href={`tel:${profile.phone_number}`}
                 className="flex items-center justify-center w-10 h-10 rounded-full transition-all hover:scale-110 active:scale-95"
@@ -355,7 +355,7 @@ const ProfilePreview = ({
             )}
 
             {/* Save Contact Icon */}
-            {(profile.email || profile.phone_number) && (
+            {(profile.email || (profile.phone_number && profile.show_phone_in_preview !== false)) && (
               <button
                 onClick={saveContact}
                 className="flex items-center justify-center w-10 h-10 rounded-full transition-all hover:scale-110 active:scale-95"
@@ -822,7 +822,7 @@ const ProfilePreview = ({
             )}
 
             {/* WhatsApp Icon (uses mobile number) */}
-            {profile.phone_number && (
+            {profile.phone_number && profile.show_phone_in_preview !== false && (
               <a
                 href={`tel:${profile.phone_number}`}
                 className="flex items-center justify-center w-10 h-10 rounded-full transition-all hover:scale-110 active:scale-95"
@@ -844,7 +844,7 @@ const ProfilePreview = ({
             )}
 
             {/* Save Contact Icon */}
-            {(profile.email || profile.phone_number) && (
+            {(profile.email || (profile.phone_number && profile.show_phone_in_preview !== false)) && (
               <button
                 onClick={saveContact}
                 className="flex items-center justify-center w-10 h-10 rounded-full transition-all hover:scale-110 active:scale-95"
@@ -1320,7 +1320,7 @@ const ProfilePreview = ({
                 )}
 
                 {/* WhatsApp Icon (uses mobile number) */}
-                {profile.phone_number && (
+                {profile.phone_number && profile.show_phone_in_preview !== false && (
                   <a
                     href={`tel:${profile.phone_number}`}
                     className="flex items-center justify-center w-10 h-10 rounded-full transition-all hover:scale-110 active:scale-95"
@@ -1342,7 +1342,7 @@ const ProfilePreview = ({
                 )}
 
                 {/* Save Contact Icon */}
-                {(profile.email || profile.phone_number) && (
+                {(profile.email || (profile.phone_number && profile.show_phone_in_preview !== false)) && (
                   <button
                     onClick={saveContact}
                     className="flex items-center justify-center w-10 h-10 rounded-full transition-all hover:scale-110 active:scale-95"

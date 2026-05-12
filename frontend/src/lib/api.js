@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { decrementInFlight, incrementInFlight } from './apiLoading';
 import { getAccessToken, getRefreshToken, setAuthTokens, clearAuthTokens } from './authTokenStore';
+import { shouldRefreshToken } from './tokenUtils';
 
 const baseURL = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -12,6 +13,11 @@ export const api = axios.create({
 // Token refresh state management
 let isRefreshing = false;
 let refreshSubscribers = [];
+
+// Callback registered by AuthContext so api.js can trigger a full logout
+// when refresh fails (clears user state, not just tokens).
+let onAuthFailure = null;
+export const setOnAuthFailure = (callback) => { onAuthFailure = callback; };
 
 /**
  * Subscribe to token refresh completion
@@ -72,11 +78,9 @@ export const refreshAccessToken = async () => {
   }
 };
 
-// Request interceptor - Attach token to requests
+// Request interceptor - Attach token, proactively refreshing if near expiry
 api.interceptors.request.use(
   async (config) => {
-    // Track in-flight requests for global loader UX.
-    // Mark config so we only decrement what we incremented.
     try {
       incrementInFlight();
       config._inFlightTracked = true;
@@ -84,12 +88,42 @@ api.interceptors.request.use(
       // non-blocking
     }
 
-    // Skip refresh pre-check for auth endpoints
+    // Auth endpoints never need a token injected
     if (config.url?.includes('/auth/')) {
       return config;
     }
 
     const token = getAccessToken();
+
+    // Proactively refresh when another refresh is already running — queue behind it
+    if (isRefreshing) {
+      const freshToken = await new Promise((resolve) => subscribeTokenRefresh(resolve));
+      config.headers = config.headers || {};
+      config.headers.Authorization = `Bearer ${freshToken}`;
+      return config;
+    }
+
+    // Proactively refresh when the token is expired or within 5 minutes of expiry.
+    // This prevents 401s entirely instead of relying on the reactive retry path.
+    if (token && shouldRefreshToken(token)) {
+      isRefreshing = true;
+      try {
+        const newToken = await refreshAccessToken();
+        isRefreshing = false;
+        onTokenRefreshed(newToken);
+        config.headers = config.headers || {};
+        config.headers.Authorization = `Bearer ${newToken}`;
+      } catch {
+        isRefreshing = false;
+        // Fall through with the old token; the 401 handler will fire
+        if (token) {
+          config.headers = config.headers || {};
+          config.headers.Authorization = `Bearer ${token}`;
+        }
+      }
+      return config;
+    }
+
     if (token) {
       config.headers = config.headers || {};
       config.headers.Authorization = `Bearer ${token}`;
@@ -144,11 +178,9 @@ api.interceptors.response.use(
       try {
         const newToken = await refreshAccessToken();
         isRefreshing = false;
-        
-        // Notify all queued requests
+
         onTokenRefreshed(newToken);
-        
-        // Retry original request; auth cookies are already refreshed.
+
         if (newToken) {
           originalRequest.headers = originalRequest.headers || {};
           originalRequest.headers.Authorization = `Bearer ${newToken}`;
@@ -156,7 +188,10 @@ api.interceptors.response.use(
         return api(originalRequest);
       } catch (refreshError) {
         isRefreshing = false;
+        // Clear tokens AND notify AuthContext to clear user state + redirect to login.
+        // Without this, the app appears logged-in but every API call fails silently.
         clearAuthTokens();
+        onAuthFailure?.();
         return Promise.reject(refreshError);
       }
     }
