@@ -6057,14 +6057,10 @@ async def get_public_profile(request: Request, username: str):
     active_items = [item for item in items_data if item.get("active", False)]
     active_items.sort(key=lambda x: x.get('order', 0))
     
-    # Apply subscription gating for items: hide items when subscription expired
-    if items_locked:
-        logger.info(f"🔒 Items are locked for public profile due to subscription status={subscription_status}")
-        gated_items = []
-    else:
-        gated_items = active_items
-    
-    logger.info(f"✅ Found {len(gated_items)} active items (after gating)")
+    # Items are always shown regardless of subscription status
+    gated_items = active_items
+
+    logger.info(f"✅ Found {len(gated_items)} active items")
     
     # Get profile views from ring analytics
     profile_views = await ring_analytics_collection.count_documents({

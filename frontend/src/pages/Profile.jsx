@@ -715,16 +715,7 @@ const Profile = () => {
           </TabsContent>
 
           <TabsContent value="items" className="mt-0 space-y-3">
-            {/* When items are locked due to expired subscription, hide them on public profile */}
-            {profile.items_locked ? (
-              <div className="text-center py-8">
-                <ShoppingBag className="w-12 h-12 mx-auto mb-4" style={{ color: secondaryTextColor }} />
-                <h3 className="font-semibold mb-2" style={{ color: textColor }}>Items unavailable</h3>
-                <p className="text-sm" style={{ color: secondaryTextColor }}>
-                  This profile&apos;s subscription has ended, so items are currently hidden.
-                </p>
-              </div>
-            ) : items.filter(item => item.active).length === 0 ? (
+            {items.filter(item => item.active).length === 0 ? (
               <div className="text-center py-8">
                 <ShoppingBag className="w-12 h-12 mx-auto mb-4" style={{ color: secondaryTextColor }} />
                 <h3 className="font-semibold mb-2" style={{ color: textColor }}>No items available</h3>
