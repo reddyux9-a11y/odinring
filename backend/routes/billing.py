@@ -342,7 +342,7 @@ async def create_checkout_session(
 
         # Create Stripe Checkout Session with the correct billing interval
         frontend_base = _resolve_stripe_frontend_base(request)
-        success_url = f"{frontend_base}/subscription?status=success"
+        success_url = f"{frontend_base}/payment-success"
         cancel_url = f"{frontend_base}/subscription?status=cancelled"
 
         recurring = {"interval": stripe_interval}

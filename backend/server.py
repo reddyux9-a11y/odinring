@@ -5964,122 +5964,102 @@ async def get_ai_status(current_user: User = Depends(get_current_user)):
 
 # ==================== PUBLIC PROFILE ROUTES ====================
 
+async def _track_profile_view_bg(user_id: str, ring_id: str | None, request: Request):
+    """Fire-and-forget helper: records analytics events without blocking the profile response."""
+    try:
+        client_ip = getattr(request.client, 'host', '127.0.0.1')
+        if ring_id:
+            await track_ring_event(ring_id, "view", user_id, None, client_ip, request.headers.get("user-agent", "Unknown"))
+        await analytics_collection.insert_one({
+            "user_id": user_id,
+            "event": "profile_view",
+            "timestamp": datetime.utcnow(),
+            "ip": client_ip,
+        })
+    except Exception:
+        pass
+
+
 @api_router.get("/profile/{username}")
 @limiter.limit("60/minute")
 async def get_public_profile(request: Request, username: str):
-    # Convert underscores back to spaces for lookup (URLs use underscores, but usernames may have spaces)
-    # Try both the URL format (with underscores) and the original format (with spaces)
+    from services.identity_resolver import IdentityResolver
+    from models.identity_models import SubscriptionStatus
+    from app.infrastructure.cache import cache_service
+
+    # Serve from cache when available (60-second TTL for public profile data)
+    cache_key = f"public_profile:{username.lower()}"
+    cached_profile = cache_service.get(cache_key)
+    if cached_profile:
+        # Still fire-and-forget analytics tracking even on cache hit
+        asyncio.create_task(_track_profile_view_bg(cached_profile.get("user_id"), cached_profile.get("ring_id"), request))
+        return cached_profile
+
+    # Resolve username: try spaces-converted form first, then raw lowercase
     username_lookup = username.replace('_', ' ').lower()
-    
-    # Find user by username - try with spaces first (original format)
     user_doc = await users_collection.find_one({"username": username_lookup})
-    
-    # If not found, try with underscores (in case username was stored with underscores)
     if not user_doc:
         user_doc = await users_collection.find_one({"username": username.lower()})
-    
     if not user_doc:
         raise HTTPException(status_code=404, detail="Profile not found")
-    
+
     user = User(**user_doc)
-    
-    # Track profile view with ring analytics
-    if user.ring_id:
-        await track_ring_event(
-            user.ring_id, 
-            "view", 
-            user.id,
-            None,
-            getattr(request.client, 'host', '127.0.0.1'),
-            request.headers.get("user-agent", "Unknown")
-        )
-    
-    # Determine subscription status for public profile gating
-    try:
-        from services.identity_resolver import IdentityResolver
-        from models.identity_models import SubscriptionStatus
-        
-        subscription_info = await IdentityResolver._get_subscription(user_id=user.id)
-        subscription_status = subscription_info.get("status", SubscriptionStatus.NONE)
-    except Exception as e:
-        logger.warning(f"Failed to resolve subscription for public profile {user.id}: {e}")
-        from models.identity_models import SubscriptionStatus
-        subscription_status = SubscriptionStatus.NONE
-    
-    # Items should only be fully visible when subscription is active or trial
+
+    async def _zero():
+        return 0
+
+    # Parallelize independent Firestore reads
+    links_task = links_collection.find({"user_id": user.id, "active": True})
+    media_task = media_collection.find({"user_id": user.id, "active": True})
+    subscription_task = IdentityResolver._get_subscription(user_id=user.id)
+    views_task = (
+        ring_analytics_collection.count_documents({"ring_id": user.ring_id, "event_type": "view"})
+        if user.ring_id else _zero()
+    )
+
+    links_docs, media_docs, subscription_info, profile_views = await asyncio.gather(
+        links_task, media_task, subscription_task, views_task,
+        return_exceptions=True,
+    )
+
+    # Gracefully handle any gather failures
+    if isinstance(links_docs, Exception):
+        links_docs = []
+    if isinstance(media_docs, Exception):
+        media_docs = []
+    if isinstance(subscription_info, Exception):
+        subscription_info = {}
+    if isinstance(profile_views, Exception):
+        profile_views = 0
+
+    subscription_status = subscription_info.get("status", SubscriptionStatus.NONE) if isinstance(subscription_info, dict) else SubscriptionStatus.NONE
     items_locked = subscription_status == SubscriptionStatus.EXPIRED
-    
-    # Get active links
-    # NOTE: Sort removed from query to avoid requiring composite index
-    # Firestore requires index for: user_id + active + order
-    # Sorting in Python instead (temporary fix until index is deployed)
-    logger.info(f"📊 Fetching active links for public profile: {user.username}")
-    
-    links_docs = await links_collection.find({
-        "user_id": user.id,
-        "active": True
-    })  # ← No sort parameter to avoid index requirement
-    
-    logger.info(f"✅ Found {len(links_docs)} active links")
-    
-    # Sort in Python by order field
+
+    # Sort links + build totals
     links_docs.sort(key=lambda x: x.get('order', 0))
-    
     links = []
     total_clicks = 0
     for link_doc in links_docs:
         link = Link(**link_doc)
         links.append(link)
         total_clicks += link.clicks
-    
-    # Get active media files
-    logger.info(f"📸 Fetching active media for public profile: {user.username}")
-    media_docs = await media_collection.find({
-        "user_id": user.id,
-        "active": True
-    })
-    
-    # Sort media by order
-    media_docs.sort(key=lambda x: x.get('order', 0))
-    
-    media_list = []
-    for media_doc in media_docs:
-        media = Media(**media_doc)
-        media_list.append(media)
-    
-    logger.info(f"✅ Found {len(media_list)} active media files")
-    
-    # Get active items from user document
-    logger.info(f"🛍️ Fetching active items for public profile: {user.username}")
-    items_data = user_doc.get("items", [])
-    
-    # Filter only active items and sort by order
-    active_items = [item for item in items_data if item.get("active", False)]
-    active_items.sort(key=lambda x: x.get('order', 0))
-    
-    # Items are always shown regardless of subscription status
-    gated_items = active_items
 
-    logger.info(f"✅ Found {len(gated_items)} active items")
-    
-    # Get profile views from ring analytics
-    profile_views = await ring_analytics_collection.count_documents({
-        "ring_id": user.ring_id,
-        "event_type": "view"
-    }) if user.ring_id else 0
-    
-    # Track profile view in old analytics
-    await analytics_collection.insert_one({
-        "user_id": user.id,
-        "event": "profile_view",
-        "timestamp": datetime.utcnow(),
-        "ip": getattr(request.client, 'host', '127.0.0.1')
-    })
-    
-    # Get show_ring_badge from user_doc (MongoDB document) or default to True
+    # Sort media
+    media_docs.sort(key=lambda x: x.get('order', 0))
+    media_list = [Media(**m) for m in media_docs]
+
+    # Items live in the user document
+    items_data = user_doc.get("items", [])
+    active_items = sorted(
+        [item for item in items_data if item.get("active", False)],
+        key=lambda x: x.get('order', 0),
+    )
+
     show_ring_badge = user_doc.get('show_ring_badge', True) if isinstance(user_doc, dict) else getattr(user, 'show_ring_badge', True)
-    
-    return PublicProfile(
+    show_phone = user_doc.get('show_phone_in_preview', True) if isinstance(user_doc, dict) else getattr(user, 'show_phone_in_preview', True)
+    phone_number = (user_doc.get('phone_number') if isinstance(user_doc, dict) else getattr(user, 'phone_number', None)) if show_phone else None
+
+    result = PublicProfile(
         name=user.name,
         username=user.username,
         bio=user.bio,
@@ -6090,23 +6070,33 @@ async def get_public_profile(request: Request, username: str):
         background_color=user.background_color,
         button_background_color=getattr(user, 'button_background_color', None),
         button_text_color=getattr(user, 'button_text_color', None),
-        # Custom Branding fields
         custom_logo=user.custom_logo,
         cover_photo=getattr(user, 'cover_photo', None),
         show_footer=user.show_footer,
         show_ring_badge=show_ring_badge,
-        email=user.email,  # Include email for mail button
-        show_phone_in_preview=user_doc.get('show_phone_in_preview', True) if isinstance(user_doc, dict) else getattr(user, 'show_phone_in_preview', True),
-        phone_number=(user_doc.get('phone_number') if isinstance(user_doc, dict) else getattr(user, 'phone_number', None)) if (user_doc.get('show_phone_in_preview', True) if isinstance(user_doc, dict) else getattr(user, 'show_phone_in_preview', True)) else None,
+        email=user.email,
+        show_phone_in_preview=show_phone,
+        phone_number=phone_number,
         whatsapp_number=user_doc.get('whatsapp_number') if isinstance(user_doc, dict) else getattr(user, 'whatsapp_number', None),
         links=[link.model_dump() for link in links],
-        media=[media.model_dump() for media in media_list],  # Include active media files
-        items=gated_items,  # Include (possibly gated) active items
+        media=[media.model_dump() for media in media_list],
+        items=active_items,
         profile_views=profile_views,
         total_clicks=total_clicks,
         subscription_status=subscription_status,
-        items_locked=items_locked
+        items_locked=items_locked,
     ).model_dump()
+
+    # Store user_id in cached payload so analytics can fire on cache hits
+    result["user_id"] = user.id
+
+    # Cache for 60 seconds — short enough for near-real-time updates
+    cache_service.set(cache_key, result, 60)
+
+    # Fire-and-forget analytics (non-blocking)
+    asyncio.create_task(_track_profile_view_bg(user.id, user.ring_id, request))
+
+    return result
 
 @api_router.get("/ring/{ring_id}")
 @limiter.limit("60/minute")  # SECURITY: Rate limit NFC scans
