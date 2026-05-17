@@ -4275,6 +4275,58 @@ async def upload_custom_logo(file: UploadFile = File(...), current_user: User = 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to upload logo: {str(e)}")
 
+
+@api_router.post("/upload-banner")
+async def upload_banner_image(file: UploadFile = File(...), current_user: User = Depends(get_current_user)):
+    """
+    Upload a profile banner / cover photo.
+    Unlike /upload-media (200×200 thumbnails) and /upload-logo (512×512 avatars),
+    this endpoint preserves the wide banner aspect ratio by capping width at 1200px
+    and height at 480px, then stores the result as a base64 data URL.
+    """
+    if not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="Only image files are allowed")
+
+    file_content = await file.read()
+    if len(file_content) > 5 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="File size must be less than 5MB")
+
+    try:
+        try:
+            from PIL import Image
+            import io
+
+            image = Image.open(io.BytesIO(file_content))
+            if image.mode in ("RGBA", "LA", "P"):
+                bg = Image.new("RGB", image.size, (255, 255, 255))
+                if image.mode == "P":
+                    image = image.convert("RGBA")
+                bg.paste(image, mask=image.split()[-1] if image.mode in ("RGBA", "LA") else None)
+                image = bg
+            elif image.mode != "RGB":
+                image = image.convert("RGB")
+
+            # Fit inside 1200×480 without upscaling — preserves wide banner shape
+            max_w, max_h = 1200, 480
+            if image.width > max_w or image.height > max_h:
+                image.thumbnail((max_w, max_h), Image.Resampling.LANCZOS)
+
+            buf = io.BytesIO()
+            image.save(buf, format="WEBP", quality=85, method=6)
+            banner_b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
+            banner_url = f"data:image/webp;base64,{banner_b64}"
+        except ImportError:
+            logger.warning("Pillow not available — storing banner as-is")
+            banner_b64 = base64.b64encode(file_content).decode("utf-8")
+            banner_url = f"data:{file.content_type};base64,{banner_b64}"
+
+        return {"success": True, "banner_url": banner_url}
+
+    except Exception as e:
+        logger.error(f"Banner upload failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to upload banner: {str(e)}")
+
+
 @api_router.post("/upload-media")
 async def upload_media_image(file: UploadFile = File(...), current_user: User = Depends(get_current_user)):
     """

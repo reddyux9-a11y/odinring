@@ -64,11 +64,11 @@ const Customization = ({ user, profile, setProfile, setUser, links, setLinks, on
     try {
       const formData = new FormData();
       formData.append("file", file);
-      const response = await api.post("/upload-media", formData, {
+      const response = await api.post("/upload-banner", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       if (response.data.success) {
-        const url = response.data.image_url;
+        const url = response.data.banner_url;
         setProfile(prev => ({ ...prev, cover_photo: url }));
         await api.put("/me", { cover_photo: url });
         addHapticFeedback("success");

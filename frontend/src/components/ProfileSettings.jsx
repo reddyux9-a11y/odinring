@@ -189,14 +189,14 @@ const ProfileSettings = ({ profile, setProfile, user }) => {
       const uploadFormData = new FormData();
       uploadFormData.append("file", file);
 
-      const response = await api.post("/upload-media", uploadFormData, {
+      const response = await api.post("/upload-banner", uploadFormData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
       });
 
       if (response.data.success) {
-        const coverUrl = response.data.image_url;
+        const coverUrl = response.data.banner_url;
         setFormData((prev) => ({ ...prev, cover_photo: coverUrl }));
         setProfile((prev) => ({ ...prev, cover_photo: coverUrl }));
         setCoverPreview(coverUrl);
