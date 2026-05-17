@@ -5,7 +5,7 @@ import { Button } from '../shared/ui/button';
 import { CheckCircle, ArrowRight, Sparkles, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useIdentityContext } from '../hooks/useIdentityContext';
-import { toast } from 'sonner';
+import api from '../lib/api';
 
 const POLL_INTERVAL_MS = 2500;
 const MAX_POLLS = 10; // ~25 seconds total
@@ -13,33 +13,51 @@ const MAX_POLLS = 10; // ~25 seconds total
 const PaymentSuccess = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { refetch: refetchContext, hasActiveSubscription } = useIdentityContext();
+  const { refetch: refetchContext } = useIdentityContext();
   const [confirmed, setConfirmed] = useState(false);
   const pollCountRef = useRef(0);
 
   const planName = searchParams.get('plan') || 'your plan';
-  const transactionId = searchParams.get('transaction_id');
+  const sessionId = searchParams.get('session_id');
 
   useEffect(() => {
     let timer;
 
-    const poll = async () => {
-      const ctx = await refetchContext();
-      const status = ctx?.subscription?.status;
-      if (status === 'active') {
-        setConfirmed(true);
-        return;
+    const activate = async () => {
+      // First, try direct Stripe session verification (immediate, no webhook wait)
+      if (sessionId) {
+        try {
+          const res = await api.get(`/billing/verify-checkout?session_id=${sessionId}`);
+          if (res.data?.activated || res.data?.already_active) {
+            setConfirmed(true);
+            return;
+          }
+        } catch {
+          // Fall through to polling
+        }
       }
-      pollCountRef.current += 1;
-      if (pollCountRef.current < MAX_POLLS) {
-        timer = setTimeout(poll, POLL_INTERVAL_MS);
-      } else {
-        // Give up polling; assume success (webhook may be delayed)
-        setConfirmed(true);
-      }
+
+      // Fall back to polling /me/context (webhook may have already fired)
+      const poll = async () => {
+        const ctx = await refetchContext();
+        const status = ctx?.subscription?.status;
+        if (status === 'active') {
+          setConfirmed(true);
+          return;
+        }
+        pollCountRef.current += 1;
+        if (pollCountRef.current < MAX_POLLS) {
+          timer = setTimeout(poll, POLL_INTERVAL_MS);
+        } else {
+          // Give up polling; assume success (webhook may be delayed)
+          setConfirmed(true);
+        }
+      };
+
+      poll();
     };
 
-    poll();
+    activate();
     return () => clearTimeout(timer);
   }, []);
 
@@ -88,10 +106,10 @@ const PaymentSuccess = () => {
                 <span className="font-semibold">{planName}</span>
               </div>
 
-              {transactionId && (
+              {sessionId && (
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Transaction ID</span>
-                  <span className="font-mono text-xs text-muted-foreground">{transactionId}</span>
+                  <span className="text-sm text-muted-foreground">Session ID</span>
+                  <span className="font-mono text-xs text-muted-foreground">{sessionId.slice(0, 20)}…</span>
                 </div>
               )}
 

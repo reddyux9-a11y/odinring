@@ -342,7 +342,7 @@ async def create_checkout_session(
 
         # Create Stripe Checkout Session with the correct billing interval
         frontend_base = _resolve_stripe_frontend_base(request)
-        success_url = f"{frontend_base}/payment-success"
+        success_url = f"{frontend_base}/payment/success?plan={plan_id}&session_id={{CHECKOUT_SESSION_ID}}"
         cancel_url = f"{frontend_base}/subscription?status=cancelled"
 
         recurring = {"interval": stripe_interval}
@@ -594,6 +594,79 @@ async def activate_subscription(
             status_code=500,
             detail=f"Failed to activate subscription: {str(e)}"
         )
+
+
+@billing_router.get(
+    "/verify-checkout",
+    response_model=dict,
+    summary="Verify Stripe Checkout Session",
+    description="Directly verify a completed Stripe Checkout Session and activate the subscription"
+)
+async def verify_checkout_session(
+    session_id: str,
+    current_user: Any = Depends(get_current_user),
+):
+    """
+    Called by the PaymentSuccess page with the Stripe session_id from the redirect URL.
+    Retrieves the session from Stripe, confirms payment_status == 'paid', and activates
+    the subscription immediately — before the webhook may arrive.
+    """
+    if not settings.STRIPE_SECRET_KEY:
+        raise HTTPException(status_code=500, detail="Stripe is not configured on the server.")
+
+    try:
+        session = stripe.checkout.Session.retrieve(session_id)
+    except Exception as e:
+        logger.error(f"Failed to retrieve Stripe session {session_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=400, detail="Could not retrieve checkout session.")
+
+    if session.get("payment_status") != "paid":
+        return {"activated": False, "status": session.get("payment_status")}
+
+    metadata = session.get("metadata") or {}
+    subscription_id = metadata.get("subscription_id")
+
+    if not subscription_id:
+        return {"activated": False, "status": "no_subscription_id"}
+
+    # Verify the subscription belongs to the requesting user
+    subscription = await subscriptions_collection.find_one({"id": subscription_id})
+    if not subscription:
+        raise HTTPException(status_code=404, detail="Subscription not found.")
+
+    context = await IdentityResolver.resolve_identity(current_user.id)
+    owner_matches = (
+        subscription.get("user_id") == current_user.id
+        or (context.business_id and context.business_id == subscription.get("business_id"))
+        or (context.organization_id and context.organization_id == subscription.get("organization_id"))
+    )
+    if not owner_matches:
+        raise HTTPException(status_code=403, detail="Access denied.")
+
+    # Idempotent: if already active, return success without re-activating
+    if subscription.get("status") == "active":
+        return {"activated": True, "already_active": True}
+
+    # Persist Stripe IDs and activate
+    await subscriptions_collection.update_one(
+        {"id": subscription_id},
+        {"$set": {
+            "stripe_customer_id": session.get("customer"),
+            "stripe_subscription_id": session.get("subscription"),
+            "transaction_id": session.get("payment_intent") or session.get("id"),
+            "plan": metadata.get("plan_id"),
+        }},
+    )
+
+    success = await SubscriptionService.activate_subscription(
+        subscription_id=subscription_id,
+        billing_cycle=metadata.get("billing_cycle") or "yearly",
+        actor_id=current_user.id,
+        ip_address="verify_checkout",
+        user_agent="verify_checkout",
+    )
+
+    return {"activated": success}
 
 
 @billing_router.post(
