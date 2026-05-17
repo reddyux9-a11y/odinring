@@ -3991,7 +3991,10 @@ async def update_current_user(
     ip_address = get_client_ip(request)
     user_agent = get_user_agent(request)
     
-    update_data = {k: v for k, v in user_update.model_dump().items() if v is not None}
+    # Use exclude_unset=True so explicitly-sent null values (e.g. cover_photo: null to clear)
+    # are included, while fields omitted from the request body are excluded.
+    raw = user_update.model_dump(exclude_unset=True)
+    update_data = {k: v for k, v in raw.items() if v is not None or k in ("cover_photo", "custom_logo", "avatar", "phone_number", "whatsapp_number")}
     update_data["updated_at"] = datetime.utcnow()
     
     # Track which fields were updated for audit log
@@ -4001,7 +4004,12 @@ async def update_current_user(
         {"id": current_user.id},
         {"$set": update_data}
     )
-    
+
+    # Invalidate all caches that contain this user's profile data
+    cache_service.delete(f"public_profile:{current_user.username.lower()}")
+    cache_service.delete(f"dashboard_data:{current_user.id}")
+    cache_service.delete(f"auth_user:{current_user.id}")
+
     # Log profile update
     await log_profile_update(
         user_id=current_user.id,
@@ -4009,7 +4017,7 @@ async def update_current_user(
         user_agent=user_agent,
         fields_updated=fields_updated
     )
-    
+
     # Return updated user
     updated_user_doc = await users_collection.find_one({"id": current_user.id})
     return User(**updated_user_doc).model_dump()
