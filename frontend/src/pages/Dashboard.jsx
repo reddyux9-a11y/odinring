@@ -342,6 +342,26 @@ const Dashboard = () => {
   const isSubscriptionExpired = identityContext?.subscription?.status === 'expired';
   const isBillingBlocked = needsBilling && isSubscriptionExpired;
 
+  const [verifyingPayment, setVerifyingPayment] = useState(false);
+
+  const verifyPayment = async () => {
+    setVerifyingPayment(true);
+    try {
+      const res = await api.post('/billing/verify-payment');
+      if (res.data?.activated || res.data?.already_active) {
+        toast.success('Payment verified! Your subscription is now active.');
+        // Reload page so identity context and all guards refresh cleanly
+        window.location.reload();
+      } else {
+        toast.error("No confirmed payment found in Stripe. If you just paid, wait a moment and try again.");
+      }
+    } catch {
+      toast.error("Could not verify payment. Please contact support if your payment went through.");
+    } finally {
+      setVerifyingPayment(false);
+    }
+  };
+
   const getProfileUrl = () => {
     if (!user?.username) return window.location.origin;
     const sanitized = sanitizeUsernameForUrl(user.username);
@@ -693,7 +713,20 @@ const Dashboard = () => {
                     </p>
                   </div>
                 </div>
-                <div className="flex gap-2 justify-end">
+                <div className="flex gap-2 justify-end flex-wrap">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={verifyPayment}
+                    disabled={verifyingPayment}
+                    className="text-green-700 hover:bg-green-50 dark:hover:bg-green-950/20"
+                  >
+                    {verifyingPayment ? (
+                      <><div className="w-3 h-3 mr-2 border-2 border-current border-t-transparent rounded-full animate-spin" />Checking…</>
+                    ) : (
+                      "I've already paid"
+                    )}
+                  </Button>
                   <Button
                     size="sm"
                     variant="outline"
@@ -869,7 +902,20 @@ const Dashboard = () => {
                         </p>
                       </div>
                     </div>
-                    <div className="flex justify-end gap-2">
+                    <div className="flex justify-end gap-2 flex-wrap">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={verifyPayment}
+                        disabled={verifyingPayment}
+                        className="text-green-700 hover:bg-green-50 dark:hover:bg-green-950/20"
+                      >
+                        {verifyingPayment ? (
+                          <><div className="w-3 h-3 mr-2 border-2 border-current border-t-transparent rounded-full animate-spin" />Checking…</>
+                        ) : (
+                          "I've already paid"
+                        )}
+                      </Button>
                       <Button
                         size="sm"
                         variant="outline"

@@ -9,15 +9,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "./ui/select";
 import { Switch } from "./ui/switch";
 import { Badge } from "./ui/badge";
-import { 
-  Palette, 
-  Type, 
-  Image as ImageIcon, 
+import {
+  Palette,
+  Type,
+  Image as ImageIcon,
   GripVertical,
   Upload,
   Save,
   Sliders,
-  Camera
+  Camera,
+  Trash2
 } from "lucide-react";
 import { FadeInUp } from "./PageTransitions";
 import { mobileToast } from "./MobileOptimizedToast";
@@ -33,7 +34,65 @@ const Customization = ({ user, profile, setProfile, setUser, links, setLinks, on
   const [activeTab, setActiveTab] = useState("appearance");
   const [loading, setLoading] = useState(false);
   const [imagePreview, setImagePreview] = useState(null);
+  const [bannerUploading, setBannerUploading] = useState(false);
   const fileInputRef = useRef(null);
+  const bannerInputRef = useRef(null);
+
+  const handleBannerUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+    event.target.value = "";
+
+    if (!file.type.startsWith("image/")) {
+      mobileToast.error("Please select an image file");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      mobileToast.error("File size must be less than 5MB");
+      return;
+    }
+
+    // Immediate local preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setProfile(prev => ({ ...prev, cover_photo: reader.result }));
+    };
+    reader.readAsDataURL(file);
+
+    setBannerUploading(true);
+    addHapticFeedback("light");
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const response = await api.post("/upload-media", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      if (response.data.success) {
+        const url = response.data.image_url;
+        setProfile(prev => ({ ...prev, cover_photo: url }));
+        await api.put("/me", { cover_photo: url });
+        addHapticFeedback("success");
+        mobileToast.success("Banner image updated!");
+      }
+    } catch {
+      addHapticFeedback("error");
+      mobileToast.error("Failed to upload banner image");
+      setProfile(prev => ({ ...prev, cover_photo: profile.cover_photo || "" }));
+    } finally {
+      setBannerUploading(false);
+    }
+  };
+
+  const handleRemoveBanner = async () => {
+    setProfile(prev => ({ ...prev, cover_photo: "" }));
+    try {
+      await api.put("/me", { cover_photo: null });
+      mobileToast.success("Banner image removed");
+    } catch {
+      mobileToast.error("Failed to remove banner image");
+      setProfile(prev => ({ ...prev, cover_photo: profile.cover_photo || "" }));
+    }
+  };
 
   // Color presets
   const colorPresets = [
@@ -771,6 +830,84 @@ const Customization = ({ user, profile, setProfile, setUser, links, setLinks, on
                       </Button>
                     </div>
                   </div>
+                </CardContent>
+              </Card>
+
+              {/* Banner / Background Image */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center space-x-2">
+                    <ImageIcon className="w-5 h-5" />
+                    <span>Profile Banner</span>
+                  </CardTitle>
+                  <CardDescription>
+                    Upload a custom background image for the top of your profile
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {/* Banner preview strip */}
+                  <div
+                    className="w-full h-24 rounded-lg overflow-hidden border border-border relative"
+                    style={
+                      profile.cover_photo
+                        ? { backgroundImage: `url(${profile.cover_photo})`, backgroundSize: "cover", backgroundPosition: "center" }
+                        : undefined
+                    }
+                  >
+                    {!profile.cover_photo && (
+                      <div className="w-full h-full bg-gradient-to-r from-purple-500 via-pink-500 to-rose-400 flex items-center justify-center">
+                        <span className="text-white/70 text-xs font-medium">Default gradient — upload an image to replace</span>
+                      </div>
+                    )}
+                    {profile.cover_photo && (
+                      <div className="absolute inset-0 bg-black/20 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <span className="text-white text-xs font-medium">Current banner</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <input
+                    ref={bannerInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleBannerUpload}
+                    className="hidden"
+                  />
+
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      onClick={() => bannerInputRef.current?.click()}
+                      disabled={bannerUploading}
+                      className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+                    >
+                      {bannerUploading ? (
+                        <>
+                          <div className="w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          Uploading…
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="w-4 h-4 mr-2" />
+                          {profile.cover_photo ? "Change Banner" : "Upload Banner"}
+                        </>
+                      )}
+                    </Button>
+                    {profile.cover_photo && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleRemoveBanner}
+                        disabled={bannerUploading}
+                        className="border-red-300 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Recommended: 1200×400px (3:1). Max 5 MB. JPG or PNG.
+                  </p>
                 </CardContent>
               </Card>
 

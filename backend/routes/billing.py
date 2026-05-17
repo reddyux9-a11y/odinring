@@ -670,6 +670,118 @@ async def verify_checkout_session(
 
 
 @billing_router.post(
+    "/verify-payment",
+    response_model=dict,
+    summary="Verify payment and activate subscription",
+    description=(
+        "Checks Stripe directly for a successful payment linked to the current user's "
+        "subscription and activates it.  No session_id required — useful when the "
+        "Stripe webhook was delayed or the redirect URL was wrong."
+    ),
+)
+async def verify_payment(
+    current_user: Any = Depends(get_current_user),
+):
+    """
+    Called by the 'I've already paid' button on the expired dashboard overlay.
+    Strategy:
+      1. Load the user's subscription record.
+      2a. If stripe_subscription_id is stored → retrieve it from Stripe.
+      2b. Else if stripe_customer_id is stored → list Stripe subscriptions for that customer.
+      2c. Else → search recent checkout sessions whose metadata contains our subscription_id.
+    If Stripe reports the payment as active/paid → activate the local subscription.
+    """
+    if not settings.STRIPE_SECRET_KEY:
+        raise HTTPException(status_code=500, detail="Stripe is not configured on the server.")
+
+    context = await IdentityResolver.resolve_identity(current_user.id)
+
+    subscription = await SubscriptionService.get_subscription(
+        user_id=context.user_id,
+        business_id=context.business_id,
+        organization_id=context.organization_id,
+    )
+
+    if not subscription:
+        return {"activated": False, "reason": "no_subscription_record"}
+
+    # Already active — nothing to do.
+    if subscription.status == "active":
+        return {"activated": True, "already_active": True}
+
+    sub_doc = await subscriptions_collection.find_one({"id": subscription.id})
+    if not sub_doc:
+        return {"activated": False, "reason": "subscription_doc_not_found"}
+
+    billing_cycle = sub_doc.get("billing_cycle") or "yearly"
+    stripe_sub_id = sub_doc.get("stripe_subscription_id")
+    stripe_customer_id = sub_doc.get("stripe_customer_id")
+
+    paid = False
+
+    # --- Strategy 2a: we already have a Stripe subscription ID ---
+    if stripe_sub_id:
+        try:
+            stripe_sub = stripe.Subscription.retrieve(stripe_sub_id)
+            if stripe_sub.get("status") in ("active", "trialing"):
+                paid = True
+        except Exception as e:
+            logger.warning(f"verify-payment: could not retrieve Stripe subscription {stripe_sub_id}: {e}")
+
+    # --- Strategy 2b: we have a customer ID but no subscription ID ---
+    if not paid and stripe_customer_id:
+        try:
+            subs = stripe.Subscription.list(customer=stripe_customer_id, status="active", limit=5)
+            if subs.get("data"):
+                stripe_sub_id = subs["data"][0]["id"]
+                paid = True
+        except Exception as e:
+            logger.warning(f"verify-payment: could not list subscriptions for customer {stripe_customer_id}: {e}")
+
+    # --- Strategy 2c: search recent checkout sessions for this subscription_id in metadata ---
+    if not paid:
+        try:
+            sessions = stripe.checkout.Session.list(limit=20)
+            for sess in sessions.get("data", []):
+                meta = sess.get("metadata") or {}
+                if (
+                    meta.get("subscription_id") == subscription.id
+                    and sess.get("payment_status") == "paid"
+                ):
+                    # Persist Stripe IDs we now know about
+                    update_fields = {}
+                    if sess.get("customer"):
+                        update_fields["stripe_customer_id"] = sess["customer"]
+                    if sess.get("subscription"):
+                        stripe_sub_id = sess["subscription"]
+                        update_fields["stripe_subscription_id"] = stripe_sub_id
+                    if sess.get("payment_intent") or sess.get("id"):
+                        update_fields["transaction_id"] = sess.get("payment_intent") or sess.get("id")
+                    if update_fields:
+                        await subscriptions_collection.update_one(
+                            {"id": subscription.id}, {"$set": update_fields}
+                        )
+                    billing_cycle = meta.get("billing_cycle") or billing_cycle
+                    paid = True
+                    break
+        except Exception as e:
+            logger.warning(f"verify-payment: could not search checkout sessions: {e}")
+
+    if not paid:
+        return {"activated": False, "reason": "no_paid_stripe_record_found"}
+
+    success = await SubscriptionService.activate_subscription(
+        subscription_id=subscription.id,
+        billing_cycle=billing_cycle,
+        actor_id=current_user.id,
+        ip_address="verify_payment_endpoint",
+        user_agent="verify_payment_endpoint",
+    )
+
+    return {"activated": success}
+
+
+@billing_router.post(
     "/stripe/webhook",
     summary="Stripe webhook handler",
     description="Handles Stripe webhook events to activate subscriptions after successful payment",
