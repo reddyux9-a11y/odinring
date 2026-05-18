@@ -31,6 +31,7 @@ import api from "../lib/api";
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 const ITEM_TOAST_DURATION = 2000;
+const ITEM_SUCCESS_TOAST_DURATION = 800;
 
 // Custom DialogContent without close button
 const CustomDialogContent = React.forwardRef(({ className, children, ...props }, ref) => (
@@ -196,7 +197,7 @@ const ItemManager = ({ items, setItems }) => {
       setIsAddDialogOpen(false);
       resetForm();
       addHapticFeedback('success');
-      mobileToast.success("Item added successfully", { duration: ITEM_TOAST_DURATION });
+      mobileToast.success("Item added successfully", { duration: ITEM_SUCCESS_TOAST_DURATION });
     } catch (error) {
       addHapticFeedback('error');
       mobileToast.error(error.response?.data?.detail || "Failed to add item", { duration: ITEM_TOAST_DURATION });
