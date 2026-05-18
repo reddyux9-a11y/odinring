@@ -249,9 +249,14 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:16px 24px;display:fl
 .price-wrap::before{content:'';position:absolute;top:-60px;right:-60px;width:200px;height:200px;border-radius:50%;background:radial-gradient(circle,rgba(109,40,217,.1),transparent);pointer-events:none}
 .price-badge{display:inline-block;background:linear-gradient(135deg,var(--purple),var(--purple2));color:#fff;padding:6px 18px;border-radius:50px;font-size:.78rem;font-weight:600;margin-bottom:24px;letter-spacing:.04em}
 .price-name{font-family:'Fraunces',serif;font-weight:700;font-size:1.1rem;color:var(--ink);margin-bottom:10px}
-.price-amount{font-family:'Fraunces',serif;font-weight:800;font-size:4rem;color:var(--purple);line-height:1;margin-bottom:4px}
+.price-cycles{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:20px}
+.price-cycle-btn{padding:8px 20px;border-radius:50px;font-size:.85rem;font-weight:600;border:1.5px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;transition:all .2s;font-family:'Outfit',sans-serif}
+.price-cycle-btn.active{background:var(--purple);color:#fff;border-color:var(--purple)}
+.price-cycle-btn:hover:not(.active){border-color:var(--purple);color:var(--purple)}
+.price-amount{font-family:'Fraunces',serif;font-weight:800;font-size:4rem;color:var(--purple);line-height:1;margin-bottom:4px;transition:opacity .2s}
 .price-amount sup{font-size:1.6rem;vertical-align:top;margin-top:10px}
 .price-period{font-size:.88rem;color:var(--muted);margin-bottom:32px}
+.price-savings{display:inline-block;background:rgba(34,197,94,.12);color:#16a34a;border:1px solid rgba(34,197,94,.25);border-radius:50px;font-size:.75rem;font-weight:600;padding:4px 12px;margin-bottom:24px}
 .price-list{list-style:none;text-align:left;display:flex;flex-direction:column;gap:11px;margin-bottom:36px}
 .price-list li{display:flex;align-items:center;gap:10px;font-size:.92rem;color:var(--ink2)}
 .price-list li::before{content:'✓';color:var(--purple);font-weight:700;font-size:.85rem;width:20px;height:20px;border-radius:50%;background:rgba(109,40,217,.1);display:flex;align-items:center;justify-content:center;flex-shrink:0}
@@ -444,7 +449,7 @@ footer{background:var(--ink);padding:52px 0 32px}
         <div class="hero-pills rv d2">
           <span>No credit card</span>
           <span>Setup in 10 minutes</span>
-          <span>From €3.99/month</span>
+          <span>From €1.99/month</span>
         </div>
         <div class="hero-btns rv d3">
           <a href="#cta" class="btn-p">Get Started Free <span class="arr">→</span></a>
@@ -690,7 +695,7 @@ footer{background:var(--ink);padding:52px 0 32px}
       <div class="feat">
         <div class="feat-icon">🪪</div>
         <h3>Smart Business Profile</h3>
-        <p>A branded page better than a website — without the cost. Logo, bio, services, social links, WhatsApp button, and catalog. One link. From €3.99/month.</p>
+        <p>A branded page better than a website — without the cost. Logo, bio, services, social links, WhatsApp button, and catalog. One link. From €1.99/month.</p>
         <div class="feat-benefit">Save €200–€800/year vs a website</div>
       </div>
       <div class="feat wide">
@@ -720,10 +725,20 @@ footer{background:var(--ink);padding:52px 0 32px}
     </div>
     <div class="rv d1">
       <div class="price-wrap">
-        <div class="price-badge">Basic Plan</div>
+        <div class="price-badge">Pro Plan</div>
         <div class="price-name">Everything you need to grow</div>
-        <div class="price-amount"><sup>€</sup>3.99</div>
-        <div class="price-period">/ month &nbsp;·&nbsp; save more with annual billing</div>
+
+        <!-- Billing cycle selector -->
+        <div class="price-cycles">
+          <button class="price-cycle-btn active" onclick="selectCycle('monthly',this)" id="cycle-monthly">Monthly</button>
+          <button class="price-cycle-btn" onclick="selectCycle('quarterly',this)" id="cycle-quarterly">Quarterly</button>
+          <button class="price-cycle-btn" onclick="selectCycle('yearly',this)" id="cycle-yearly">Annual</button>
+        </div>
+
+        <div class="price-amount"><sup>€</sup><span id="priceValue">1.99</span></div>
+        <div class="price-period" id="pricePeriod">/ month</div>
+        <div class="price-savings" id="priceSavings" style="display:none"></div>
+
         <ul class="price-list">
           <li>Smart business profile with custom link</li>
           <li>Digital product &amp; service catalog</li>
@@ -735,7 +750,7 @@ footer{background:var(--ink);padding:52px 0 32px}
           <li>NFC ring &amp; business card compatible</li>
         </ul>
         <a href="#cta" class="btn-p" style="width:100%;justify-content:center">Start Free — No Card Required <span class="arr">→</span></a>
-        <p class="price-note">Cancel any time · No long-term contracts · Your data always stays yours</p>
+        <p class="price-note">14-day free trial · Cancel any time · No long-term contracts</p>
       </div>
     </div>
   </div>
@@ -907,7 +922,7 @@ footer{background:var(--ink);padding:52px 0 32px}
   <div class="container">
     <div class="diff-intro">
       <div class="eyebrow rv">Why OdinRing?</div>
-      <h2 class="rv d1">A website costs €300+/year.<br>OdinRing costs €3.99/month.<br>And it converts better.</h2>
+      <h2 class="rv d1">A website costs €300+/year.<br>OdinRing costs €1.99/month.<br>And it converts better.</h2>
       <p class="rv d2">Traditional websites need hosting, a domain, a developer, and constant maintenance. OdinRing is a vertical mini website built for conversion — with NFC sharing, lead tracking, and social distribution built in from day one.</p>
     </div>
     <div class="comp-table rv d1">
@@ -925,14 +940,14 @@ footer{background:var(--ink);padding:52px 0 32px}
       <div class="ct-row"><div class="ct-feat">WhatsApp direct connect</div><div class="ct-cell cp">✦</div><div class="ct-cell cn">✗</div><div class="ct-cell cy">✓</div><div class="ct-cell cn">✗</div></div>
       <div class="ct-row"><div class="ct-feat">Social distribution</div><div class="ct-cell cp">✦</div><div class="ct-cell cn">✗</div><div class="ct-cell cn">✗</div><div class="ct-cell cn">✗</div></div>
       <div class="ct-row"><div class="ct-feat">Setup time</div><div class="ct-cell cp" style="font-size:.75rem">10 min</div><div class="ct-cell cn" style="font-size:.75rem">Weeks</div><div class="ct-cell cy" style="font-size:.75rem">Instant</div><div class="ct-cell cy" style="font-size:.75rem">Minutes</div></div>
-      <div class="ct-row"><div class="ct-feat">Monthly cost</div><div class="ct-cell cp" style="font-size:.8rem">€3.99</div><div class="ct-cell cn" style="font-size:.75rem">€25–80+</div><div class="ct-cell cy" style="font-size:.75rem">Free</div><div class="ct-cell" style="text-align:center;font-size:.75rem;color:var(--muted)">€5+</div></div>
+      <div class="ct-row"><div class="ct-feat">Monthly cost</div><div class="ct-cell cp" style="font-size:.8rem">€1.99</div><div class="ct-cell cn" style="font-size:.75rem">€25–80+</div><div class="ct-cell cy" style="font-size:.75rem">Free</div><div class="ct-cell" style="text-align:center;font-size:.75rem;color:var(--muted)">€5+</div></div>
       <div class="ct-row"><div class="ct-feat">No hosting/domain needed</div><div class="ct-cell cp">✦</div><div class="ct-cell cn">✗</div><div class="ct-cell cy">✓</div><div class="ct-cell cy">✓</div></div>
     </div>
     <div class="vs-grid rv d2">
       <div class="vs-card">
         <span class="vs-icon">🌐</span>
         <h3>vs. Traditional Website</h3>
-        <p>Websites cost hundreds per year, take weeks to build, and require a developer every time you update a product. OdinRing goes live in 10 minutes, costs €3.99/month, and you update it yourself — in seconds.</p>
+        <p>Websites cost hundreds per year, take weeks to build, and require a developer every time you update a product. OdinRing goes live in 10 minutes, costs €1.99/month, and you update it yourself — in seconds.</p>
       </div>
       <div class="vs-card">
         <span class="vs-icon">💬</span>
@@ -971,7 +986,7 @@ footer{background:var(--ink);padding:52px 0 32px}
       </div>
       <div class="obj-card rv d1">
         <div class="obj-icon">?</div>
-        <div><div class="obj-q">Is €3.99/month really all it costs?</div><p class="obj-a">Yes. No hidden fees, no setup costs, no domain or hosting charges. One flat monthly price. Cancel any time. What you see is what you pay.</p></div>
+        <div><div class="obj-q">Is €1.99/month really all it costs?</div><p class="obj-a">Yes. No hidden fees, no setup costs, no domain or hosting charges. One flat monthly price. Cancel any time. What you see is what you pay.</p></div>
       </div>
       <div class="obj-card rv">
         <div class="obj-icon">?</div>
@@ -1089,7 +1104,7 @@ footer{background:var(--ink);padding:52px 0 32px}
     </div>
     <div class="footer-bottom">
       <div class="footer-copy">© 2025 OdinRing. All rights reserved.</div>
-      <div class="footer-badge">Starts at €3.99/month · No contracts</div>
+      <div class="footer-badge">Starts at €1.99/month · No contracts</div>
     </div>
   </div>
 </footer>
@@ -1114,6 +1129,27 @@ window.addEventListener('scroll', () => {
   document.getElementById('nav').style.boxShadow =
     window.scrollY > 20 ? '0 2px 20px rgba(109,40,217,.1)' : 'none'
 })
+
+// Pricing cycle selector
+const PLANS = {
+  monthly:   { price: '1.99',  period: '/ month',     savings: null },
+  quarterly: { price: '11.99', period: '/ 3 months',  savings: 'Save vs. monthly' },
+  yearly:    { price: '47.99', period: '/ year',       savings: 'Save ~33% vs. monthly' },
+}
+function selectCycle(cycle, btn) {
+  document.querySelectorAll('.price-cycle-btn').forEach(b => b.classList.remove('active'))
+  btn.classList.add('active')
+  const plan = PLANS[cycle]
+  document.getElementById('priceValue').textContent = plan.price
+  document.getElementById('pricePeriod').textContent = plan.period
+  const savingsEl = document.getElementById('priceSavings')
+  if (plan.savings) {
+    savingsEl.textContent = plan.savings
+    savingsEl.style.display = 'inline-block'
+  } else {
+    savingsEl.style.display = 'none'
+  }
+}
 
 // Contact form submission
 function submitContact(e) {
