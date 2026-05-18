@@ -5665,6 +5665,62 @@ async def create_item(
     logger.info(f"✅ Item created and added to user profile: {item.id}")
     return item.model_dump()
 
+@api_router.put("/items/reorder")
+async def reorder_items(
+    request: Request,
+    body: ItemsReorderRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Reorder items - in user document
+
+    Request body: {"items_order": [{"id": "item_id_1", "order": 0}, ...]}
+    """
+    items_order = body.items_order
+    logger.info(f"🛍️ Reordering {len(items_order)} items")
+
+    if not items_order:
+        return {"message": "No items to reorder"}
+
+    # Get user document
+    user_doc = await users_collection.find_one({"id": current_user.id})
+    if not user_doc:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Get items array
+    items = user_doc.get("items", [])
+
+    # Validate that all item IDs exist in user's items
+    item_ids = [item_order.id for item_order in items_order]
+    existing_item_ids = {item.get("id") for item in items}
+
+    # Check if all requested items belong to the user
+    if not all(item_id in existing_item_ids for item_id in item_ids):
+        logger.warning(f"⚠️  PUT /items/reorder - Item ID mismatch for {current_user.email}")
+        raise HTTPException(
+            status_code=400,
+            detail="One or more items do not exist"
+        )
+
+    # Update order for each item
+    for item_order in items_order:
+        item_id = item_order.id
+        new_order = item_order.order
+
+        for item in items:
+            if item.get("id") == item_id:
+                item["order"] = new_order
+                break
+
+    # Update user document
+    await users_collection.update_one(
+        {"id": current_user.id},
+        {"$set": {"items": items, "updated_at": datetime.now(timezone.utc)}}
+    )
+
+    logger.info(f"✅ Items reordered in user profile")
+    return {"message": "Items reordered successfully"}
+
 @api_router.put("/items/{item_id}")
 async def update_item(
     request: Request,
@@ -5751,62 +5807,6 @@ async def track_item_view(item_id: str, request: Request):
     )
     
     return {"success": True, "views": item_doc.get("views", 0) + 1}
-
-@api_router.put("/items/reorder")
-async def reorder_items(
-    request: Request,
-    body: ItemsReorderRequest,
-    current_user: User = Depends(get_current_user)
-):
-    """
-    Reorder items - in user document
-
-    Request body: {"items_order": [{"id": "item_id_1", "order": 0}, ...]}
-    """
-    items_order = body.items_order
-    logger.info(f"🛍️ Reordering {len(items_order)} items")
-
-    if not items_order:
-        return {"message": "No items to reorder"}
-    
-    # Get user document
-    user_doc = await users_collection.find_one({"id": current_user.id})
-    if not user_doc:
-        raise HTTPException(status_code=404, detail="User not found")
-    
-    # Get items array
-    items = user_doc.get("items", [])
-    
-    # Validate that all item IDs exist in user's items
-    item_ids = [item_order.id for item_order in items_order]
-    existing_item_ids = {item.get("id") for item in items}
-    
-    # Check if all requested items belong to the user
-    if not all(item_id in existing_item_ids for item_id in item_ids):
-        logger.warning(f"⚠️  PUT /items/reorder - Item ID mismatch for {current_user.email}")
-        raise HTTPException(
-            status_code=400,
-            detail="One or more items do not exist"
-        )
-    
-    # Update order for each item
-    for item_order in items_order:
-        item_id = item_order.id
-        new_order = item_order.order
-        
-        for item in items:
-            if item.get("id") == item_id:
-                item["order"] = new_order
-                break
-    
-    # Update user document
-    await users_collection.update_one(
-        {"id": current_user.id},
-        {"$set": {"items": items, "updated_at": datetime.now(timezone.utc)}}
-    )
-    
-    logger.info(f"✅ Items reordered in user profile")
-    return {"message": "Items reordered successfully"}
 
 # ==================== AI ENDPOINTS ====================
 
