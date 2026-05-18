@@ -5755,16 +5755,17 @@ async def track_item_view(item_id: str, request: Request):
 @api_router.put("/items/reorder")
 async def reorder_items(
     request: Request,
-    items_order: List[ItemOrder] = Body(...),
+    body: ItemsReorderRequest,
     current_user: User = Depends(get_current_user)
 ):
     """
     Reorder items - in user document
-    
-    Request body: [{"id": "item_id_1", "order": 0}, {"id": "item_id_2", "order": 1}, ...]
+
+    Request body: {"items_order": [{"id": "item_id_1", "order": 0}, ...]}
     """
+    items_order = body.items_order
     logger.info(f"🛍️ Reordering {len(items_order)} items")
-    
+
     if not items_order:
         return {"message": "No items to reorder"}
     

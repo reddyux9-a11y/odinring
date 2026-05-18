@@ -316,44 +316,18 @@ const ItemManager = ({ items, setItems }) => {
     }));
     
     try {
-      // Some backend deployments expect a raw array body, while others expect
-      // an object like { items_order: [...] }. Try array first, then fallback.
-      await api.put(`/items/reorder`, reorderedItems);
+      await api.put(`/items/reorder`, { items_order: reorderedItems });
       setItems(newItems);
       addHapticFeedback('light');
       mobileToast.success("Items reordered successfully! 🔄", { duration: ITEM_TOAST_DURATION });
     } catch (error) {
-      const shouldRetryWithObjectPayload =
-        error?.response?.status === 422 &&
-        Array.isArray(error?.response?.data?.detail);
-
-      if (shouldRetryWithObjectPayload) {
-        try {
-          await api.put(`/items/reorder`, { items_order: reorderedItems });
-          setItems(newItems);
-          addHapticFeedback('light');
-          mobileToast.success("Items reordered successfully! 🔄", { duration: ITEM_TOAST_DURATION });
-          return;
-        } catch (retryError) {
-          error = retryError;
-        }
-      }
-
-      // Extract error message safely - handle both string and array formats
       let errorMessage = "Failed to reorder items";
       if (error.response?.data?.detail) {
         const detail = error.response.data.detail;
         if (Array.isArray(detail)) {
-          // FastAPI validation errors are arrays of objects
-          errorMessage = detail.map(err => {
-            if (typeof err === 'string') return err;
-            if (err.msg) return err.msg;
-            return JSON.stringify(err);
-          }).join(', ') || "Validation error";
+          errorMessage = detail.map(err => err.msg || JSON.stringify(err)).join(', ') || "Validation error";
         } else if (typeof detail === 'string') {
           errorMessage = detail;
-        } else {
-          errorMessage = String(detail);
         }
       } else if (error.message) {
         errorMessage = error.message;

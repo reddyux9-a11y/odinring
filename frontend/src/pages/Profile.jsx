@@ -469,7 +469,7 @@ const Profile = () => {
     >
       {/* Top Banner Section - Gradient Header */}
       <div className={`h-32 ${bannerClassName} relative`} style={bannerStyle}>
-        <div className="absolute inset-0 bg-gradient-to-r from-purple-500 via-purple-600 to-pink-500"></div>
+        {!coverPhoto && <div className="absolute inset-0 bg-gradient-to-r from-purple-500 via-purple-600 to-pink-500"></div>}
         <div className="absolute inset-0 bg-black/10"></div>
       </div>
       
