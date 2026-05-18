@@ -5668,15 +5668,28 @@ async def create_item(
 @api_router.put("/items/reorder")
 async def reorder_items(
     request: Request,
-    body: ItemsReorderRequest,
     current_user: User = Depends(get_current_user)
 ):
     """
     Reorder items - in user document
 
-    Request body: {"items_order": [{"id": "item_id_1", "order": 0}, ...]}
+    Accepts both formats:
+    - Raw array:  [{"id": "...", "order": 0}, ...]
+    - Wrapped:    {"items_order": [{"id": "...", "order": 0}, ...]}
     """
-    items_order = body.items_order
+    raw = await request.json()
+    if isinstance(raw, list):
+        items_data = raw
+    elif isinstance(raw, dict):
+        items_data = raw.get("items_order", [])
+    else:
+        raise HTTPException(status_code=422, detail="Request body must be a list or object")
+
+    try:
+        items_order = [ItemOrder(**item) for item in items_data]
+    except Exception:
+        raise HTTPException(status_code=422, detail="Each item must have 'id' and 'order' fields")
+
     logger.info(f"🛍️ Reordering {len(items_order)} items")
 
     if not items_order:
