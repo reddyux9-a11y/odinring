@@ -435,9 +435,24 @@ const Profile = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+      <div className="min-h-screen w-full max-w-lg mx-auto shadow-xl relative animate-pulse">
+        {/* Banner skeleton */}
+        <div className="h-32 bg-muted" />
+        {/* Avatar skeleton */}
+        <div className="relative text-center p-6 pb-4 -mt-16">
+          <div className="w-[172px] h-[172px] rounded-full bg-muted mx-auto mb-4 border-4 border-background" />
+          <div className="h-6 w-40 bg-muted rounded mx-auto mb-2" />
+          <div className="h-4 w-56 bg-muted rounded mx-auto mb-4" />
+          <div className="flex justify-center gap-2 mb-4">
+            <div className="h-8 w-24 bg-muted rounded-full" />
+            <div className="h-8 w-24 bg-muted rounded-full" />
+          </div>
+        </div>
+        {/* Links skeleton */}
+        <div className="px-6 space-y-3">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="h-12 bg-muted rounded-xl" />
+          ))}
         </div>
       </div>
     );

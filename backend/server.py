@@ -6061,7 +6061,7 @@ async def get_public_profile(request: Request, username: str):
     from models.identity_models import SubscriptionStatus
     from app.infrastructure.cache import cache_service
 
-    # Serve from cache when available (60-second TTL for public profile data)
+    # Serve from cache when available (300-second TTL for public profile data)
     cache_key = f"public_profile:{username.lower()}"
     cached_profile = cache_service.get(cache_key)
     if cached_profile:
@@ -6069,11 +6069,14 @@ async def get_public_profile(request: Request, username: str):
         asyncio.create_task(_track_profile_view_bg(cached_profile.get("user_id"), cached_profile.get("ring_id"), request))
         return cached_profile
 
-    # Resolve username: try spaces-converted form first, then raw lowercase
+    # Resolve username: fetch both variants in a single query
     username_lookup = username.replace('_', ' ').lower()
-    user_doc = await users_collection.find_one({"username": username_lookup})
-    if not user_doc:
-        user_doc = await users_collection.find_one({"username": username.lower()})
+    username_lower = username.lower()
+    if username_lookup == username_lower:
+        user_doc = await users_collection.find_one({"username": username_lower})
+    else:
+        docs = await users_collection.find({"username": {"$in": [username_lookup, username_lower]}}).to_list(length=2)
+        user_doc = next((d for d in docs if d.get("username") == username_lookup), None) or (docs[0] if docs else None)
     if not user_doc:
         raise HTTPException(status_code=404, detail="Profile not found")
 
@@ -6086,10 +6089,10 @@ async def get_public_profile(request: Request, username: str):
     links_task = links_collection.find({"user_id": user.id, "active": True})
     media_task = media_collection.find({"user_id": user.id, "active": True})
     subscription_task = IdentityResolver._get_subscription(user_id=user.id)
-    views_task = (
-        ring_analytics_collection.count_documents({"ring_id": user.ring_id, "event_type": "view"})
-        if user.ring_id else _zero()
-    )
+    # Read profile_views from user doc — avoids slow count_documents on analytics collection
+    async def _get_profile_views():
+        return user_doc.get("profile_views", 0)
+    views_task = _get_profile_views()
 
     links_docs, media_docs, subscription_info, profile_views = await asyncio.gather(
         links_task, media_task, subscription_task, views_task,
@@ -6164,8 +6167,8 @@ async def get_public_profile(request: Request, username: str):
     # Store user_id in cached payload so analytics can fire on cache hits
     result["user_id"] = user.id
 
-    # Cache for 60 seconds — short enough for near-real-time updates
-    cache_service.set(cache_key, result, 60)
+    # Cache for 300 seconds
+    cache_service.set(cache_key, result, 300)
 
     # Fire-and-forget analytics (non-blocking)
     asyncio.create_task(_track_profile_view_bg(user.id, user.ring_id, request))
@@ -6194,19 +6197,15 @@ async def get_profile_by_ring(ring_id: str, request: Request):
         
         user = User(**user_doc)
         
-        # Track regular ring tap with error handling
-        try:
-            await track_ring_event(
-                ring_id, 
-                "tap", 
-                user.id,
-                None,
-                getattr(request.client, 'host', '127.0.0.1'),
-                request.headers.get("user-agent", "Unknown")
-            )
-        except Exception as e:
-            # Don't fail the request if analytics tracking fails
-            logger.warning(f"Failed to track ring tap event: {e}")
+        # Fire-and-forget ring tap analytics (non-blocking)
+        asyncio.create_task(track_ring_event(
+            ring_id,
+            "tap",
+            user.id,
+            None,
+            getattr(request.client, 'host', '127.0.0.1'),
+            request.headers.get("user-agent", "Unknown")
+        ))
         
         # Return regular profile
         return await get_public_profile(user.username, request)
