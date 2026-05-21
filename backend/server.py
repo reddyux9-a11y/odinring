@@ -6583,7 +6583,24 @@ class ContactForm(BaseModel):
     comment: str
 
 
-CONTACT_SUBJECTS = {"sells", "affiliate", "products", "complains", "suggestions"}
+CONTACT_SUBJECTS = {"sells", "affiliate", "products", "complains", "suggestions", "general"}
+
+
+def _append_to_google_sheet(doc: dict):
+    """POST the submission to a Google Apps Script web app which appends it to the sheet."""
+    url = settings.GOOGLE_APPS_SCRIPT_URL
+    if not url:
+        return
+    try:
+        requests.post(url, json={
+            "timestamp": doc["created_at"],
+            "full_name": doc["full_name"],
+            "email": doc["email"],
+            "subject": doc["subject"],
+            "comment": doc["comment"],
+        }, timeout=10)
+    except Exception as e:
+        logger.warning(f"Google Sheet append failed: {e}")
 
 
 @api_router.post("/contact")
@@ -6602,6 +6619,11 @@ async def submit_contact_form(form: ContactForm):
     }
     await contact_submissions_collection.insert_one(doc)
     logger.info(f"Contact form submission from {doc['email']} — subject: {doc['subject']}")
+
+    # Forward to Google Sheet in a background thread (non-blocking)
+    loop = asyncio.get_event_loop()
+    loop.run_in_executor(None, _append_to_google_sheet, doc)
+
     return {"success": True, "message": "Message received"}
 
 

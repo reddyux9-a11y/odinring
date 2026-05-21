@@ -66,6 +66,9 @@ class Settings(BaseSettings):
     STRIPE_PUBLISHABLE_KEY: Optional[str] = None
     STRIPE_WEBHOOK_SECRET: Optional[str] = None
     
+    # Google Apps Script webhook URL for contact form → Google Sheets
+    GOOGLE_APPS_SCRIPT_URL: Optional[str] = None
+
     # AI Service Configuration (Optional)
     OPENAI_API_KEY: Optional[str] = None
     ANTHROPIC_API_KEY: Optional[str] = None

@@ -53,5 +53,6 @@ faker==20.1.0
 # Caching (optional - falls back to in-memory if not available)
 redis==5.0.1
 
+
 # TOTAL SIZE: ~35MB (well under 250MB limit)
 # REMOVED: pymongo (included with motor)
