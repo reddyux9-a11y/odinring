@@ -6,10 +6,19 @@ import { useAuth } from "@/contexts/AuthContext";
 import AppProviders from "@/app/providers/AppProviders";
 import AppRouter from "@/app/router/AppRouter";
 
+// Routes that are fully public and must not wait for auth to resolve
+const PUBLIC_ROUTE_PREFIXES = ["/profile/", "/ring/"];
+
+function isPublicRoute(pathname) {
+  return PUBLIC_ROUTE_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+}
+
 function AppContent() {
   const { loading, authChecked } = useAuth();
 
-  if (!authChecked || loading) {
+  // Public pages (e.g. /profile/:username) render immediately — no auth gate.
+  // This avoids a 30-60 s Render cold-start delay for visitors who share links.
+  if (!isPublicRoute(window.location.pathname) && (!authChecked || loading)) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">

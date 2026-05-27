@@ -229,19 +229,20 @@ const Profile = () => {
     const fetchProfile = async () => {
       try {
         setLoading(true);
-        
-        let response;
-        if (ringId) {
-          // Fetch by ring ID
-          response = await api.get(`/ring/${ringId}`);
-        } else if (username) {
-          // Fetch by username
-          response = await api.get(`/profile/${username}`);
-        } else {
-          throw new Error("No username or ring ID provided");
-        }
 
-        const profileData = response.data;
+        const endpoint = ringId
+          ? `/api/ring/${ringId}`
+          : username
+          ? `/api/profile/${username}`
+          : null;
+        if (!endpoint) throw new Error("No username or ring ID provided");
+
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 15000);
+        const res = await fetch(endpoint, { signal: controller.signal });
+        clearTimeout(timeout);
+        if (!res.ok) throw new Error("Profile not found");
+        const profileData = await res.json();
         setProfile(profileData);
         setLinks(profileData.links || []);
         setMedia(profileData.media || []);
