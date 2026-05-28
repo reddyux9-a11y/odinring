@@ -179,9 +179,17 @@ return { token: accessToken, refresh_token: refreshToken, user: userData };
     };
   }, [user]);
 
-  // Check authentication status on app start
+  // Check authentication status on app start — skip on public routes to avoid
+  // hitting a cold Render backend for pages that need no auth at all.
   useEffect(() => {
-checkAuthStatus();
+    const publicPrefixes = ["/profile/", "/ring/"];
+    const isPublic = publicPrefixes.some((p) => window.location.pathname.startsWith(p));
+    if (isPublic) {
+      setLoading(false);
+      setAuthChecked(true);
+      return;
+    }
+    checkAuthStatus();
   }, []);
 
   // Register auth-failure callback with the API layer so it can trigger a full

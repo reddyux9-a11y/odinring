@@ -106,6 +106,8 @@ const Profile = () => {
   const [media, setMedia] = useState([]);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [retryCount, setRetryCount] = useState(0);
   const [analytics, setAnalytics] = useState({ profileViews: 0, totalClicks: 0 });
   const [isMobile, setIsMobile] = useState(false);
   const [activeTab, setActiveTab] = useState("items");
@@ -238,7 +240,7 @@ const Profile = () => {
         if (!endpoint) throw new Error("No username or ring ID provided");
 
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 15000);
+        const timeout = setTimeout(() => controller.abort(), 30000);
         const res = await fetch(endpoint, { signal: controller.signal });
         clearTimeout(timeout);
         if (!res.ok) throw new Error("Profile not found");
@@ -255,59 +257,16 @@ const Profile = () => {
           profileViews: profileData.profile_views || 0,
           totalClicks: profileData.total_clicks || 0
         });
-      } catch (error) {
-        toast.error("Profile not found");
-        
-        // Fallback to mock data for demo purposes
-        const mockProfile = {
-          name: "John Doe",
-          bio: "Digital creator & entrepreneur. Building the future one link at a time.",
-          avatar: "",
-          custom_logo: "",
-          show_footer: true,
-          username: username || "johndoe",
-          ring_id: ringId || "RING_001",
-          theme: "light",
-          accent_color: "#000000",
-          background_color: "#ffffff"
-        };
-
-        const mockLinks = [
-          {
-            id: "1",
-            title: "Personal Website",
-            url: "https://johndoe.com",
-            icon: "Globe",
-            active: true,
-            clicks: 234,
-            style: "gradient",
-            border_radius: "lg",
-            category: "professional"
-          },
-          {
-            id: "2",
-            title: "LinkedIn Profile", 
-            url: "https://linkedin.com/in/johndoe",
-            icon: "Briefcase",
-            active: true,
-            clicks: 189,
-            style: "filled",
-            border_radius: "md",
-            category: "professional"
-          }
-        ];
-
-        setProfile(mockProfile);
-        setLinks(mockLinks);
-        setItems([]);
-        setAnalytics({ profileViews: 1247, totalClicks: 423 });
+      } catch (err) {
+        const timedOut = err?.name === "AbortError";
+        setError(timedOut ? "timeout" : "not_found");
       } finally {
         setLoading(false);
       }
     };
 
     fetchProfile();
-  }, [username, ringId]);
+  }, [username, ringId, retryCount]);
 
   const trackProfileView = async () => {
     // In real app, this would call analytics API
@@ -459,20 +418,29 @@ const Profile = () => {
     );
   }
 
-  if (!profile) {
+  if (error || !profile) {
+    const isTimeout = error === "timeout";
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="text-center max-w-md">
-          <div className="text-6xl mb-4">🔍</div>
-          <h1 className="text-2xl font-bold text-foreground mb-2">Profile Not Found</h1>
+          <div className="text-6xl mb-4">{isTimeout ? "⏳" : "🔍"}</div>
+          <h1 className="text-2xl font-bold text-foreground mb-2">
+            {isTimeout ? "Taking longer than usual…" : "Profile Not Found"}
+          </h1>
           <p className="text-muted-foreground mb-6">
-            The profile you're looking for doesn't exist or has been removed.
+            {isTimeout
+              ? "The server is waking up. Please try again in a few seconds."
+              : "The profile you're looking for doesn't exist or has been removed."}
           </p>
-          <Button 
-            onClick={() => window.location.href = '/'}
-          >
-            Go to Homepage
-          </Button>
+          {isTimeout ? (
+            <Button onClick={() => { setError(null); setLoading(true); setRetryCount(c => c + 1); }}>
+              Try Again
+            </Button>
+          ) : (
+            <Button onClick={() => window.location.href = '/'}>
+              Go to Homepage
+            </Button>
+          )}
         </div>
       </div>
     );
