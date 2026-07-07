@@ -217,11 +217,11 @@ const Profile = () => {
       default:
         return {
           className: `${baseClasses} hover:shadow-md rounded-lg`,
-          style: { 
+          style: {
             backgroundColor: "rgba(10, 10, 10, 0.1)",
             borderWidth: "1px",
             borderColor: "rgba(156, 163, 175, 0.05)",
-            color: buttonTextColor || "#ffffff"
+            color: buttonTextColor || textColor
           }
         };
     }
@@ -618,10 +618,12 @@ const Profile = () => {
                     onClick={() => handleLinkClick(link)}
                   >
                     <div className="flex items-center space-x-4 w-full">
-                      <div 
-                        className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 text-white"
-                        style={{ 
-                          backgroundColor: "rgba(255,255,255,0.1)"
+                      <div
+                        className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+                        style={{
+                          backgroundColor: isBackgroundDark
+                            ? "rgba(255,255,255,0.1)"
+                            : "rgba(0,0,0,0.05)"
                         }}
                       >
                         {getIconByName(link.icon || "Globe", "w-5 h-5")}

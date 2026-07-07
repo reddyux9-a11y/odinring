@@ -29,6 +29,7 @@ const PaymentSuccess = () => {
         try {
           const res = await api.get(`/billing/verify-checkout?session_id=${sessionId}`);
           if (res.data?.activated || res.data?.already_active) {
+            await refetchContext();
             setConfirmed(true);
             return;
           }

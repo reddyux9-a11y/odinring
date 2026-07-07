@@ -1,5 +1,13 @@
 """
-Shared cache service with Redis-first strategy and in-memory fallback.
+Shared cache service with Redis-first strategy.
+
+Without Redis, the app typically runs multiple worker processes (see
+backend/Dockerfile `--workers`), each with its own Python heap. A per-process
+in-memory cache can't be invalidated across those processes, so a write on
+one worker (e.g. subscription activation after payment) would leave other
+workers serving stale reads for the full TTL. To avoid that correctness bug,
+caching is a no-op whenever Redis isn't available - every read goes straight
+to the source of truth (Firestore) instead of a cache that can't be trusted.
 """
 
 from __future__ import annotations
@@ -7,7 +15,6 @@ from __future__ import annotations
 import json
 import logging
 import os
-import time
 from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
@@ -15,7 +22,6 @@ logger = logging.getLogger(__name__)
 
 class CacheService:
     def __init__(self) -> None:
-        self._memory_cache: dict[str, dict[str, Any]] = {}
         self._redis = None
         self._redis_enabled = False
         self._init_redis()
@@ -35,10 +41,10 @@ class CacheService:
         except Exception as exc:
             self._redis_enabled = False
             self._redis = None
-            logger.warning("Redis unavailable, using in-memory cache fallback: %s", exc)
+            logger.warning("Redis unavailable, caching disabled: %s", exc)
 
     def status(self) -> dict[str, Any]:
-        backend = "redis" if self._redis_enabled and self._redis is not None else "memory"
+        backend = "redis" if self._redis_enabled and self._redis is not None else "disabled"
         healthy = False
         if backend == "redis":
             try:
@@ -46,8 +52,6 @@ class CacheService:
                 healthy = True
             except Exception:
                 healthy = False
-        else:
-            healthy = True
         return {
             "backend": backend,
             "healthy": healthy,
@@ -55,39 +59,31 @@ class CacheService:
         }
 
     def get(self, key: str) -> Optional[Any]:
-        if self._redis_enabled and self._redis is not None:
-            try:
-                raw = self._redis.get(key)
-                if raw:
-                    return json.loads(raw)
-            except Exception as exc:
-                logger.warning("Redis get failed, falling back to memory cache: %s", exc)
-
-        cached = self._memory_cache.get(key)
-        if cached and cached.get("expires_at", 0) > time.time():
-            return cached.get("data")
+        if not (self._redis_enabled and self._redis is not None):
+            return None
+        try:
+            raw = self._redis.get(key)
+            if raw:
+                return json.loads(raw)
+        except Exception as exc:
+            logger.warning("Redis get failed: %s", exc)
         return None
 
     def set(self, key: str, value: Any, ttl_seconds: int) -> None:
-        if self._redis_enabled and self._redis is not None:
-            try:
-                self._redis.setex(key, ttl_seconds, json.dumps(value))
-                return
-            except Exception as exc:
-                logger.warning("Redis set failed, falling back to memory cache: %s", exc)
-
-        self._memory_cache[key] = {
-            "expires_at": time.time() + ttl_seconds,
-            "data": value,
-        }
+        if not (self._redis_enabled and self._redis is not None):
+            return
+        try:
+            self._redis.setex(key, ttl_seconds, json.dumps(value))
+        except Exception as exc:
+            logger.warning("Redis set failed: %s", exc)
 
     def delete(self, key: str) -> None:
-        if self._redis_enabled and self._redis is not None:
-            try:
-                self._redis.delete(key)
-            except Exception:
-                pass
-        self._memory_cache.pop(key, None)
+        if not (self._redis_enabled and self._redis is not None):
+            return
+        try:
+            self._redis.delete(key)
+        except Exception:
+            pass
 
 
 cache_service = CacheService()

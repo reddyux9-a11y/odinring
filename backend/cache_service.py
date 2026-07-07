@@ -1,114 +1,56 @@
 """
 Caching Service for OdinRing
-Provides Redis caching with in-memory fallback for performance optimization
+Provides Redis caching for performance optimization.
+
+Without Redis, the app runs multiple worker processes (see backend/Dockerfile
+`--workers`), each with its own heap. A per-process in-memory cache can't be
+invalidated across those processes: a write in one worker (e.g. activating a
+subscription after payment) only clears that worker's own copy, so other
+workers keep serving stale data for the full TTL (up to 5 minutes for the
+'subscriptions' collection). To avoid that correctness bug, caching is a
+no-op whenever Redis isn't available - every read goes straight to Firestore.
 """
 
 import json
 import logging
 import os
-from typing import Any, Optional, Dict
-from datetime import timedelta
-import hashlib
-import time
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
-# Try to import Redis, fall back to in-memory if not available
+# Try to import Redis; caching is disabled entirely if it's unavailable/unconfigured
 try:
     import redis
     REDIS_AVAILABLE = True
 except ImportError:
     REDIS_AVAILABLE = False
-    logger.warning("Redis not available, using in-memory cache")
-
-class InMemoryCache:
-    """Simple in-memory cache with TTL support"""
-    
-    def __init__(self):
-        self._cache: Dict[str, Dict[str, Any]] = {}
-        self._max_size = 10000  # Maximum number of entries
-    
-    def get(self, key: str) -> Optional[Any]:
-        """Get value from cache"""
-        if key not in self._cache:
-            return None
-        
-        entry = self._cache[key]
-        if entry['expires_at'] and time.time() > entry['expires_at']:
-            # Expired, remove it
-            del self._cache[key]
-            return None
-        
-        return entry['value']
-    
-    def set(self, key: str, value: Any, ttl: Optional[int] = None):
-        """Set value in cache with optional TTL"""
-        # If cache is full, remove oldest entries
-        if len(self._cache) >= self._max_size:
-            # Remove 10% of oldest entries
-            sorted_entries = sorted(
-                self._cache.items(),
-                key=lambda x: x[1].get('created_at', 0)
-            )
-            to_remove = len(sorted_entries) // 10
-            for i in range(to_remove):
-                del self._cache[sorted_entries[i][0]]
-        
-        expires_at = None
-        if ttl:
-            expires_at = time.time() + ttl
-        
-        self._cache[key] = {
-            'value': value,
-            'expires_at': expires_at,
-            'created_at': time.time()
-        }
-    
-    def delete(self, key: str):
-        """Delete key from cache"""
-        if key in self._cache:
-            del self._cache[key]
-    
-    def clear(self):
-        """Clear all cache entries"""
-        self._cache.clear()
-    
-    def exists(self, key: str) -> bool:
-        """Check if key exists and is not expired"""
-        if key not in self._cache:
-            return False
-        
-        entry = self._cache[key]
-        if entry['expires_at'] and time.time() > entry['expires_at']:
-            del self._cache[key]
-            return False
-        
-        return True
+    logger.warning("Redis not available, caching disabled")
 
 
 class CacheService:
     """
-    Unified caching service with Redis support and in-memory fallback
+    Redis-backed caching service. No-ops when Redis isn't configured.
     """
     
     def __init__(self):
         self.redis_client = None
-        self.in_memory_cache = InMemoryCache()
         self.use_redis = False
-        
+
         # Try to initialize Redis
         if REDIS_AVAILABLE:
             try:
-                redis_url = os.getenv('REDIS_URL', 'redis://localhost:6379')
+                redis_url = os.getenv('REDIS_URL', '')
+                if not redis_url:
+                    raise ValueError("REDIS_URL not configured")
                 redis_password = os.getenv('REDIS_PASSWORD')
-                
+
                 # Parse Redis URL
                 if redis_url.startswith('redis://'):
                     # Extract host and port
                     parts = redis_url.replace('redis://', '').split(':')
                     host = parts[0] if len(parts) > 0 else 'localhost'
                     port = int(parts[1]) if len(parts) > 1 else 6379
-                    
+
                     self.redis_client = redis.Redis(
                         host=host,
                         port=port,
@@ -117,17 +59,18 @@ class CacheService:
                         socket_connect_timeout=2,
                         socket_timeout=2
                     )
-                    
+
                     # Test connection
                     self.redis_client.ping()
                     self.use_redis = True
                     logger.info("✅ Redis cache initialized successfully")
             except Exception as e:
-                logger.warning(f"⚠️  Redis not available, using in-memory cache: {e}")
+                logger.warning(f"⚠️  Redis not available, caching disabled: {e}")
                 self.use_redis = False
-        
+                self.redis_client = None
+
         if not self.use_redis:
-            logger.info("📦 Using in-memory cache (Redis not configured)")
+            logger.info("📦 Caching disabled (Redis not configured) - reads go straight to the database")
     
     def _serialize(self, value: Any) -> str:
         """Serialize value to JSON string"""
@@ -152,15 +95,15 @@ class CacheService:
         Returns:
             Cached value or None if not found/expired
         """
+        if not (self.use_redis and self.redis_client):
+            return None
+
         cache_key = self._make_key(collection, key)
-        
         try:
-            if self.use_redis and self.redis_client:
-                value = self.redis_client.get(cache_key)
-                if value:
-                    return self._deserialize(value)
-            else:
-                return self.in_memory_cache.get(cache_key)
+            value = self.redis_client.get(cache_key)
+            if value:
+                return self._deserialize(value)
+            return None
         except Exception as e:
             logger.warning(f"Cache get error: {e}, falling back to database")
             return None
@@ -175,59 +118,49 @@ class CacheService:
             value: Value to cache
             ttl: Time to live in seconds (None = no expiration)
         """
+        if not (self.use_redis and self.redis_client):
+            return
+
         cache_key = self._make_key(collection, key)
-        
         try:
-            if self.use_redis and self.redis_client:
-                serialized = self._serialize(value)
-                if ttl:
-                    self.redis_client.setex(cache_key, ttl, serialized)
-                else:
-                    self.redis_client.set(cache_key, serialized)
+            serialized = self._serialize(value)
+            if ttl:
+                self.redis_client.setex(cache_key, ttl, serialized)
             else:
-                self.in_memory_cache.set(cache_key, value, ttl)
+                self.redis_client.set(cache_key, serialized)
         except Exception as e:
             logger.warning(f"Cache set error: {e}")
     
     def delete(self, collection: str, key: str):
         """Delete key from cache"""
+        if not (self.use_redis and self.redis_client):
+            return
+
         cache_key = self._make_key(collection, key)
-        
         try:
-            if self.use_redis and self.redis_client:
-                self.redis_client.delete(cache_key)
-            else:
-                self.in_memory_cache.delete(cache_key)
+            self.redis_client.delete(cache_key)
         except Exception as e:
             logger.warning(f"Cache delete error: {e}")
     
     def delete_pattern(self, collection: str, pattern: str):
         """Delete all keys matching pattern in collection"""
+        if not (self.use_redis and self.redis_client):
+            return
+
         cache_key_pattern = self._make_key(collection, pattern)
-        
         try:
-            if self.use_redis and self.redis_client:
-                # Use SCAN to find matching keys
-                cursor = 0
-                while True:
-                    cursor, keys = self.redis_client.scan(
-                        cursor=cursor,
-                        match=cache_key_pattern.replace('*', '*'),
-                        count=100
-                    )
-                    if keys:
-                        self.redis_client.delete(*keys)
-                    if cursor == 0:
-                        break
-            else:
-                # For in-memory, we need to check each key
-                prefix = cache_key_pattern.replace('*', '')
-                keys_to_delete = [
-                    key for key in self.in_memory_cache._cache.keys()
-                    if key.startswith(prefix)
-                ]
-                for key in keys_to_delete:
-                    self.in_memory_cache.delete(key)
+            # Use SCAN to find matching keys
+            cursor = 0
+            while True:
+                cursor, keys = self.redis_client.scan(
+                    cursor=cursor,
+                    match=cache_key_pattern.replace('*', '*'),
+                    count=100
+                )
+                if keys:
+                    self.redis_client.delete(*keys)
+                if cursor == 0:
+                    break
         except Exception as e:
             logger.warning(f"Cache delete pattern error: {e}")
     
@@ -237,13 +170,12 @@ class CacheService:
     
     def exists(self, collection: str, key: str) -> bool:
         """Check if key exists in cache"""
+        if not (self.use_redis and self.redis_client):
+            return False
+
         cache_key = self._make_key(collection, key)
-        
         try:
-            if self.use_redis and self.redis_client:
-                return bool(self.redis_client.exists(cache_key))
-            else:
-                return self.in_memory_cache.exists(cache_key)
+            return bool(self.redis_client.exists(cache_key))
         except Exception as e:
             logger.warning(f"Cache exists error: {e}")
             return False
