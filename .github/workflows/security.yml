@@ -36,19 +36,19 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-          cache: 'yarn'
-          cache-dependency-path: frontend/yarn.lock
-      
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
       # SECURITY: Check npm dependencies for vulnerabilities
       - name: Check npm dependencies
         working-directory: ./frontend
         run: |
-          yarn install --frozen-lockfile
+          npm ci
           # SECURITY: Run npm audit in production mode
-          yarn audit --level moderate --production || true
+          npm audit --audit-level moderate --omit=dev || true
           # Verify lockfile is present and up to date
-          if [ ! -f yarn.lock ]; then
-            echo "ERROR: yarn.lock file missing - lockfile required for supply chain security"
+          if [ ! -f package-lock.json ]; then
+            echo "ERROR: package-lock.json file missing - lockfile required for supply chain security"
             exit 1
           fi
 
@@ -131,9 +131,9 @@ jobs:
       - name: Verify npm lockfile
         working-directory: ./frontend
         run: |
-          # SECURITY: Verify yarn.lock exists
-          if [ ! -f yarn.lock ]; then
-            echo "ERROR: yarn.lock file missing"
+          # SECURITY: Verify package-lock.json exists
+          if [ ! -f package-lock.json ]; then
+            echo "ERROR: package-lock.json file missing"
             exit 1
           fi
           echo "✅ npm lockfile check passed"

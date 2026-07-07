@@ -48,7 +48,7 @@ jobs:
           name: backend-coverage
       
       - name: Upload coverage report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: backend-coverage-report
           path: backend/htmlcov/
@@ -64,17 +64,17 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-          cache: 'yarn'
-          cache-dependency-path: frontend/yarn.lock
-      
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
       - name: Install dependencies
         working-directory: ./frontend
-        run: yarn install --frozen-lockfile
-      
+        run: npm ci
+
       - name: Run frontend tests with coverage
         working-directory: ./frontend
         run: |
-          yarn test --coverage --watchAll=false --passWithNoTests
+          npm run test:coverage -- --passWithNoTests
         env:
           CI: true
       
@@ -86,7 +86,7 @@ jobs:
           name: frontend-coverage
       
       - name: Upload coverage report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: frontend-coverage-report
           path: frontend/coverage/
@@ -102,13 +102,13 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-          cache: 'yarn'
-          cache-dependency-path: frontend/yarn.lock
-      
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
       - name: Install dependencies
         working-directory: ./frontend
-        run: yarn install --frozen-lockfile
-      
+        run: npm ci
+
       - name: Install Playwright browsers
         working-directory: ./frontend
         run: npx playwright install --with-deps
@@ -121,7 +121,7 @@ jobs:
       
       - name: Upload Playwright report
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: playwright-report
           path: frontend/playwright-report/
