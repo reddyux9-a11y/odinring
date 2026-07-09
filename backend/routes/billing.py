@@ -615,7 +615,7 @@ async def verify_checkout_session(
         raise HTTPException(status_code=500, detail="Stripe is not configured on the server.")
 
     try:
-        session = stripe.checkout.Session.retrieve(session_id)
+        session = stripe.checkout.Session.retrieve(session_id).to_dict()
     except Exception as e:
         logger.error(f"Failed to retrieve Stripe session {session_id}: {e}", exc_info=True)
         raise HTTPException(status_code=400, detail="Could not retrieve checkout session.")
@@ -722,7 +722,7 @@ async def verify_payment(
     # --- Strategy 2a: we already have a Stripe subscription ID ---
     if stripe_sub_id:
         try:
-            stripe_sub = stripe.Subscription.retrieve(stripe_sub_id)
+            stripe_sub = stripe.Subscription.retrieve(stripe_sub_id).to_dict()
             if stripe_sub.get("status") in ("active", "trialing"):
                 paid = True
         except Exception as e:
@@ -731,7 +731,7 @@ async def verify_payment(
     # --- Strategy 2b: we have a customer ID but no subscription ID ---
     if not paid and stripe_customer_id:
         try:
-            subs = stripe.Subscription.list(customer=stripe_customer_id, status="active", limit=5)
+            subs = stripe.Subscription.list(customer=stripe_customer_id, status="active", limit=5).to_dict()
             if subs.get("data"):
                 stripe_sub_id = subs["data"][0]["id"]
                 paid = True
@@ -741,7 +741,7 @@ async def verify_payment(
     # --- Strategy 2c: search recent checkout sessions for this subscription_id in metadata ---
     if not paid:
         try:
-            sessions = stripe.checkout.Session.list(limit=20)
+            sessions = stripe.checkout.Session.list(limit=20).to_dict()
             for sess in sessions.get("data", []):
                 meta = sess.get("metadata") or {}
                 if (
@@ -807,7 +807,7 @@ async def stripe_webhook(request: Request):
             payload=payload,
             sig_header=sig_header,
             secret=settings.STRIPE_WEBHOOK_SECRET,
-        )
+        ).to_dict()
     except Exception as e:
         logger.error(f"Error verifying Stripe webhook: {e}", exc_info=True)
         raise HTTPException(status_code=400, detail="Invalid Stripe webhook")

@@ -14,6 +14,7 @@ from firebase_config import (
 from cache_service import get_cache, CACHE_TTL
 from google.cloud.firestore_v1 import FieldFilter
 from datetime import datetime
+import asyncio
 import logging
 import hashlib
 import json
@@ -112,7 +113,9 @@ class FirestoreDB:
             # miss them while find({"user_id": ...}) still returns them via doc snapshot id.
             if 'id' in filt:
                 doc_id = str(filt['id'])
-                doc_ref = self.db.collection(coll_name).document(doc_id).get()
+                doc_ref = await asyncio.to_thread(
+                    self.db.collection(coll_name).document(doc_id).get
+                )
                 if not doc_ref.exists:
                     return None
                 result = firestore_to_dict(doc_ref)
@@ -145,8 +148,8 @@ class FirestoreDB:
                 else:
                     query = query.where(filter=FieldFilter(key, '==', value))
             
-            docs = query.limit(1).stream()
-            
+            docs = await asyncio.to_thread(lambda: list(query.limit(1).stream()))
+
             for doc in docs:
                 result = firestore_to_dict(doc)
                 # Cache the result if it has an ID
@@ -258,7 +261,7 @@ class FirestoreDB:
             if limit:
                 query = query.limit(limit)
             
-            docs = query.stream()
+            docs = await asyncio.to_thread(lambda: list(query.stream()))
             return [firestore_to_dict(doc) for doc in docs]
             
         except DatabaseUnavailableError:
@@ -289,14 +292,14 @@ class FirestoreDB:
             doc_id = doc.get('id')
             
             if doc_id:
-                self.db.collection(coll_name).document(doc_id).set(data)
+                await asyncio.to_thread(self.db.collection(coll_name).document(doc_id).set, data)
                 # Cache the new document
                 if self.enable_cache and self.cache:
                     ttl = CACHE_TTL.get(coll_name, CACHE_TTL['default'])
                     self.cache.set(coll_name, doc_id, doc, ttl)
                 return {'inserted_id': doc_id}
             else:
-                doc_ref = self.db.collection(coll_name).add(data)
+                doc_ref = await asyncio.to_thread(self.db.collection(coll_name).add, data)
                 inserted_id = doc_ref[1].id
                 # Cache the new document
                 if self.enable_cache and self.cache:
@@ -354,7 +357,10 @@ class FirestoreDB:
                     update_data = dict_to_firestore(upd)
 
                 if update_data:
-                    self.db.collection(coll_name).document(doc_id).update(dict_to_firestore(update_data))
+                    await asyncio.to_thread(
+                        self.db.collection(coll_name).document(doc_id).update,
+                        dict_to_firestore(update_data),
+                    )
                 # Invalidate cache
                 if self.enable_cache and self.cache:
                     self.cache.delete(coll_name, doc_id)
@@ -389,7 +395,7 @@ class FirestoreDB:
             
             if doc:
                 doc_id = doc['id']
-                self.db.collection(coll_name).document(doc_id).delete()
+                await asyncio.to_thread(self.db.collection(coll_name).document(doc_id).delete)
                 # Invalidate cache
                 if self.enable_cache and self.cache:
                     self.cache.delete(coll_name, doc_id)
@@ -523,7 +529,7 @@ class FirestoreDB:
                         results['deleted'].append(doc_id)
             
             # Commit batch
-            await batch.commit()
+            await asyncio.to_thread(batch.commit)
             
             # Invalidate cache for affected documents
             if self.enable_cache and self.cache:
