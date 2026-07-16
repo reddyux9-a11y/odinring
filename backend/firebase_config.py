@@ -165,6 +165,23 @@ def _validate_service_account_info(service_account_info: dict) -> None:
         )
 
 
+def _force_rest_transport(db_client, gcp_creds):
+    """
+    Force the Firestore client onto REST transport instead of its default gRPC.
+
+    Render's network path to firestore.googleapis.com has been observed to
+    reject the gRPC client's raw HTTP2 framing with a bare
+    "403 Received http2 header with status: 403" (no real gRPC status/reason,
+    unlike a genuine PermissionDenied) even with valid credentials and IAM.
+    REST rides over plain HTTPS, which passes through that same path fine.
+    Pre-populating the lazy-loaded GAPIC client short-circuits the client's
+    own gRPC channel construction (see google.cloud.firestore_v1.base_client).
+    """
+    from google.cloud.firestore_v1.services.firestore.client import FirestoreClient
+    db_client._firestore_api_internal = FirestoreClient(credentials=gcp_creds, transport='rest')
+    return db_client
+
+
 def _normalize_private_key(service_account_info: dict) -> dict:
     """
     Normalize private_key by replacing escaped newlines with actual newlines.
@@ -268,9 +285,10 @@ def initialize_firebase():
             database='odinringdb',
             credentials=gcp_creds
         )
-        
+        _force_rest_transport(_db, gcp_creds)
+
         logger.info("✅ Firebase initialized successfully from environment variable")
-        logger.info(f"🔥 Using Firestore database: odinringdb")
+        logger.info(f"🔥 Using Firestore database: odinringdb (REST transport)")
         logger.info(f"📦 Project ID: {project_id}")
         
         return _db
