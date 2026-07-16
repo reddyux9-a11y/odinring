@@ -18,6 +18,7 @@ import asyncio
 import logging
 import hashlib
 import json
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -30,13 +31,32 @@ class FirestoreDB:
     """
     Firestore database operations wrapper
     Provides MongoDB-like interface for Firestore with caching support
+
+    If FIRESTORE_PROXY_URL is set, all Firestore access is routed through the
+    Cloud Run proxy in firestore_proxy/ instead of calling Firestore directly.
+    This exists because Render's outbound network path to Firestore gets
+    blocked by Google's edge (403, unrelated to credentials/IAM - see
+    firebase_config.py). The proxy runs inside Google's network so it isn't
+    subject to that. Local dev (no FIRESTORE_PROXY_URL) keeps using Firestore
+    directly.
     """
-    
+
     def __init__(self, collection_name=None, enable_cache=True):
-        self.db = get_firestore_client()
+        self.proxy_url = os.getenv('FIRESTORE_PROXY_URL', '').rstrip('/')
+        self.proxy_secret = os.getenv('FIRESTORE_PROXY_SECRET')
+        self.use_proxy = bool(self.proxy_url)
+        self.db = None if self.use_proxy else get_firestore_client()
         self.collection_name = collection_name
         self.enable_cache = enable_cache
         self.cache = get_cache() if enable_cache else None
+
+    async def _proxy_request(self, endpoint: str, payload: dict):
+        import httpx
+        headers = {'Authorization': f'Bearer {self.proxy_secret}'}
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            resp = await client.post(f'{self.proxy_url}/{endpoint}', json=payload, headers=headers)
+            resp.raise_for_status()
+            return resp.json()
 
     def _ensure_db(self):
         """
@@ -47,6 +67,8 @@ class FirestoreDB:
         it (e.g. after a transport-level error), this picks up the freshly
         rebuilt client instead of continuing to use a stale one.
         """
+        if self.use_proxy:
+            return
         self.db = get_firestore_client()
         if self.db is None:
             err = get_firestore_client_error()
@@ -57,7 +79,12 @@ class FirestoreDB:
             raise DatabaseUnavailableError(hint)
     
     def collection(self, name):
-        """Get collection reference"""
+        """Get collection reference. Not available in proxy mode (no direct Firestore client)."""
+        if self.use_proxy:
+            raise NotImplementedError(
+                "FirestoreDB.collection() needs a direct Firestore client; "
+                "use find/find_one/insert_one/etc. instead when FIRESTORE_PROXY_URL is set."
+            )
         self._ensure_db()
         return self.db.collection(name)
     
@@ -100,7 +127,14 @@ class FirestoreDB:
                 if cached is not None:
                     logger.debug(f"Cache hit: {coll_name}:{cache_key}")
                     return cached
-        
+
+        if self.use_proxy:
+            result = await self._proxy_request('find_one', {'collection': coll_name, 'filter': filt})
+            if result and self.enable_cache and self.cache and use_cache and 'id' in result:
+                ttl = CACHE_TTL.get(coll_name, CACHE_TTL['default'])
+                self.cache.set(coll_name, result['id'], result, ttl)
+            return result
+
         try:
             self._ensure_db()
             # Handle $or queries - Firestore doesn't support $or directly
@@ -183,7 +217,12 @@ class FirestoreDB:
         else:
             coll_name = self.collection_name
             filt = collection_name
-        
+
+        if self.use_proxy:
+            return await self._proxy_request('find', {
+                'collection': coll_name, 'filter': filt, 'limit': limit, 'sort': sort, 'skip': skip,
+            })
+
         try:
             self._ensure_db()
             # Handle $or queries - Firestore doesn't support $or directly
@@ -191,7 +230,7 @@ class FirestoreDB:
                 or_conditions = filt['$or']
                 all_results = []
                 seen_ids = set()
-                
+
                 # Try each condition in the $or array and combine results
                 for condition in or_conditions:
                     # Recursively call find for each condition
@@ -289,7 +328,15 @@ class FirestoreDB:
         else:
             coll_name = self.collection_name
             doc = collection_name
-        
+
+        if self.use_proxy:
+            result = await self._proxy_request('insert_one', {'collection': coll_name, 'document': doc})
+            if self.enable_cache and self.cache and result.get('inserted_id'):
+                doc_with_id = {**doc, 'id': result['inserted_id']}
+                ttl = CACHE_TTL.get(coll_name, CACHE_TTL['default'])
+                self.cache.set(coll_name, result['inserted_id'], doc_with_id, ttl)
+            return result
+
         try:
             self._ensure_db()
             data = dict_to_firestore(doc)
@@ -335,7 +382,17 @@ class FirestoreDB:
             upd = filter_dict
             if update_dict is not None and isinstance(update_dict, bool):
                 upsert = update_dict
-        
+
+        if self.use_proxy:
+            result = await self._proxy_request('update_one', {
+                'collection': coll_name, 'filter': filt, 'update': upd, 'upsert': upsert,
+            })
+            if self.enable_cache and self.cache:
+                # We don't get the doc_id back for a plain update; invalidate by re-querying id if present.
+                if isinstance(filt, dict) and 'id' in filt:
+                    self.cache.delete(coll_name, filt['id'])
+            return result
+
         try:
             # Find the document first
             doc = await self.find_one(coll_name, filt)
@@ -395,10 +452,16 @@ class FirestoreDB:
         else:
             coll_name = self.collection_name
             filt = collection_name
-        
+
+        if self.use_proxy:
+            result = await self._proxy_request('delete_one', {'collection': coll_name, 'filter': filt})
+            if self.enable_cache and self.cache and isinstance(filt, dict) and 'id' in filt:
+                self.cache.delete(coll_name, filt['id'])
+            return result
+
         try:
             doc = await self.find_one(coll_name, filt)
-            
+
             if doc:
                 doc_id = doc['id']
                 await asyncio.to_thread(self.db.collection(coll_name).document(doc_id).delete)
@@ -484,6 +547,9 @@ class FirestoreDB:
         Returns:
             Dict with results: {'inserted': [...], 'updated': [...], 'deleted': [...]}
         """
+        if self.use_proxy:
+            return await self._proxy_request('batch_write', {'operations': operations})
+
         try:
             self._ensure_db()
             batch = self.db.batch()
