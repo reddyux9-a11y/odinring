@@ -39,9 +39,15 @@ class FirestoreDB:
         self.cache = get_cache() if enable_cache else None
 
     def _ensure_db(self):
-        """Ensure Firestore client exists; retry once per call (env may be fixed at runtime)."""
-        if self.db is None:
-            self.db = get_firestore_client()
+        """
+        Ensure Firestore client exists and is current.
+
+        Always re-reads the module-level client rather than caching it on the
+        instance forever: if firebase_config.reset_firestore_client() cleared
+        it (e.g. after a transport-level error), this picks up the freshly
+        rebuilt client instead of continuing to use a stale one.
+        """
+        self.db = get_firestore_client()
         if self.db is None:
             err = get_firestore_client_error()
             hint = err or (

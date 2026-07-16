@@ -29,6 +29,47 @@ def get_firestore_client_error() -> Optional[str]:
     """Human-readable reason Firestore client is unavailable, or None if not recorded."""
     return _firestore_client_error
 
+
+def reset_firestore_client():
+    """
+    Tear down the cached Firebase app and Firestore client so the next
+    get_firestore_client() call rebuilds both from scratch.
+
+    Serverless runtimes (e.g. Vercel) freeze/thaw function instances between
+    invocations, which can leave the Firestore client's persistent gRPC/HTTP2
+    channel stale. A stale channel surfaces as a bare transport-level 403
+    ("Received http2 header with status: 403") rather than a real IAM denial.
+    Deregistering the firebase_admin app too (not just _db) matters: leaving
+    it registered makes initialize_firebase() take a fallback path that
+    builds a Firestore client without explicit credentials.
+    """
+    global _app, _db
+    if _app is not None:
+        try:
+            firebase_admin.delete_app(_app)
+        except Exception as e:
+            logger.warning(f"Error deleting stale Firebase app during reset: {e}")
+    _app = None
+    _db = None
+
+
+def _is_retryable_transport_error(exc: Exception) -> bool:
+    """True if exc looks like a broken connection/transport rather than a real data/logic error."""
+    try:
+        from google.api_core import exceptions as gexc
+        if isinstance(exc, (
+            gexc.PermissionDenied,
+            gexc.Unauthenticated,
+            gexc.ServiceUnavailable,
+            gexc.Unknown,
+            gexc.InternalServerError,
+        )):
+            return True
+    except ImportError:
+        pass
+    msg = str(exc).lower()
+    return 'http2' in msg or 'transport' in msg or 'unavailable' in msg
+
 # SECURITY: NEVER commit service account JSON to git
 # TODO: Rotate credentials immediately if firebase-service-account.json was ever committed
 
@@ -56,7 +97,10 @@ def retry_on_failure(max_retries=3, delay=1, backoff=2):
                     if retries >= max_retries:
                         logger.error(f"Max retries ({max_retries}) exceeded for {func.__name__}: {e}")
                         raise
-                    
+
+                    if _is_retryable_transport_error(e):
+                        logger.warning(f"Transport-level error in {func.__name__} ({type(e).__name__}); resetting Firestore client")
+                        reset_firestore_client()
                     logger.warning(f"Attempt {retries} failed for {func.__name__}: {e}. Retrying in {current_delay}s...")
                     time.sleep(current_delay)
                     current_delay *= backoff
@@ -75,7 +119,10 @@ def retry_on_failure(max_retries=3, delay=1, backoff=2):
                     if retries >= max_retries:
                         logger.error(f"Max retries ({max_retries}) exceeded for {func.__name__}: {e}")
                         raise
-                    
+
+                    if _is_retryable_transport_error(e):
+                        logger.warning(f"Transport-level error in {func.__name__} ({type(e).__name__}); resetting Firestore client")
+                        reset_firestore_client()
                     logger.warning(f"Attempt {retries} failed for {func.__name__}: {e}. Retrying in {current_delay}s...")
                     await asyncio.sleep(current_delay)
                     current_delay *= backoff
