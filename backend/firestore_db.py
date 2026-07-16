@@ -55,6 +55,8 @@ class FirestoreDB:
         headers = {'Authorization': f'Bearer {self.proxy_secret}'}
         async with httpx.AsyncClient(timeout=15.0) as client:
             resp = await client.post(f'{self.proxy_url}/{endpoint}', json=payload, headers=headers)
+            if resp.status_code >= 400:
+                logger.error(f"Proxy request to {endpoint} failed: {resp.status_code} body={resp.text[:2000]!r}")
             resp.raise_for_status()
             return resp.json()
 
